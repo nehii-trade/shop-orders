@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Нэхий Трейд — Захиалгын систем</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{
+  --ink:#241f19;
+  --stone:#eae4d8;
+  --stone-dim:#ddd5c4;
+  --paper:#f6f2e9;
+  --line:#d8cfbb;
+  --saddle:#a6592e;
+  --saddle-dim:#c97c4f;
+  --moss:#5f6f4e;
+  --moss-dim:#eef1e7;
+  --brick:#a83b28;
+  --brick-dim:#faeae6;
+  --amber:#b5852b;
+  --amber-dim:#faf1de;
+  --muted:#7a7266;
+  --white:#fffdf9;
+  --radius:3px;
+  --shadow:none;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  font-family:'IBM Plex Sans',sans-serif;
+  background:var(--stone);
+  color:var(--ink);
+  font-size:14.5px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.serif{font-family:'Newsreader',serif;}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;font-size:inherit;}
+a{color:inherit;}
+::selection{background:var(--saddle-dim);color:var(--white);}
+
+/* ---------- Login screen ---------- */
+#loginScreen{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(166,89,46,.10), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(95,111,78,.10), transparent 45%),
+    var(--stone);
+  padding:24px;
+}
+.login-card{
+  width:100%;
+  max-width:420px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  padding:48px 40px;
+  text-align:center;
+}
+.login-mark{
+  width:56px;height:56px;
+  margin:0 auto 22px;
+  border:1.5px solid var(--ink);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Newsreader',serif;
+  font-size:26px;
+  font-style:italic;
+}
+.login-card h1{
+  font-size:28px;
+  font-weight:600;
+  letter-spacing:-.01em;
+  margin-bottom:6px;
+}
+.login-card p.sub{
+  color:var(--muted);
+  font-size:14px;
+  margin-bottom:34px;
+}
+#gsiBtnHost{display:flex;justify-content:center;min-height:44px;}
+.login-foot{
+  margin-top:28px;
+  font-size:12.5px;
+  color:var(--muted);
+  border-top:1px solid var(--line);
+  padding-top:18px;
+}
+.login-error{
+  display:none;
+  margin-top:16px;
+  padding:10px 14px;
+  background:var(--brick-dim);
+  color:var(--brick);
+  font-size:13px;
+  text-align:left;
+  border-left:3px solid var(--brick);
+}
+
+/* ---------- App shell ---------- */
+#app{display:none;min-height:100vh;}
+.shell{display:flex;min-height:100vh;}
+
+.sidebar{
+  width:230px;
+  flex:none;
+  background:var(--ink);
+  color:var(--stone);
+  display:flex;
+  flex-direction:column;
+  padding:22px 0;
+}
+.brand{
+  padding:0 22px 22px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+  margin-bottom:14px;
+}
+.brand .name{
+  font-family:'Newsreader',serif;
+  font-style:italic;
+  font-size:21px;
+  color:var(--white);
+}
+.brand .tag{
+  font-size:11.5px;
+  color:#a89a80;
+  margin-top:2px;
+}
+nav.navlist{flex:1;padding:0 10px;}
+nav.navlist button{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  width:100%;
+  text-align:left;
+  background:none;
+  border:none;
+  color:#c9bea9;
+  padding:10px 12px;
+  font-size:14px;
+  border-radius:var(--radius);
+  margin-bottom:2px;
+}
+nav.navlist button svg{width:17px;height:17px;flex:none;opacity:.85;}
+nav.navlist button:hover{background:rgba(255,255,255,.06);color:var(--white);}
+nav.navlist button.active{background:var(--saddle);color:var(--white);}
+.sidebar-foot{
+  padding:14px 22px 0;
+  border-top:1px solid rgba(255,255,255,.1);
+  margin-top:12px;
+}
+.sync-row{
+  display:flex;align-items:center;gap:7px;
+  font-size:11.5px;color:#a89a80;
+  margin-bottom:10px;
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--moss);flex:none;}
+.dot.busy{background:var(--amber);animation:pulse 1s infinite;}
+.dot.err{background:var(--brick);}
+@keyframes pulse{50%{opacity:.35;}}
+.user-row{display:flex;align-items:center;gap:9px;}
+.user-row img{width:28px;height:28px;border-radius:50%;}
+.user-row .uname{font-size:12.5px;color:var(--stone);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.signout{
+  margin-top:10px;
+  width:100%;
+  background:none;border:1px solid rgba(255,255,255,.18);
+  color:#a89a80;padding:7px;font-size:12px;border-radius:var(--radius);
+}
+.signout:hover{color:var(--white);border-color:rgba(255,255,255,.4);}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column;}
+.topbar{
+  padding:20px 32px;
+  border-bottom:1px solid var(--line);
+  background:var(--paper);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.topbar h1{font-size:22px;font-weight:600;letter-spacing:-.01em;}
+.topbar .sub{font-size:13px;color:var(--muted);margin-top:2px;}
+.content{flex:1;padding:28px 32px 48px;overflow-y:auto;}
+.view{display:none;}
+.view.active{display:block;}
+
+/* buttons */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 16px;
+  font-size:13.5px;font-weight:500;
+  border-radius:var(--radius);
+  border:1px solid var(--ink);
+  background:var(--ink);color:var(--white);
+}
+.btn:hover{background:#3a3227;}
+.btn.secondary{background:var(--paper);color:var(--ink);border:1px solid var(--line);}
+.btn.secondary:hover{background:var(--white);border-color:var(--ink);}
+.btn.danger{background:var(--brick);border-color:var(--brick);}
+.btn.danger:hover{background:#8a2f20;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn svg{width:15px;height:15px;}
+
+/* cards / stats */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:28px;}
+.stat-card{
+  background:var(--paper);border:1px solid var(--line);
+  padding:18px 20px;
+}
+.stat-card .lbl{font-size:12px;color:var(--muted);margin-bottom:8px;}
+.stat-card .val{font-family:'Newsreader',serif;font-size:30px;font-weight:600;}
+.stat-card .val small{font-size:15px;font-weight:500;color:var(--muted);}
+
+.panel{background:var(--paper);border:1px solid var(--line);}
+.panel-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--line);
+  gap:12px;flex-wrap:wrap;
+}
+.panel-head h2{font-size:16px;font-weight:600;}
+.search{
+  padding:8px 12px;border:1px solid var(--line);background:var(--white);
+  font-size:13px;min-width:200px;border-radius:var(--radius);
+}
+
+table{width:100%;border-collapse:collapse;}
+th{
+  text-align:left;font-size:11.5px;color:var(--muted);font-weight:600;
+  padding:10px 14px;border-bottom:1px solid var(--line);
+  white-space:nowrap;
+}
+td{padding:11px 14px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle;}
+tbody tr:hover{background:rgba(166,89,46,.04);}
+.rowbtn{background:none;border:none;color:var(--muted);padding:4px 6px;border-radius:var(--radius);}
+.rowbtn:hover{color:var(--ink);background:var(--stone-dim);}
+.empty-row td{text-align:center;color:var(--muted);padding:40px 14px;}
+
+.badge{display:inline-block;padding:3px 10px;font-size:11.5px;border-radius:20px;font-weight:500;}
+.badge.new{background:var(--amber-dim);color:var(--amber);}
+.badge.confirmed{background:#e6eef7;color:#2c5b8a;}
+.badge.shipping{background:#f0e7f7;color:#6b3fa0;}
+.badge.done{background:var(--moss-dim);color:var(--moss);}
+.badge.cancelled{background:var(--brick-dim);color:var(--brick);}
+
+/* modal */
+.overlay{
+  display:none;position:fixed;inset:0;background:rgba(36,31,25,.5);
+  align-items:center;justify-content:center;z-index:50;padding:20px;
+}
+.overlay.show{display:flex;}
+.modal{
+  background:var(--paper);width:100%;max-width:480px;
+  max-height:88vh;overflow-y:auto;
+  border:1px solid var(--line);
+}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+.modal-head h3{font-size:17px;font-weight:600;}
+.modal-close{background:none;border:none;font-size:20px;color:var(--muted);line-height:1;}
+.modal-body{padding:20px 22px;}
+.field{margin-bottom:15px;}
+.field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;}
+.field input,.field select,.field textarea{
+  width:100%;padding:9px 11px;border:1px solid var(--line);background:var(--white);
+  border-radius:var(--radius);font-size:14px;
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--saddle-dim);outline-offset:0;border-color:var(--saddle);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.modal-foot{padding:16px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;}
+
+/* reports */
+.aimag-table td.num, .aimag-table th.num{text-align:right;}
+.export-row{display:flex;gap:10px;}
+
+/* toast */
+#toastHost{position:fixed;bottom:22px;right:22px;z-index:100;display:flex;flex-direction:column;gap:8px;}
+.toast{
+  background:var(--ink);color:var(--white);padding:11px 16px;font-size:13px;
+  border-radius:var(--radius);box-shadow:0 6px 20px rgba(0,0,0,.18);
+  display:flex;align-items:center;gap:8px;min-width:220px;
+  animation:slidein .18s ease-out;
+}
+.toast.err{background:var(--brick);}
+.toast.ok{background:var(--moss);}
+@keyframes slidein{from{transform:translateY(8px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+
+.hint{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6;}
+
+@media (max-width:840px){
+  .sidebar{position:fixed;left:-230px;top:0;bottom:0;z-index:40;transition:left .2s;}
+  .sidebar.open{left:0;}
+  .field-row{grid-template-columns:1fr;}
+  .content{padding:20px 16px 40px;}
+  .topbar{padding:16px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-mark">НТ</div>
+    <h1>Нэхий Трейд</h1>
+    <p class="sub">Захиалгын удирдлагын систем</p>
+    <div id="gsiBtnHost"></div>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-foot">Өгөгдөл таны Google Drive-д хадгалагдана. Зөвхөн зөвшөөрөгдсөн акаунтаар нэвтэрнэ.</div>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app">
+<div class="shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="name">Нэхий Трейд</div>
+      <div class="tag">Захиалгын систем</div>
+    </div>
+    <nav class="navlist">
+      <button data-view="dashboard" class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        Хяналтын самбар
+      </button>
+      <button data-view="shops">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v10a1 1 0 001 1h14a1 1 0 001-1V9"/><path d="M9 20v-6h6v6"/></svg>
+        Дэлгүүрүүд
+      </button>
+      <button data-view="products">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+        Бүтээгдэхүүн
+      </button>
+      <button data-view="orders">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 2l1 4h10l1-4"/><rect x="4" y="6" width="16" height="16" rx="1"/><path d="M9 11h6M9 15h6"/></svg>
+        Захиалгууд
+      </button>
+      <button data-view="reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+        Нэгтгэл тайлан
+      </button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="sync-row"><span class="dot" id="syncDot"></span><span id="syncLabel">Бэлэн</span></div>
+      <div class="user-row">
+        <img id="userAvatar" src="" alt="">
+        <span class="uname" id="userName">—</span>
+      </div>
+      <button class="signout" id="signOutBtn">Гарах</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="viewTitle">Хяналтын самбар</h1>
+        <div class="sub" id="viewSub">Ерөнхий тойм</div>
+      </div>
+      <button class="btn secondary" id="syncNowBtn">Дахин ачаалах</button>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <section class="view active" id="view-dashboard">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="lbl">Нийт дэлгүүр</div><div class="val" id="statShops">0</div></div>
+          <div class="stat-card"><div class="lbl">Нийт бүтээгдэхүүн</div><div class="val" id="statProducts">0</div></div>
+          <div class="stat-card"><div class="lbl">Нийт захиалга</div><div class="val" id="statOrders">0</div></div>
+          <div class="stat-card"><div class="lbl">Хүлээгдэж буй</div><div class="val" id="statPending">0</div></div>
+          <div class="stat-card"><div class="lbl">Нийт дүн</div><div class="val" id="statRevenue">0<small> ₮</small></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Сүүлийн захиалгууд</h2></div>
+          <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Огноо</th><th>Дэлгүүр</th><th>Бүтээгдэхүүн</th><th>Тоо</th><th>Дүн</th><th>Төлөв</th></tr></thead>
+            <tbody id="recentOrdersBody"></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SHOPS -->
+      <section class="view" id="view-shops">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Дэлгүүрүүд</h2>
+            <div style="display:flex;gap:10px;">
+              <input type="text" class="search" id="shopSearch" placeholder="Дэлгүүр хайх...">
+              <button class="btn" id="addShopBtn">+ Дэлгүүр нэмэх</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Нэр</th><th>Аймаг</th><th>Сум</th><th>Холбоо барих</th><th>Утас</th><th></th></tr></thead>
+            <tbody id="shopsBody"></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PRODUCTS -->
+      <section class="view" id="view-products">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Бүтээгдэхүүн</h2>
+            <div style="display:flex;gap:10px;">
+              <input type="text" class="search" id="productSearch" placeholder="Бүтээгдэхүүн хайх...">
+              <button class="btn" id="addProductBtn">+ Бүтээгдэхүүн нэмэх</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Нэр</th><th>Ангилал</th><th>Код</th><th>Размер</th><th>Үнэ</th><th></th></tr></thead>
+            <tbody id="productsBody"></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ORDERS -->
+      <section class="view" id="view-orders">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Захиалгууд</h2>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <select class="search" id="orderStatusFilter">
+                <option value="">Бүх төлөв</option>
+                <option value="new">Шинэ</option>
+                <option value="confirmed">Батлагдсан</option>
+                <option value="shipping">Хүргэлтэд</option>
+                <option value="done">Дууссан</option>
+                <option value="cancelled">Цуцлагдсан</option>
+              </select>
+              <button class="btn" id="addOrderBtn">+ Захиалга нэмэх</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Огноо</th><th>Дэлгүүр</th><th>Бүтээгдэхүүн</th><th>Размер</th><th>Тоо</th><th>Дүн</th><th>Төлөв</th><th></th></tr></thead>
+            <tbody id="ordersBody"></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- REPORTS -->
+      <section class="view" id="view-reports">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Аймгаар нэгтгэсэн тайлан</h2>
+            <div class="export-row">
+              <button class="btn secondary" id="exportCsvBtn">CSV татах</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+          <table class="aimag-table">
+            <thead><tr><th>Аймаг</th><th class="num">Дэлгүүр</th><th class="num">Захиалга</th><th class="num">Нийт дүн (₮)</th></tr></thead>
+            <tbody id="reportsBody"></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+
+<div class="overlay" id="shopModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="shopModalTitle">Дэлгүүр нэмэх</h3><button class="modal-close" data-close="shopModal">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="shopId">
+      <div class="field"><label>Дэлгүүрийн нэр *</label><input type="text" id="shopName"></div>
+      <div class="field-row">
+        <div class="field"><label>Аймаг *</label><input type="text" id="shopAimag" placeholder="жиш: Дархан-Уул"></div>
+        <div class="field"><label>Сум</label><input type="text" id="shopSum"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Холбоо барих хүн</label><input type="text" id="shopContact"></div>
+        <div class="field"><label>Утас</label><input type="text" id="shopPhone"></div>
+      </div>
+      <div class="field"><label>Хаяг</label><input type="text" id="shopAddress"></div>
+      <div class="field"><label>Тэмдэглэл</label><textarea id="shopNotes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" data-close="shopModal">Цуцлах</button>
+      <button class="btn" id="saveShopBtn">Хадгалах</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="productModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="productModalTitle">Бүтээгдэхүүн нэмэх</h3><button class="modal-close" data-close="productModal">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="productId">
+      <div class="field"><label>Бүтээгдэхүүний нэр *</label><input type="text" id="productName"></div>
+      <div class="field-row">
+        <div class="field"><label>Ангилал</label><input type="text" id="productCategory" placeholder="жиш: Нэхий хантааз"></div>
+        <div class="field"><label>Код</label><input type="text" id="productCode"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Размер</label><input type="text" id="productSize" placeholder="жиш: 48,50,52"></div>
+        <div class="field"><label>Үнэ (₮) *</label><input type="number" id="productPrice" min="0"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" data-close="productModal">Цуцлах</button>
+      <button class="btn" id="saveProductBtn">Хадгалах</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="orderModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="orderModalTitle">Захиалга нэмэх</h3><button class="modal-close" data-close="orderModal">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="orderId">
+      <div class="field"><label>Дэлгүүр *</label><select id="orderShop"></select></div>
+      <div class="field"><label>Бүтээгдэхүүн *</label><select id="orderProduct"></select></div>
+      <div class="field-row">
+        <div class="field"><label>Размер</label><input type="text" id="orderSize"></div>
+        <div class="field"><label>Тоо ширхэг *</label><input type="number" id="orderQty" min="1" value="1"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Нэгжийн үнэ (₮)</label><input type="number" id="orderUnitPrice" min="0"></div>
+        <div class="field"><label>Нийт дүн (₮)</label><input type="number" id="orderTotal" min="0" readonly style="background:var(--stone);"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Огноо</label><input type="date" id="orderDate"></div>
+        <div class="field"><label>Төлөв</label>
+          <select id="orderStatus">
+            <option value="new">Шинэ</option>
+            <option value="confirmed">Батлагдсан</option>
+            <option value="shipping">Хүргэлтэд</option>
+            <option value="done">Дууссан</option>
+            <option value="cancelled">Цуцлагдсан</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Тэмдэглэл</label><textarea id="orderNotes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" data-close="orderModal">Цуцлах</button>
+      <button class="btn" id="saveOrderBtn">Хадгалах</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastHost"></div>
+
+<script>
+/* ========================================================================
+   TANI: TODO — доорх CLIENT_ID-г Google Cloud Console-с авсан client_id-гаар солино уу
+   ======================================================================== */
+const CLIENT_ID = '419659492139-735svn0e0tir8naaf1o8qhtaujrornah.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
+const DATA_FILENAME = 'nehii_trade_orders_data.json';
+const LOCAL_KEY = 'nehiitrade_orders_cache_v1';
+
+let accessToken = null;
+let tokenClient = null;
+let driveFileId = null;
+let saveTimer = null;
+
+let data = { shops: [], products: [], orders: [] };
+
+const STATUS_LABEL = { new:'Шинэ', confirmed:'Батлагдсан', shipping:'Хүргэлтэд', done:'Дууссан', cancelled:'Цуцлагдсан' };
+const STATUS_CLASS = { new:'new', confirmed:'confirmed', shipping:'shipping', done:'done', cancelled:'cancelled' };
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function money(n){ return Number(n||0).toLocaleString('mn-MN'); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+/* ---------------- Toasts ---------------- */
+function toast(msg, kind){
+  const host = document.getElementById('toastHost');
+  const el = document.createElement('div');
+  el.className = 'toast' + (kind ? ' '+kind : '');
+  el.textContent = msg;
+  host.appendChild(el);
+  setTimeout(()=>{ el.remove(); }, 3200);
+}
+
+/* ---------------- Sync indicator ---------------- */
+function setSync(state, label){
+  const dot = document.getElementById('syncDot');
+  dot.className = 'dot' + (state ? ' '+state : '');
+  document.getElementById('syncLabel').textContent = label;
+}
+
+/* ---------------- Auth ---------------- */
+window.addEventListener('load', () => {
+  const cachedRaw = localStorage.getItem(LOCAL_KEY);
+  if (cachedRaw) {
+    try { data = JSON.parse(cachedRaw); } catch(e){}
+  }
+  initGSI();
+});
+
+function initGSI(){
+  if (!window.google || !google.accounts) { setTimeout(initGSI, 200); return; }
+
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: () => {}
+  });
+
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) {
+        showLoginError('Нэвтрэхэд алдаа гарлаа: ' + resp.error);
+        return;
+      }
+      accessToken = resp.access_token;
+      await onSignedIn();
+    }
+  });
+
+  // Custom "Sign in with Google" trigger button (styled to match design)
+  const host = document.getElementById('gsiBtnHost');
+  const btn = document.createElement('button');
+  btn.className = 'btn';
+  btn.style.width = '100%';
+  btn.style.justifyContent = 'center';
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="#fff" d="M21.35 11.1h-9.17v2.92h5.27c-.23 1.44-1.62 4.22-5.27 4.22-3.17 0-5.76-2.62-5.76-5.85s2.59-5.85 5.76-5.85c1.8 0 3.01.77 3.7 1.43l2.52-2.43C16.96 3.9 14.7 2.8 11.99 2.8 6.98 2.8 2.9 6.9 2.9 11.9s4.08 9.1 9.09 9.1c5.25 0 8.73-3.69 8.73-8.89 0-.6-.06-1.05-.16-1.51z"/></svg> Google-ээр нэвтрэх';
+  btn.addEventListener('click', () => {
+    hideLoginError();
+    tokenClient.requestAccessToken({ prompt: '' });
+  });
+  host.appendChild(btn);
+}
+
+function showLoginError(msg){
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideLoginError(){
+  document.getElementById('loginError').style.display = 'none';
+}
+
+let currentUser = null;
+async function onSignedIn(){
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    currentUser = await r.json();
+    document.getElementById('userName').textContent = currentUser.name || currentUser.email || 'Хэрэглэгч';
+    document.getElementById('userAvatar').src = currentUser.picture || '';
+  } catch(e){}
+
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+
+  render();
+  await loadFromDrive();
+}
+
+document.getElementById('signOutBtn').addEventListener('click', () => {
+  if (accessToken) {
+    google.accounts.oauth2.revoke(accessToken, () => {});
+  }
+  accessToken = null;
+  driveFileId = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+});
+
+/* ---------------- Drive storage ---------------- */
+async function driveFetch(url, opts){
+  opts = opts || {};
+  opts.headers = Object.assign({}, opts.headers, { Authorization: 'Bearer ' + accessToken });
+  let res = await fetch(url, opts);
+  if (res.status === 401 && tokenClient) {
+    await new Promise((resolve) => {
+      tokenClient.callback = async (resp) => {
+        if (!resp.error) accessToken = resp.access_token;
+        resolve();
+      };
+      tokenClient.requestAccessToken({ prompt: '' });
+    });
+    opts.headers.Authorization = 'Bearer ' + accessToken;
+    res = await fetch(url, opts);
+  }
+  return res;
+}
+
+async function findDriveFile(){
+  const url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=' +
+    encodeURIComponent(`name='${DATA_FILENAME}'`) + '&fields=files(id,name)';
+  const res = await driveFetch(url);
+  const json = await res.json();
+  if (json.files && json.files.length) return json.files[0].id;
+  return null;
+}
+
+async function createDriveFile(initialData){
+  const metadata = { name: DATA_FILENAME, parents: ['appDataFolder'] };
+  const boundary = '-------nehiitrade' + uid();
+  const body =
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(initialData)}\r\n--${boundary}--`;
+  const res = await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body
+  });
+  const json = await res.json();
+  return json.id;
+}
+
+async function readDriveFile(fileId){
+  const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+  if (!res.ok) throw new Error('read failed');
+  return await res.json();
+}
+
+async function writeDriveFile(fileId, obj){
+  const res = await driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(obj)
+  });
+  if (!res.ok) throw new Error('write failed');
+}
+
+async function loadFromDrive(){
+  setSync('busy', 'Ачааллаж байна...');
+  try {
+    driveFileId = await findDriveFile();
+    if (!driveFileId) {
+      driveFileId = await createDriveFile(data);
+    } else {
+      const remote = await readDriveFile(driveFileId);
+      data = Object.assign({ shops:[], products:[], orders:[] }, remote);
+    }
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+    setSync('', 'Синк хийгдсэн');
+    render();
+  } catch(e){
+    console.error(e);
+    setSync('err', 'Ачааллахад алдаа гарлаа');
+    toast('Drive-с ачаалахад алдаа гарлаа. Кэш өгөгдлөөр ажиллаж байна.', 'err');
+  }
+}
+
+function queueSave(){
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+  setSync('busy', 'Хадгалж байна...');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(doSave, 600);
+}
+
+async function doSave(){
+  if (!driveFileId) {
+    try { driveFileId = await findDriveFile() || await createDriveFile(data); }
+    catch(e){ setSync('err','Холбогдоогүй'); return; }
+  }
+  try {
+    await writeDriveFile(driveFileId, data);
+    setSync('', 'Хадгалагдсан');
+  } catch(e){
+    console.error(e);
+    setSync('err', 'Хадгалахад алдаа гарлаа');
+    toast('Google Drive рүү хадгалахад алдаа гарлаа', 'err');
+  }
+}
+
+document.getElementById('syncNowBtn').addEventListener('click', loadFromDrive);
+
+/* ---------------- Navigation ---------------- */
+const VIEW_META = {
+  dashboard: { title: 'Хяналтын самбар', sub: 'Ерөнхий тойм' },
+  shops: { title: 'Дэлгүүрүүд', sub: 'Харилцагч дэлгүүрийн бүртгэл' },
+  products: { title: 'Бүтээгдэхүүн', sub: 'Барааны бүртгэл' },
+  orders: { title: 'Захиалгууд', sub: 'Захиалгын удирдлага' },
+  reports: { title: 'Нэгтгэл тайлан', sub: 'Аймгаар нэгтгэсэн статистик' }
+};
+
+document.querySelectorAll('nav.navlist button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav.navlist button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const v = btn.dataset.view;
+    document.querySelectorAll('.view').forEach(sec => sec.classList.remove('active'));
+    document.getElementById('view-'+v).classList.add('active');
+    document.getElementById('viewTitle').textContent = VIEW_META[v].title;
+    document.getElementById('viewSub').textContent = VIEW_META[v].sub;
+    render();
+  });
+});
+
+/* ---------------- Render ---------------- */
+function render(){
+  renderDashboard();
+  renderShops();
+  renderProducts();
+  renderOrders();
+  renderReports();
+  fillSelectOptions();
+}
+
+function renderDashboard(){
+  document.getElementById('statShops').textContent = data.shops.length;
+  document.getElementById('statProducts').textContent = data.products.length;
+  document.getElementById('statOrders').textContent = data.orders.length;
+  const pending = data.orders.filter(o => o.status === 'new' || o.status === 'confirmed').length;
+  document.getElementById('statPending').textContent = pending;
+  const revenue = data.orders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
+  document.getElementById('statRevenue').innerHTML = money(revenue) + ' <small>₮</small>';
+
+  const body = document.getElementById('recentOrdersBody');
+  const rows = [...data.orders].sort((a,b)=> (b.orderDate||'').localeCompare(a.orderDate||'')).slice(0,8);
+  body.innerHTML = rows.length ? rows.map(o => {
+    const shop = data.shops.find(s=>s.id===o.shopId);
+    const prod = data.products.find(p=>p.id===o.productId);
+    return `<tr>
+      <td>${o.orderDate||'—'}</td>
+      <td>${shop ? shop.name : '—'}</td>
+      <td>${prod ? prod.name : '—'}</td>
+      <td>${o.qty}</td>
+      <td>${money(o.total)} ₮</td>
+      <td><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></td>
+    </tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="6">Захиалга бүртгэгдээгүй байна</td></tr>`;
+}
+
+function renderShops(){
+  const q = (document.getElementById('shopSearch').value||'').toLowerCase();
+  const body = document.getElementById('shopsBody');
+  const rows = data.shops.filter(s => !q || (s.name+s.aimag+s.sum).toLowerCase().includes(q));
+  body.innerHTML = rows.length ? rows.map(s => `
+    <tr>
+      <td>${esc(s.name)}</td>
+      <td>${esc(s.aimag||'—')}</td>
+      <td>${esc(s.sum||'—')}</td>
+      <td>${esc(s.contact||'—')}</td>
+      <td>${esc(s.phone||'—')}</td>
+      <td style="text-align:right;white-space:nowrap;">
+        <button class="rowbtn" onclick="editShop('${s.id}')">Засах</button>
+        <button class="rowbtn" onclick="deleteShop('${s.id}')">Устгах</button>
+      </td>
+    </tr>`).join('') : `<tr class="empty-row"><td colspan="6">Дэлгүүр бүртгэгдээгүй байна</td></tr>`;
+}
+
+function renderProducts(){
+  const q = (document.getElementById('productSearch').value||'').toLowerCase();
+  const body = document.getElementById('productsBody');
+  const rows = data.products.filter(p => !q || (p.name+p.category+p.code).toLowerCase().includes(q));
+  body.innerHTML = rows.length ? rows.map(p => `
+    <tr>
+      <td>${esc(p.name)}</td>
+      <td>${esc(p.category||'—')}</td>
+      <td>${esc(p.code||'—')}</td>
+      <td>${esc(p.size||'—')}</td>
+      <td>${money(p.price)} ₮</td>
+      <td style="text-align:right;white-space:nowrap;">
+        <button class="rowbtn" onclick="editProduct('${p.id}')">Засах</button>
+        <button class="rowbtn" onclick="deleteProduct('${p.id}')">Устгах</button>
+      </td>
+    </tr>`).join('') : `<tr class="empty-row"><td colspan="6">Бүтээгдэхүүн бүртгэгдээгүй байна</td></tr>`;
+}
+
+function renderOrders(){
+  const filter = document.getElementById('orderStatusFilter').value;
+  const body = document.getElementById('ordersBody');
+  let rows = [...data.orders].sort((a,b)=> (b.orderDate||'').localeCompare(a.orderDate||''));
+  if (filter) rows = rows.filter(o => o.status === filter);
+  body.innerHTML = rows.length ? rows.map(o => {
+    const shop = data.shops.find(s=>s.id===o.shopId);
+    const prod = data.products.find(p=>p.id===o.productId);
+    return `<tr>
+      <td>${o.orderDate||'—'}</td>
+      <td>${shop ? esc(shop.name) : '—'}</td>
+      <td>${prod ? esc(prod.name) : '—'}</td>
+      <td>${esc(o.size||'—')}</td>
+      <td>${o.qty}</td>
+      <td>${money(o.total)} ₮</td>
+      <td><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></td>
+      <td style="text-align:right;white-space:nowrap;">
+        <button class="rowbtn" onclick="editOrder('${o.id}')">Засах</button>
+        <button class="rowbtn" onclick="deleteOrder('${o.id}')">Устгах</button>
+      </td>
+    </tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="8">Захиалга бүртгэгдээгүй байна</td></tr>`;
+}
+
+function renderReports(){
+  const map = {};
+  data.shops.forEach(s => {
+    const key = s.aimag || 'Тодорхойгүй';
+    if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
+    map[key].shops.add(s.id);
+  });
+  data.orders.forEach(o => {
+    const shop = data.shops.find(s=>s.id===o.shopId);
+    const key = shop ? (shop.aimag || 'Тодорхойгүй') : 'Тодорхойгүй';
+    if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
+    map[key].orders += 1;
+    if (o.status !== 'cancelled') map[key].total += Number(o.total||0);
+  });
+  const body = document.getElementById('reportsBody');
+  const keys = Object.keys(map).sort();
+  body.innerHTML = keys.length ? keys.map(k => `
+    <tr>
+      <td>${esc(k)}</td>
+      <td class="num">${map[k].shops.size}</td>
+      <td class="num">${map[k].orders}</td>
+      <td class="num">${money(map[k].total)}</td>
+    </tr>`).join('') : `<tr class="empty-row"><td colspan="4">Өгөгдөл алга</td></tr>`;
+}
+
+function fillSelectOptions(){
+  const shopSel = document.getElementById('orderShop');
+  const curShop = shopSel.value;
+  shopSel.innerHTML = data.shops.map(s => `<option value="${s.id}">${esc(s.name)}${s.aimag?' — '+esc(s.aimag):''}</option>`).join('') || '<option value="">Дэлгүүр байхгүй</option>';
+  if (curShop) shopSel.value = curShop;
+
+  const prodSel = document.getElementById('orderProduct');
+  const curProd = prodSel.value;
+  prodSel.innerHTML = data.products.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('') || '<option value="">Бүтээгдэхүүн байхгүй</option>';
+  if (curProd) prodSel.value = curProd;
+}
+
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------------- Search / filter listeners ---------------- */
+document.getElementById('shopSearch').addEventListener('input', renderShops);
+document.getElementById('productSearch').addEventListener('input', renderProducts);
+document.getElementById('orderStatusFilter').addEventListener('change', renderOrders);
+
+/* ---------------- Modal helpers ---------------- */
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('[data-close]').forEach(el => {
+  el.addEventListener('click', () => closeModal(el.dataset.close));
+});
+document.querySelectorAll('.overlay').forEach(ov => {
+  ov.addEventListener('click', (e) => { if (e.target === ov) closeModal(ov.id); });
+});
+
+/* ---------------- Shops CRUD ---------------- */
+document.getElementById('addShopBtn').addEventListener('click', () => {
+  document.getElementById('shopModalTitle').textContent = 'Дэлгүүр нэмэх';
+  ['shopId','shopName','shopAimag','shopSum','shopContact','shopPhone','shopAddress','shopNotes'].forEach(id => document.getElementById(id).value = '');
+  openModal('shopModal');
+});
+function editShop(id){
+  const s = data.shops.find(x=>x.id===id); if (!s) return;
+  document.getElementById('shopModalTitle').textContent = 'Дэлгүүр засах';
+  document.getElementById('shopId').value = s.id;
+  document.getElementById('shopName').value = s.name||'';
+  document.getElementById('shopAimag').value = s.aimag||'';
+  document.getElementById('shopSum').value = s.sum||'';
+  document.getElementById('shopContact').value = s.contact||'';
+  document.getElementById('shopPhone').value = s.phone||'';
+  document.getElementById('shopAddress').value = s.address||'';
+  document.getElementById('shopNotes').value = s.notes||'';
+  openModal('shopModal');
+}
+function deleteShop(id){
+  if (!confirm('Энэ дэлгүүрийг устгах уу?')) return;
+  data.shops = data.shops.filter(x=>x.id!==id);
+  queueSave(); render();
+  toast('Дэлгүүр устгагдлаа');
+}
+document.getElementById('saveShopBtn').addEventListener('click', () => {
+  const name = document.getElementById('shopName').value.trim();
+  const aimag = document.getElementById('shopAimag').value.trim();
+  if (!name || !aimag) { toast('Нэр болон аймгийг бөглөнө үү', 'err'); return; }
+  const id = document.getElementById('shopId').value;
+  const obj = {
+    id: id || uid(),
+    name, aimag,
+    sum: document.getElementById('shopSum').value.trim(),
+    contact: document.getElementById('shopContact').value.trim(),
+    phone: document.getElementById('shopPhone').value.trim(),
+    address: document.getElementById('shopAddress').value.trim(),
+    notes: document.getElementById('shopNotes').value.trim(),
+    createdAt: id ? (data.shops.find(x=>x.id===id)||{}).createdAt||Date.now() : Date.now()
+  };
+  if (id) { data.shops = data.shops.map(x => x.id===id ? obj : x); }
+  else { data.shops.push(obj); }
+  queueSave(); render(); closeModal('shopModal');
+  toast('Дэлгүүр хадгалагдлаа', 'ok');
+});
+
+/* ---------------- Products CRUD ---------------- */
+document.getElementById('addProductBtn').addEventListener('click', () => {
+  document.getElementById('productModalTitle').textContent = 'Бүтээгдэхүүн нэмэх';
+  ['productId','productName','productCategory','productCode','productSize','productPrice'].forEach(id => document.getElementById(id).value = '');
+  openModal('productModal');
+});
+function editProduct(id){
+  const p = data.products.find(x=>x.id===id); if (!p) return;
+  document.getElementById('productModalTitle').textContent = 'Бүтээгдэхүүн засах';
+  document.getElementById('productId').value = p.id;
+  document.getElementById('productName').value = p.name||'';
+  document.getElementById('productCategory').value = p.category||'';
+  document.getElementById('productCode').value = p.code||'';
+  document.getElementById('productSize').value = p.size||'';
+  document.getElementById('productPrice').value = p.price||'';
+  openModal('productModal');
+}
+function deleteProduct(id){
+  if (!confirm('Энэ бүтээгдэхүүнийг устгах уу?')) return;
+  data.products = data.products.filter(x=>x.id!==id);
+  queueSave(); render();
+  toast('Бүтээгдэхүүн устгагдлаа');
+}
+document.getElementById('saveProductBtn').addEventListener('click', () => {
+  const name = document.getElementById('productName').value.trim();
+  const price = Number(document.getElementById('productPrice').value || 0);
+  if (!name || !price) { toast('Нэр болон үнийг бөглөнө үү', 'err'); return; }
+  const id = document.getElementById('productId').value;
+  const obj = {
+    id: id || uid(),
+    name,
+    category: document.getElementById('productCategory').value.trim(),
+    code: document.getElementById('productCode').value.trim(),
+    size: document.getElementById('productSize').value.trim(),
+    price,
+    createdAt: id ? (data.products.find(x=>x.id===id)||{}).createdAt||Date.now() : Date.now()
+  };
+  if (id) { data.products = data.products.map(x => x.id===id ? obj : x); }
+  else { data.products.push(obj); }
+  queueSave(); render(); closeModal('productModal');
+  toast('Бүтээгдэхүүн хадгалагдлаа', 'ok');
+});
+
+/* ---------------- Orders CRUD ---------------- */
+function recalcOrderTotal(){
+  const qty = Number(document.getElementById('orderQty').value||0);
+  const unit = Number(document.getElementById('orderUnitPrice').value||0);
+  document.getElementById('orderTotal').value = qty * unit;
+}
+document.getElementById('orderQty').addEventListener('input', recalcOrderTotal);
+document.getElementById('orderUnitPrice').addEventListener('input', recalcOrderTotal);
+document.getElementById('orderProduct').addEventListener('change', () => {
+  const p = data.products.find(x=>x.id===document.getElementById('orderProduct').value);
+  if (p) { document.getElementById('orderUnitPrice').value = p.price; recalcOrderTotal(); }
+});
+
+document.getElementById('addOrderBtn').addEventListener('click', () => {
+  if (!data.shops.length || !data.products.length) {
+    toast('Эхлээд дэлгүүр болон бүтээгдэхүүн бүртгэнэ үү', 'err'); return;
+  }
+  document.getElementById('orderModalTitle').textContent = 'Захиалга нэмэх';
+  document.getElementById('orderId').value = '';
+  document.getElementById('orderSize').value = '';
+  document.getElementById('orderQty').value = 1;
+  document.getElementById('orderUnitPrice').value = data.products[0] ? data.products[0].price : 0;
+  document.getElementById('orderDate').value = todayStr();
+  document.getElementById('orderStatus').value = 'new';
+  document.getElementById('orderNotes').value = '';
+  fillSelectOptions();
+  recalcOrderTotal();
+  openModal('orderModal');
+});
+function editOrder(id){
+  const o = data.orders.find(x=>x.id===id); if (!o) return;
+  document.getElementById('orderModalTitle').textContent = 'Захиалга засах';
+  fillSelectOptions();
+  document.getElementById('orderId').value = o.id;
+  document.getElementById('orderShop').value = o.shopId;
+  document.getElementById('orderProduct').value = o.productId;
+  document.getElementById('orderSize').value = o.size||'';
+  document.getElementById('orderQty').value = o.qty;
+  document.getElementById('orderUnitPrice').value = o.unitPrice;
+  document.getElementById('orderTotal').value = o.total;
+  document.getElementById('orderDate').value = o.orderDate||todayStr();
+  document.getElementById('orderStatus').value = o.status;
+  document.getElementById('orderNotes').value = o.notes||'';
+  openModal('orderModal');
+}
+function deleteOrder(id){
+  if (!confirm('Энэ захиалгыг устгах уу?')) return;
+  data.orders = data.orders.filter(x=>x.id!==id);
+  queueSave(); render();
+  toast('Захиалга устгагдлаа');
+}
+document.getElementById('saveOrderBtn').addEventListener('click', () => {
+  const shopId = document.getElementById('orderShop').value;
+  const productId = document.getElementById('orderProduct').value;
+  const qty = Number(document.getElementById('orderQty').value||0);
+  if (!shopId || !productId || !qty) { toast('Дэлгүүр, бүтээгдэхүүн, тоог бөглөнө үү', 'err'); return; }
+  const id = document.getElementById('orderId').value;
+  const obj = {
+    id: id || uid(),
+    shopId, productId,
+    size: document.getElementById('orderSize').value.trim(),
+    qty,
+    unitPrice: Number(document.getElementById('orderUnitPrice').value||0),
+    total: Number(document.getElementById('orderTotal').value||0),
+    orderDate: document.getElementById('orderDate').value || todayStr(),
+    status: document.getElementById('orderStatus').value,
+    notes: document.getElementById('orderNotes').value.trim(),
+    createdAt: id ? (data.orders.find(x=>x.id===id)||{}).createdAt||Date.now() : Date.now()
+  };
+  if (id) { data.orders = data.orders.map(x => x.id===id ? obj : x); }
+  else { data.orders.push(obj); }
+  queueSave(); render(); closeModal('orderModal');
+  toast('Захиалга хадгалагдлаа', 'ok');
+});
+
+/* ---------------- CSV export ---------------- */
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  const map = {};
+  data.shops.forEach(s => {
+    const key = s.aimag || 'Тодорхойгүй';
+    if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
+    map[key].shops.add(s.id);
+  });
+  data.orders.forEach(o => {
+    const shop = data.shops.find(s=>s.id===o.shopId);
+    const key = shop ? (shop.aimag || 'Тодорхойгүй') : 'Тодорхойгүй';
+    if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
+    map[key].orders += 1;
+    if (o.status !== 'cancelled') map[key].total += Number(o.total||0);
+  });
+  let csv = 'Аймаг,Дэлгүүр,Захиалга,Нийт дүн\n';
+  Object.keys(map).sort().forEach(k => {
+    csv += `${k},${map[k].shops.size},${map[k].orders},${map[k].total}\n`;
+  });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'aimag_negtgel_' + todayStr() + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
