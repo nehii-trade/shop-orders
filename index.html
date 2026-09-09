@@ -563,12 +563,14 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
    TANI: TODO — доорх CLIENT_ID-г Google Cloud Console-с авсан client_id-гаар солино уу
    ======================================================================== */
 const CLIENT_ID = '419659492139-735svn0e0tir8naaf1o8qhtaujrornah.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+const FOLDER_NAME = 'Нэхий Трейд Захиалга';
 const DATA_FILENAME = 'nehii_trade_orders_data.json';
 const LOCAL_KEY = 'nehiitrade_orders_cache_v1';
 
 let accessToken = null;
 let tokenClient = null;
+let driveFolderId = null;
 let driveFileId = null;
 let saveTimer = null;
 
@@ -675,6 +677,7 @@ document.getElementById('signOutBtn').addEventListener('click', () => {
   }
   accessToken = null;
   driveFileId = null;
+  driveFolderId = null;
   document.getElementById('app').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
 });
@@ -698,17 +701,45 @@ async function driveFetch(url, opts){
   return res;
 }
 
-async function findDriveFile(){
-  const url = 'https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=' +
-    encodeURIComponent(`name='${DATA_FILENAME}'`) + '&fields=files(id,name)';
+async function findDriveFolder(){
+  const url = 'https://www.googleapis.com/drive/v3/files?q=' +
+    encodeURIComponent(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`) +
+    '&fields=files(id,name)';
   const res = await driveFetch(url);
   const json = await res.json();
   if (json.files && json.files.length) return json.files[0].id;
   return null;
 }
 
-async function createDriveFile(initialData){
-  const metadata = { name: DATA_FILENAME, parents: ['appDataFolder'] };
+async function createDriveFolder(){
+  const res = await driveFetch('https://www.googleapis.com/drive/v3/files?fields=id', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
+  });
+  const json = await res.json();
+  return json.id;
+}
+
+async function ensureDriveFolder(){
+  if (driveFolderId) return driveFolderId;
+  driveFolderId = await findDriveFolder();
+  if (!driveFolderId) driveFolderId = await createDriveFolder();
+  return driveFolderId;
+}
+
+async function findDriveFile(folderId){
+  const url = 'https://www.googleapis.com/drive/v3/files?q=' +
+    encodeURIComponent(`name='${DATA_FILENAME}' and '${folderId}' in parents and trashed=false`) +
+    '&fields=files(id,name)';
+  const res = await driveFetch(url);
+  const json = await res.json();
+  if (json.files && json.files.length) return json.files[0].id;
+  return null;
+}
+
+async function createDriveFile(folderId, initialData){
+  const metadata = { name: DATA_FILENAME, parents: [folderId] };
   const boundary = '-------nehiitrade' + uid();
   const body =
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
@@ -740,9 +771,10 @@ async function writeDriveFile(fileId, obj){
 async function loadFromDrive(){
   setSync('busy', 'Ачааллаж байна...');
   try {
-    driveFileId = await findDriveFile();
+    const folderId = await ensureDriveFolder();
+    driveFileId = await findDriveFile(folderId);
     if (!driveFileId) {
-      driveFileId = await createDriveFile(data);
+      driveFileId = await createDriveFile(folderId, data);
     } else {
       const remote = await readDriveFile(driveFileId);
       data = Object.assign({ shops:[], products:[], orders:[] }, remote);
@@ -766,7 +798,10 @@ function queueSave(){
 
 async function doSave(){
   if (!driveFileId) {
-    try { driveFileId = await findDriveFile() || await createDriveFile(data); }
+    try {
+      const folderId = await ensureDriveFolder();
+      driveFileId = await findDriveFile(folderId) || await createDriveFile(folderId, data);
+    }
     catch(e){ setSync('err','Холбогдоогүй'); return; }
   }
   try {
