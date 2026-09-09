@@ -569,12 +569,13 @@ const DATA_FILENAME = 'nehii_trade_orders_data.json';
 const LOCAL_KEY = 'nehiitrade_orders_cache_v1';
 
 let accessToken = null;
+let tokenExpiresAt = 0;
 let tokenClient = null;
 let driveFolderId = null;
 let driveFileId = null;
 let saveTimer = null;
 
-let data = { shops: [], products: [], orders: [] };
+let data = { shops: [], products: [], orders: [], tombstones: {} };
 
 const STATUS_LABEL = { new:'Шинэ', confirmed:'Батлагдсан', shipping:'Хүргэлтэд', done:'Дууссан', cancelled:'Цуцлагдсан' };
 const STATUS_CLASS = { new:'new', confirmed:'confirmed', shipping:'shipping', done:'done', cancelled:'cancelled' };
@@ -582,6 +583,31 @@ const STATUS_CLASS = { new:'new', confirmed:'confirmed', shipping:'shipping', do
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 function money(n){ return Number(n||0).toLocaleString('mn-MN'); }
 function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+/* ---------------- Tombstones (устгалт зэрэгцүүлэх) ---------------- */
+const TOMB_KEEP_DAYS = 90;
+function tombstone(id){ if (id) data.tombstones[id] = Date.now(); }
+function isTombstoned(item){
+  const t = data.tombstones[item.id];
+  // Устгасны дараа тухайн бичлэгийг дахин засварласан бол (updatedAt > устгасан цаг) хүчинтэй хэвээр үлдэнэ
+  return t != null && t >= (item.updatedAt || 0);
+}
+function mergeTombstones(remoteT){
+  if (!remoteT) return;
+  for (const id in remoteT) {
+    if (!data.tombstones[id] || data.tombstones[id] < remoteT[id]) data.tombstones[id] = remoteT[id];
+  }
+}
+function purgeTombstones(){
+  const cutoff = Date.now() - TOMB_KEEP_DAYS * 86400000;
+  for (const id in data.tombstones) { if (data.tombstones[id] < cutoff) delete data.tombstones[id]; }
+}
+function mergeById(local, remote){
+  const byId = {};
+  (local||[]).forEach(x => byId[x.id] = x);
+  (remote||[]).forEach(r => { const l = byId[r.id]; if (!l || (r.updatedAt||0) > (l.updatedAt||0)) byId[r.id] = r; });
+  return Object.values(byId).filter(x => !isTombstoned(x));
+}
 
 /* ---------------- Toasts ---------------- */
 function toast(msg, kind){
@@ -606,6 +632,10 @@ window.addEventListener('load', () => {
   if (cachedRaw) {
     try { data = JSON.parse(cachedRaw); } catch(e){}
   }
+  if (!data.tombstones) data.tombstones = {};
+  if (!Array.isArray(data.shops)) data.shops = [];
+  if (!Array.isArray(data.products)) data.products = [];
+  if (!Array.isArray(data.orders)) data.orders = [];
   initGSI();
 });
 
@@ -626,6 +656,7 @@ function initGSI(){
         return;
       }
       accessToken = resp.access_token;
+      tokenExpiresAt = Date.now() + (Number(resp.expires_in || 3600) * 1000);
       await onSignedIn();
     }
   });
@@ -671,11 +702,42 @@ async function onSignedIn(){
   await loadFromDrive();
 }
 
+function tokenExpiringSoon(){
+  return !tokenExpiresAt || Date.now() > tokenExpiresAt - 120000; // дуусахаас 2 минутын өмнө
+}
+
+function silentRefresh(){
+  return new Promise((resolve) => {
+    if (!tokenClient) { resolve(false); return; }
+    tokenClient.callback = (resp) => {
+      if (!resp.error) {
+        accessToken = resp.access_token;
+        tokenExpiresAt = Date.now() + (Number(resp.expires_in || 3600) * 1000);
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    };
+    tokenClient.requestAccessToken({ prompt: '' });
+  });
+}
+
+// 30 секунд тутам токены хугацааг шалгаж, дуусахад ойртсон бол нам гүм шинэчилнэ
+setInterval(() => {
+  if (accessToken && tokenExpiringSoon()) silentRefresh();
+}, 30000);
+
+// Хэрэглэгч tab руу буцаж ирэхэд (жиш. унтраасан утаснаасаа буцаж нээхэд) шууд шалгах
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && accessToken && tokenExpiringSoon()) silentRefresh();
+});
+
 document.getElementById('signOutBtn').addEventListener('click', () => {
   if (accessToken) {
     google.accounts.oauth2.revoke(accessToken, () => {});
   }
   accessToken = null;
+  tokenExpiresAt = 0;
   driveFileId = null;
   driveFolderId = null;
   document.getElementById('app').style.display = 'none';
@@ -687,14 +749,8 @@ async function driveFetch(url, opts){
   opts = opts || {};
   opts.headers = Object.assign({}, opts.headers, { Authorization: 'Bearer ' + accessToken });
   let res = await fetch(url, opts);
-  if (res.status === 401 && tokenClient) {
-    await new Promise((resolve) => {
-      tokenClient.callback = async (resp) => {
-        if (!resp.error) accessToken = resp.access_token;
-        resolve();
-      };
-      tokenClient.requestAccessToken({ prompt: '' });
-    });
+  if (res.status === 401) {
+    await silentRefresh();
     opts.headers.Authorization = 'Bearer ' + accessToken;
     res = await fetch(url, opts);
   }
@@ -777,7 +833,11 @@ async function loadFromDrive(){
       driveFileId = await createDriveFile(folderId, data);
     } else {
       const remote = await readDriveFile(driveFileId);
-      data = Object.assign({ shops:[], products:[], orders:[] }, remote);
+      mergeTombstones(remote.tombstones);          // эхлээд устгалтууд, дараа нь бичлэгүүд
+      data.shops = mergeById(data.shops, remote.shops || []);
+      data.products = mergeById(data.products, remote.products || []);
+      data.orders = mergeById(data.orders, remote.orders || []);
+      purgeTombstones();
     }
     localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
     setSync('', 'Синк хийгдсэн');
@@ -1010,6 +1070,7 @@ function editShop(id){
 }
 function deleteShop(id){
   if (!confirm('Энэ дэлгүүрийг устгах уу?')) return;
+  tombstone(id);
   data.shops = data.shops.filter(x=>x.id!==id);
   queueSave(); render();
   toast('Дэлгүүр устгагдлаа');
@@ -1027,7 +1088,8 @@ document.getElementById('saveShopBtn').addEventListener('click', () => {
     phone: document.getElementById('shopPhone').value.trim(),
     address: document.getElementById('shopAddress').value.trim(),
     notes: document.getElementById('shopNotes').value.trim(),
-    createdAt: id ? (data.shops.find(x=>x.id===id)||{}).createdAt||Date.now() : Date.now()
+    createdAt: id ? (data.shops.find(x=>x.id===id)||{}).createdAt||Date.now() : Date.now(),
+    updatedAt: Date.now()
   };
   if (id) { data.shops = data.shops.map(x => x.id===id ? obj : x); }
   else { data.shops.push(obj); }
@@ -1054,6 +1116,7 @@ function editProduct(id){
 }
 function deleteProduct(id){
   if (!confirm('Энэ бүтээгдэхүүнийг устгах уу?')) return;
+  tombstone(id);
   data.products = data.products.filter(x=>x.id!==id);
   queueSave(); render();
   toast('Бүтээгдэхүүн устгагдлаа');
@@ -1070,7 +1133,8 @@ document.getElementById('saveProductBtn').addEventListener('click', () => {
     code: document.getElementById('productCode').value.trim(),
     size: document.getElementById('productSize').value.trim(),
     price,
-    createdAt: id ? (data.products.find(x=>x.id===id)||{}).createdAt||Date.now() : Date.now()
+    createdAt: id ? (data.products.find(x=>x.id===id)||{}).createdAt||Date.now() : Date.now(),
+    updatedAt: Date.now()
   };
   if (id) { data.products = data.products.map(x => x.id===id ? obj : x); }
   else { data.products.push(obj); }
@@ -1125,6 +1189,7 @@ function editOrder(id){
 }
 function deleteOrder(id){
   if (!confirm('Энэ захиалгыг устгах уу?')) return;
+  tombstone(id);
   data.orders = data.orders.filter(x=>x.id!==id);
   queueSave(); render();
   toast('Захиалга устгагдлаа');
@@ -1145,7 +1210,8 @@ document.getElementById('saveOrderBtn').addEventListener('click', () => {
     orderDate: document.getElementById('orderDate').value || todayStr(),
     status: document.getElementById('orderStatus').value,
     notes: document.getElementById('orderNotes').value.trim(),
-    createdAt: id ? (data.orders.find(x=>x.id===id)||{}).createdAt||Date.now() : Date.now()
+    createdAt: id ? (data.orders.find(x=>x.id===id)||{}).createdAt||Date.now() : Date.now(),
+    updatedAt: Date.now()
   };
   if (id) { data.orders = data.orders.map(x => x.id===id ? obj : x); }
   else { data.orders.push(obj); }
