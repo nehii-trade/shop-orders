@@ -686,6 +686,10 @@ function migrateOrder(o, d){
       const shop = (d.shops||[]).find(s=>s.id===o.shopId);
       if (shop) o.shopName = shop.name;
     }
+    if (!o.shopAimag) {
+      const shop = (d.shops||[]).find(s=>s.id===o.shopId);
+      if (shop) o.shopAimag = shop.aimag||'';
+    }
     o.items.forEach(it => {
       if (!it.productName) {
         const p = (d.products||[]).find(x=>x.id===it.productId);
@@ -1197,7 +1201,7 @@ function renderReports(){
   });
   data.orders.forEach(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
-    const key = shop ? (shop.aimag || 'Тодорхойгүй') : 'Тодорхойгүй';
+    const key = shop ? (shop.aimag || 'Тодорхойгүй') : (o.shopAimag || 'Тодорхойгүй');
     if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
     map[key].orders += 1;
     if (o.status !== 'cancelled') map[key].total += Number(o.total||0);
@@ -1640,6 +1644,7 @@ document.getElementById('saveOrderBtn').addEventListener('click', () => {
     orderNo,
     shopId,
     shopName: shop ? shop.name : '',
+    shopAimag: shop ? (shop.aimag||'') : '',
     items: currentOrderItems.map(it => {
       const p = data.products.find(x=>x.id===it.productId);
       return { productId: it.productId, productName: p ? p.name : (it.productName||''), size: it.size||'', qty: Number(it.qty||0), unitPrice: Number(it.unitPrice||0), total: Number(it.total||0) };
@@ -1667,7 +1672,7 @@ document.getElementById('exportCsvBtn').addEventListener('click', () => {
   });
   data.orders.forEach(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
-    const key = shop ? (shop.aimag || 'Тодорхойгүй') : 'Тодорхойгүй';
+    const key = shop ? (shop.aimag || 'Тодорхойгүй') : (o.shopAimag || 'Тодорхойгүй');
     if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
     map[key].orders += 1;
     if (o.status !== 'cancelled') map[key].total += Number(o.total||0);
