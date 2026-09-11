@@ -436,7 +436,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           </div>
           <div style="overflow-x:auto;">
           <table>
-            <thead><tr><th>Нэр</th><th>Компани</th><th>Ангилал</th><th>Код</th><th>Размер</th><th>Үнэ</th><th></th></tr></thead>
+            <thead><tr><th>Нэр</th><th>Компани</th><th>Ангилал</th><th>Загварын код</th><th>Барааны код</th><th>Размер</th><th>Үнэ</th><th></th></tr></thead>
             <tbody id="productsBody"></tbody>
           </table>
           </div>
@@ -533,10 +533,13 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <div class="field"><label>Ангилал</label><input type="text" id="productCategory" list="categoryList" placeholder="сонгох эсвэл бичих"><datalist id="categoryList"></datalist></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Загварын код</label><input type="text" id="productCode" list="codeList" placeholder="сонгох эсвэл бичих"><datalist id="codeList"></datalist></div>
-        <div class="field"><label>Размер</label><input type="text" id="productSize" list="sizeList" placeholder="жиш: 48,50,52"><datalist id="sizeList"></datalist></div>
+        <div class="field"><label>Загварын код</label><input type="text" id="productModelCode" list="modelCodeList" placeholder="жиш: 31951409 (олон размерт нийтлэг)"><datalist id="modelCodeList"></datalist></div>
+        <div class="field"><label>Барааны код</label><input type="text" id="productCode" list="codeList" placeholder="жиш: 319514090338 (размер тус бүрд өөр)"><datalist id="codeList"></datalist></div>
       </div>
-      <div class="field"><label>Үнэ (₮) *</label><input type="number" id="productPrice" min="0"></div>
+      <div class="field-row">
+        <div class="field"><label>Размер</label><input type="text" id="productSize" list="sizeList" placeholder="жиш: 38 (ганц утга)"><datalist id="sizeList"></datalist></div>
+        <div class="field"><label>Үнэ (₮) *</label><input type="number" id="productPrice" min="0"></div>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn secondary" data-close="productModal">Цуцлах</button>
@@ -559,14 +562,14 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <label style="margin-bottom:9px;">Бараа нэмэх</label>
         <div class="field-row">
           <div class="field"><label>Бүтээгдэхүүн</label><select id="itemProduct" multiple size="4"></select></div>
-          <div class="field"><label>Размер (боломжтой бол)</label><div id="itemSizeChecks" style="font-size:13px;color:var(--muted);">Эхлээд бүтээгдэхүүн сонгоно уу</div></div>
+          <div class="field"><label>Сонгосон бараа</label><div id="itemSizeChecks" style="font-size:13px;color:var(--muted);">Эхлээд бүтээгдэхүүн сонгоно уу</div></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Тоо ширхэг (нэг размерт)</label><input type="number" id="itemQty" min="1" value="1"></div>
+          <div class="field"><label>Тоо ширхэг</label><input type="number" id="itemQty" min="1" value="1"></div>
           <div class="field"><label>Нэгжийн үнэ (₮)</label><input type="number" id="itemUnitPrice" min="0"></div>
         </div>
         <button type="button" class="btn secondary" id="addItemRowBtn" style="width:100%;justify-content:center;">+ Мөр нэмэх</button>
-        <div class="hint">Ctrl (эсвэл Cmd)-той дарж хэдэн ч бүтээгдэхүүнийг зэрэг сонгож болно. Размер сонговол тухайн бараа бүр сонгосон размер тус бүрээр тусдаа мөр болж нэмэгдэнэ.</div>
+        <div class="hint">Ctrl (эсвэл Cmd)-той дарж хэдэн ч бараа (размер тус бүрийг тусдаа бараа гэж) зэрэг сонгож нэг дор нэмж болно.</div>
       </div>
 
       <div class="field">
@@ -639,8 +642,30 @@ function migrateOrder(o){
   if (o.total == null) o.total = o.items.reduce((s,it)=>s+Number(it.total||0),0);
   return o;
 }
+function migrateProducts(list){
+  const result = [];
+  (list||[]).forEach(p => {
+    if (p.modelCode == null) p.modelCode = '';
+    const sizes = (p.size||'').split(',').map(s=>s.trim()).filter(Boolean);
+    if (sizes.length <= 1) { result.push(p); return; }
+    sizes.forEach((sz, idx) => {
+      if (idx === 0) { p.size = sz; result.push(p); }
+      else {
+        result.push(Object.assign({}, p, {
+          id: uid(),
+          size: sz,
+          code: p.code ? p.code + '-' + sz : '',
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        }));
+      }
+    });
+  });
+  return result;
+}
 function migrateData(d){
   (d.shops||[]).forEach(migrateShop);
+  d.products = migrateProducts(d.products);
   (d.orders||[]).forEach(migrateOrder);
   return d;
 }
@@ -1053,12 +1078,13 @@ function renderShops(){
 function renderProducts(){
   const q = (document.getElementById('productSearch').value||'').toLowerCase();
   const body = document.getElementById('productsBody');
-  const rows = data.products.filter(p => !q || (p.name+(p.company||'')+p.category+p.code).toLowerCase().includes(q));
+  const rows = data.products.filter(p => !q || (p.name+(p.company||'')+(p.modelCode||'')+p.code).toLowerCase().includes(q));
   body.innerHTML = rows.length ? rows.map(p => `
     <tr>
       <td>${esc(p.name)}</td>
       <td>${esc(p.company||'—')}</td>
       <td>${esc(p.category||'—')}</td>
+      <td>${esc(p.modelCode||'—')}</td>
       <td>${esc(p.code||'—')}</td>
       <td>${esc(p.size||'—')}</td>
       <td>${money(p.price)} ₮</td>
@@ -1066,7 +1092,7 @@ function renderProducts(){
         <button class="rowbtn" onclick="editProduct('${p.id}')">Засах</button>
         <button class="rowbtn" onclick="deleteProduct('${p.id}')">Устгах</button>
       </td>
-    </tr>`).join('') : `<tr class="empty-row"><td colspan="7">Бүтээгдэхүүн бүртгэгдээгүй байна</td></tr>`;
+    </tr>`).join('') : `<tr class="empty-row"><td colspan="8">Бүтээгдэхүүн бүртгэгдээгүй байна</td></tr>`;
 }
 
 function renderOrders(){
@@ -1124,7 +1150,7 @@ function fillSelectOptions(){
 
   const itemProdSel = document.getElementById('itemProduct');
   if (itemProdSel) {
-    itemProdSel.innerHTML = data.products.map(p => `<option value="${p.id}">${esc(p.name)}${p.company?' — '+esc(p.company):''}</option>`).join('') || '<option value="" disabled>Бүтээгдэхүүн байхгүй</option>';
+    itemProdSel.innerHTML = data.products.map(p => `<option value="${p.id}">${esc(p.name)}${p.size?' — р.'+esc(p.size):''}${p.company?' — '+esc(p.company):''}</option>`).join('') || '<option value="" disabled>Бүтээгдэхүүн байхгүй</option>';
   }
 }
 
@@ -1134,6 +1160,7 @@ function refreshProductDatalists(){
     const el = document.getElementById(listId);
     if (el) el.innerHTML = values.map(v=>`<option value="${esc(v)}"></option>`).join('');
   };
+  fill('modelCodeList', distinct('modelCode'));
   fill('companyList', distinct('company'));
   fill('categoryList', distinct('category'));
   fill('codeList', distinct('code'));
@@ -1214,7 +1241,7 @@ document.getElementById('saveShopBtn').addEventListener('click', () => {
 /* ---------------- Products CRUD ---------------- */
 document.getElementById('addProductBtn').addEventListener('click', () => {
   document.getElementById('productModalTitle').textContent = 'Бүтээгдэхүүн нэмэх';
-  ['productId','productName','productCompany','productCategory','productCode','productSize','productPrice'].forEach(id => document.getElementById(id).value = '');
+  ['productId','productName','productCompany','productCategory','productModelCode','productCode','productSize','productPrice'].forEach(id => document.getElementById(id).value = '');
   openModal('productModal');
 });
 function editProduct(id){
@@ -1224,6 +1251,7 @@ function editProduct(id){
   document.getElementById('productName').value = p.name||'';
   document.getElementById('productCompany').value = p.company||'';
   document.getElementById('productCategory').value = p.category||'';
+  document.getElementById('productModelCode').value = p.modelCode||'';
   document.getElementById('productCode').value = p.code||'';
   document.getElementById('productSize').value = p.size||'';
   document.getElementById('productPrice').value = p.price||'';
@@ -1246,6 +1274,7 @@ document.getElementById('saveProductBtn').addEventListener('click', () => {
     name,
     company: document.getElementById('productCompany').value.trim(),
     category: document.getElementById('productCategory').value.trim(),
+    modelCode: document.getElementById('productModelCode').value.trim(),
     code: document.getElementById('productCode').value.trim(),
     size: document.getElementById('productSize').value.trim(),
     price,
@@ -1275,24 +1304,14 @@ function updateItemSizeChecks(){
   if (selectedIds.length === 1) {
     const p = data.products.find(x=>x.id===selectedIds[0]);
     if (p) document.getElementById('itemUnitPrice').value = p.price;
+  } else {
+    document.getElementById('itemUnitPrice').value = '';
   }
-  // Сонгосон бүх барааны размерүүдийг цуглуулж, checkbox болгож харуулна (бараа бүрээр)
-  let html = '';
-  selectedIds.forEach(pid => {
+  host.innerHTML = selectedIds.map(pid => {
     const p = data.products.find(x=>x.id===pid);
-    if (!p) return;
-    const sizes = (p.size||'').split(',').map(s=>s.trim()).filter(Boolean);
-    if (!sizes.length) {
-      html += `<label style="display:block;margin-bottom:4px;"><input type="checkbox" class="sizeChk" data-pid="${pid}" data-size="" checked disabled> ${esc(p.name)} (размергүй)</label>`;
-    } else {
-      html += `<div style="margin-bottom:6px;"><div style="font-weight:600;margin-bottom:3px;">${esc(p.name)}</div>`;
-      sizes.forEach(sz => {
-        html += `<label style="display:inline-block;margin:0 10px 4px 0;"><input type="checkbox" class="sizeChk" data-pid="${pid}" data-size="${esc(sz)}"> ${esc(sz)}</label>`;
-      });
-      html += `</div>`;
-    }
-  });
-  host.innerHTML = html;
+    if (!p) return '';
+    return `<div>${esc(p.name)}${p.size?' — размер '+esc(p.size):''}</div>`;
+  }).join('');
 }
 document.getElementById('itemProduct').addEventListener('change', updateItemSizeChecks);
 
@@ -1333,30 +1352,12 @@ document.getElementById('addItemRowBtn').addEventListener('click', () => {
   if (!selectedIds.length) { toast('Бүтээгдэхүүн сонгоно уу', 'err'); return; }
   const qty = Number(document.getElementById('itemQty').value || 1);
   const priceOverride = document.getElementById('itemUnitPrice').value;
-  const checks = [...document.querySelectorAll('.sizeChk')];
-  const checkedByProduct = {};
-  checks.forEach(c => {
-    if (c.checked) {
-      (checkedByProduct[c.dataset.pid] = checkedByProduct[c.dataset.pid] || []).push(c.dataset.size);
-    }
-  });
-  let addedAny = false;
   selectedIds.forEach(pid => {
     const p = data.products.find(x=>x.id===pid);
     if (!p) return;
-    const unitPrice = priceOverride !== '' && selectedIds.length===1 ? Number(priceOverride) : p.price;
-    const sizesForProduct = checkedByProduct[pid];
-    if (sizesForProduct && sizesForProduct.length) {
-      sizesForProduct.forEach(sz => {
-        currentOrderItems.push({ productId: pid, size: sz, qty, unitPrice, total: qty*unitPrice });
-        addedAny = true;
-      });
-    } else if (!(p.size||'').trim()) {
-      currentOrderItems.push({ productId: pid, size: '', qty, unitPrice, total: qty*unitPrice });
-      addedAny = true;
-    }
+    const unitPrice = (priceOverride !== '' && selectedIds.length===1) ? Number(priceOverride) : p.price;
+    currentOrderItems.push({ productId: pid, size: p.size||'', qty, unitPrice, total: qty*unitPrice });
   });
-  if (!addedAny) { toast('Размер сонгоно уу', 'err'); return; }
   renderOrderItemsTable();
   sel.selectedIndex = -1;
   document.getElementById('itemSizeChecks').innerHTML = '<span style="color:var(--muted);">Эхлээд бүтээгдэхүүн сонгоно уу</span>';
