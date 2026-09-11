@@ -381,7 +381,10 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           <div class="sub" id="viewSub">Ерөнхий тойм</div>
         </div>
       </div>
-      <button class="btn secondary" id="syncNowBtn">Дахин ачаалах</button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn secondary" id="backupExportBtn">Нөөцлөх</button>
+        <button class="btn secondary" id="syncNowBtn">Дахин ачаалах</button>
+      </div>
     </div>
 
     <div class="content">
@@ -1017,6 +1020,22 @@ async function doSave(){
 }
 
 document.getElementById('syncNowBtn').addEventListener('click', loadFromDrive);
+document.getElementById('backupExportBtn').addEventListener('click', () => {
+  const backup = {
+    app: 'Нэхий Трейд — Захиалгын систем',
+    exportedAt: new Date().toISOString(),
+    data
+  };
+  const json = JSON.stringify(backup, null, 2);
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'nehii_trade_backup_' + todayStr() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Нөөцлөлт татагдлаа', 'ok');
+});
 
 /* ---------------- Navigation ---------------- */
 const VIEW_META = {
