@@ -903,6 +903,7 @@ function signOutLocal(){
   if (accessToken) {
     google.accounts.oauth2.revoke(accessToken, () => {});
   }
+  cancelSaveRetry();
   accessToken = null;
   tokenExpiresAt = 0;
   driveFileId = null;
@@ -1049,21 +1050,41 @@ function queueSave(){
   saveTimer = setTimeout(doSave, 600);
 }
 
+let saveRetryTimer = null;
+let saveRetryAttempts = 0;
+const SAVE_RETRY_DELAYS = [10000, 30000, 60000]; // 10с → 30с → 60с, тэгээд 60с-аар үргэлжилнэ
+
+function scheduleSaveRetry(){
+  if (saveRetryTimer) return; // аль хэдийн дахин оролдлого товлогдсон бол давхар товлохгүй
+  const delay = SAVE_RETRY_DELAYS[Math.min(saveRetryAttempts, SAVE_RETRY_DELAYS.length - 1)];
+  saveRetryAttempts++;
+  saveRetryTimer = setTimeout(() => {
+    saveRetryTimer = null;
+    doSave();
+  }, delay);
+}
+function cancelSaveRetry(){
+  if (saveRetryTimer) { clearTimeout(saveRetryTimer); saveRetryTimer = null; }
+  saveRetryAttempts = 0;
+}
+
 async function doSave(){
   if (!driveFileId) {
     try {
       const folderId = await ensureDriveFolder();
       driveFileId = await findDriveFile(folderId) || await createDriveFile(folderId, data);
     }
-    catch(e){ setSync('err','Холбогдоогүй'); return; }
+    catch(e){ setSync('err','Холбогдоогүй'); scheduleSaveRetry(); return; }
   }
   try {
     await writeDriveFile(driveFileId, data);
     setSync('', 'Хадгалагдсан');
+    cancelSaveRetry();
   } catch(e){
     console.error(e);
     setSync('err', 'Хадгалахад алдаа гарлаа');
-    toast('Google Drive рүү хадгалахад алдаа гарлаа', 'err');
+    toast('Google Drive рүү хадгалахад алдаа гарлаа. Автоматаар дахин оролдоно.', 'err');
+    scheduleSaveRetry();
   }
 }
 
