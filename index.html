@@ -398,7 +398,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           <div class="panel-head"><h2>Сүүлийн захиалгууд</h2></div>
           <div style="overflow-x:auto;">
           <table>
-            <thead><tr><th>Огноо</th><th>Дэлгүүр</th><th>Бүтээгдэхүүн</th><th>Тоо</th><th>Дүн</th><th>Төлөв</th></tr></thead>
+            <thead><tr><th>№</th><th>Огноо</th><th>Дэлгүүр</th><th>Бүтээгдэхүүн</th><th>Тоо</th><th>Дүн</th><th>Төлөв</th></tr></thead>
             <tbody id="recentOrdersBody"></tbody>
           </table>
           </div>
@@ -462,7 +462,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           </div>
           <div style="overflow-x:auto;">
           <table>
-            <thead><tr><th>Огноо</th><th>Дэлгүүр</th><th>Бараа</th><th>Тоо</th><th>Дүн</th><th>Төлөв</th><th></th></tr></thead>
+            <thead><tr><th>№</th><th>Огноо</th><th>Дэлгүүр</th><th>Бараа</th><th>Тоо</th><th>Дүн</th><th>Төлөв</th><th></th></tr></thead>
             <tbody id="ordersBody"></tbody>
           </table>
           </div>
@@ -619,7 +619,7 @@ let driveFolderId = null;
 let driveFileId = null;
 let saveTimer = null;
 
-let data = { shops: [], products: [], orders: [], tombstones: {} };
+let data = { shops: [], products: [], orders: [], tombstones: {}, nextOrderNo: 1 };
 
 const STATUS_LABEL = { new:'Шинэ', confirmed:'Батлагдсан', shipping:'Хүргэлтэд', done:'Дууссан', cancelled:'Цуцлагдсан' };
 const STATUS_CLASS = { new:'new', confirmed:'confirmed', shipping:'shipping', done:'done', cancelled:'cancelled' };
@@ -656,6 +656,12 @@ function migrateOrder(o, d){
 function migrateData(d){
   (d.shops||[]).forEach(migrateShop);
   (d.orders||[]).forEach(o => migrateOrder(o, d));
+  // Хуучин хэрэглэгчид nextOrderNo байхгүй бол одоо байгаа захиалгуудын дугаараас нөхнө
+  if (typeof d.nextOrderNo !== 'number') {
+    let maxNo = 0;
+    (d.orders||[]).forEach(o => { if (typeof o.orderNo === 'number' && o.orderNo > maxNo) maxNo = o.orderNo; });
+    d.nextOrderNo = maxNo + 1;
+  }
   return d;
 }
 
@@ -918,6 +924,8 @@ async function loadFromDrive(){
       data.shops = mergeById(data.shops, remote.shops || []);
       data.products = mergeById(data.products, remote.products || []);
       data.orders = mergeById(data.orders, remote.orders || []);
+      // Дараалсан тоолуур: sync-ийн зөрчлийг багасгахын тулд хоёр талын хамгийн ихийг авна
+      data.nextOrderNo = Math.max(Number(data.nextOrderNo)||1, Number(remote.nextOrderNo)||1);
       purgeTombstones();
     }
     localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
@@ -1031,6 +1039,7 @@ function renderDashboard(){
   body.innerHTML = rows.length ? rows.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     return `<tr>
+      <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
       <td>${esc(o.orderDate||'—')}</td>
       <td>${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
       <td>${orderItemsSummary(o)}</td>
@@ -1038,7 +1047,7 @@ function renderDashboard(){
       <td>${money(o.total)} ₮</td>
       <td><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></td>
     </tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="6">Захиалга бүртгэгдээгүй байна</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="7">Захиалга бүртгэгдээгүй байна</td></tr>`;
 }
 
 function renderShops(){
@@ -1091,6 +1100,7 @@ function renderOrders(){
   body.innerHTML = rows.length ? rows.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     return `<tr>
+      <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
       <td>${esc(o.orderDate||'—')}</td>
       <td>${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
       <td>${orderItemsSummary(o, 3)}</td>
@@ -1102,7 +1112,7 @@ function renderOrders(){
         <button class="rowbtn" onclick="deleteOrder('${o.id}')">Устгах</button>
       </td>
     </tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="7">Захиалга бүртгэгдээгүй байна</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="8">Захиалга бүртгэгдээгүй байна</td></tr>`;
 }
 
 function renderReports(){
@@ -1398,7 +1408,7 @@ document.getElementById('addOrderBtn').addEventListener('click', () => {
 });
 function editOrder(id){
   const o = data.orders.find(x=>x.id===id); if (!o) return;
-  document.getElementById('orderModalTitle').textContent = 'Захиалга засах';
+  document.getElementById('orderModalTitle').textContent = 'Захиалга засах' + (o.orderNo ? ' — №'+o.orderNo : '');
   fillSelectOptions();
   document.getElementById('orderId').value = o.id;
   document.getElementById('orderShop').value = o.shopId;
@@ -1425,8 +1435,17 @@ document.getElementById('saveOrderBtn').addEventListener('click', () => {
   const id = document.getElementById('orderId').value;
   const total = currentOrderItems.reduce((s,it)=>s+Number(it.total||0),0);
   const shop = data.shops.find(s=>s.id===shopId);
+  const existingOrder = id ? data.orders.find(x=>x.id===id) : null;
+  let orderNo;
+  if (existingOrder) {
+    orderNo = existingOrder.orderNo;
+  } else {
+    orderNo = data.nextOrderNo || 1;
+    data.nextOrderNo = orderNo + 1;
+  }
   const obj = {
     id: id || uid(),
+    orderNo,
     shopId,
     shopName: shop ? shop.name : '',
     items: currentOrderItems.map(it => {
@@ -1437,7 +1456,7 @@ document.getElementById('saveOrderBtn').addEventListener('click', () => {
     orderDate: document.getElementById('orderDate').value || todayStr(),
     status: document.getElementById('orderStatus').value,
     notes: document.getElementById('orderNotes').value.trim(),
-    createdAt: id ? (data.orders.find(x=>x.id===id)||{}).createdAt||Date.now() : Date.now(),
+    createdAt: existingOrder ? (existingOrder.createdAt||Date.now()) : Date.now(),
     updatedAt: Date.now()
   };
   if (id) { data.orders = data.orders.map(x => x.id===id ? obj : x); }
