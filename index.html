@@ -644,6 +644,9 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
    ======================================================================== */
 const CLIENT_ID = '419659492139-735svn0e0tir8naaf1o8qhtaujrornah.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile';
+// Зөвхөн энд бичсэн имэйл хаяг(ууд) энэ системд нэвтэрч чадна. Нэмэлт хэрэглэгч зөвшөөрөхийг хүсвэл
+// доор жагсаалтад имэйл хаягийг нь бага үсгээр, таслалаар зааглан нэмнэ үү.
+const ALLOWED_EMAILS = ['munhtsetsegdn@gmail.com'];
 const FOLDER_NAME = 'Нэхий Трейд Захиалга';
 const DATA_FILENAME = 'nehii_trade_orders_data.json';
 const LOCAL_KEY = 'nehiitrade_orders_cache_v1';
@@ -813,9 +816,22 @@ async function onSignedIn(){
       headers: { Authorization: 'Bearer ' + accessToken }
     });
     currentUser = await r.json();
-    document.getElementById('userName').textContent = currentUser.name || currentUser.email || 'Хэрэглэгч';
-    document.getElementById('userAvatar').src = currentUser.picture || '';
-  } catch(e){}
+  } catch(e){
+    showLoginError('Хэрэглэгчийн мэдээлэл авахад алдаа гарлаа. Дахин оролдоно уу.');
+    signOutLocal();
+    return;
+  }
+
+  // Зөвшөөрөгдсөн имэйлийн жагсаалт (allowlist) шалгах
+  const email = (currentUser.email || '').toLowerCase().trim();
+  if (ALLOWED_EMAILS.length && !ALLOWED_EMAILS.includes(email)) {
+    showLoginError(`"${currentUser.email || 'тодорхойгүй имэйл'}" хаяг энэ системд нэвтрэх зөвшөөрөлгүй байна.`);
+    signOutLocal();
+    return;
+  }
+
+  document.getElementById('userName').textContent = currentUser.name || currentUser.email || 'Хэрэглэгч';
+  document.getElementById('userAvatar').src = currentUser.picture || '';
 
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
@@ -854,7 +870,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && accessToken && tokenExpiringSoon()) silentRefresh();
 });
 
-document.getElementById('signOutBtn').addEventListener('click', () => {
+function signOutLocal(){
   if (accessToken) {
     google.accounts.oauth2.revoke(accessToken, () => {});
   }
@@ -864,7 +880,8 @@ document.getElementById('signOutBtn').addEventListener('click', () => {
   driveFolderId = null;
   document.getElementById('app').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
-});
+}
+document.getElementById('signOutBtn').addEventListener('click', signOutLocal);
 
 /* ---------------- Drive storage ---------------- */
 async function driveFetch(url, opts){
