@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 :root{
   --ink:#241f19;
@@ -431,12 +432,13 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             <h2>Бүтээгдэхүүн</h2>
             <div style="display:flex;gap:10px;">
               <input type="text" class="search" id="productSearch" placeholder="Бүтээгдэхүүн хайх...">
+              <button class="btn secondary" id="importProductsBtn">Excel-с импортлох</button>
               <button class="btn" id="addProductBtn">+ Бүтээгдэхүүн нэмэх</button>
             </div>
           </div>
           <div style="overflow-x:auto;">
           <table>
-            <thead><tr><th>Нэр</th><th>Компани</th><th>Ангилал</th><th>Код</th><th>Размер</th><th>Үнэ</th><th></th></tr></thead>
+            <thead><tr><th>Барааны код</th><th>Загварын код</th><th>Размер</th><th>Компани</th><th>Бүтээгдэхүүний нэр</th><th>Барааны нэр</th><th>Нэгж үнэ</th><th></th></tr></thead>
             <tbody id="productsBody"></tbody>
           </table>
           </div>
@@ -527,20 +529,54 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
     <div class="modal-head"><h3 id="productModalTitle">Бүтээгдэхүүн нэмэх</h3><button class="modal-close" data-close="productModal">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="productId">
-      <div class="field"><label>Бүтээгдэхүүний нэр *</label><input type="text" id="productName"></div>
       <div class="field-row">
-        <div class="field"><label>Компани</label><input type="text" id="productCompany" list="companyList" placeholder="сонгох эсвэл бичих"><datalist id="companyList"></datalist></div>
-        <div class="field"><label>Ангилал</label><input type="text" id="productCategory" list="categoryList" placeholder="сонгох эсвэл бичих"><datalist id="categoryList"></datalist></div>
-      </div>
-      <div class="field-row">
+        <div class="field"><label>Барааны код</label><input type="text" id="productItemCode" placeholder="тухайн размерийн өвөрмөц код"></div>
         <div class="field"><label>Загварын код</label><input type="text" id="productCode" list="codeList" placeholder="сонгох эсвэл бичих"><datalist id="codeList"></datalist></div>
-        <div class="field"><label>Размер</label><input type="text" id="productSize" list="sizeList" placeholder="жиш: 48,50,52"><datalist id="sizeList"></datalist></div>
       </div>
-      <div class="field"><label>Үнэ (₮) *</label><input type="number" id="productPrice" min="0"></div>
+      <div class="field-row">
+        <div class="field"><label>Размер</label><input type="text" id="productSize" list="sizeList" placeholder="жиш: 48,50,52"><datalist id="sizeList"></datalist></div>
+        <div class="field"><label>Компани</label><input type="text" id="productCompany" list="companyList" placeholder="сонгох эсвэл бичих"><datalist id="companyList"></datalist></div>
+      </div>
+      <div class="field"><label>Бүтээгдэхүүний нэр *</label><input type="text" id="productName"></div>
+      <div class="field"><label>Барааны нэр</label><input type="text" id="productItemName" placeholder="тухайн барааны нэр (заавал биш)"></div>
+      <div class="field"><label>Нэгж үнэ (₮) *</label><input type="number" id="productPrice" min="0"></div>
     </div>
     <div class="modal-foot">
       <button class="btn secondary" data-close="productModal">Цуцлах</button>
       <button class="btn" id="saveProductBtn">Хадгалах</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="productImportModal">
+  <div class="modal" style="max-width:760px;">
+    <div class="modal-head"><h3>Excel-с бараа импортлох</h3><button class="modal-close" data-close="productImportModal">&times;</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Excel файл сонгох (.xlsx)</label>
+        <input type="file" id="productImportFile" accept=".xlsx,.xls">
+        <div style="font-size:12.5px;color:var(--muted);margin-top:6px;">
+          Багана: Барааны код, Загварын код, Размер, Компани, Бүтээгдэхүүний нэр, Барааны нэр, Нэгж үнэ — эхний мөр толгой байх ёстой.
+        </div>
+      </div>
+      <div id="productImportStatus" style="font-size:13px;color:var(--muted);margin:10px 0;"></div>
+      <div id="productImportPreviewWrap" style="display:none;">
+        <div style="display:flex;gap:14px;font-size:13px;margin-bottom:10px;">
+          <span><span class="badge new">Шинэ</span> <b id="importCountNew">0</b></span>
+          <span><span class="badge confirmed">Шинэчлэгдэнэ</span> <b id="importCountDup">0</b></span>
+          <span style="color:var(--muted);">Алгасах: <b id="importCountSkip">0</b></span>
+        </div>
+        <div style="max-height:340px;overflow:auto;border:1px solid var(--line);">
+          <table>
+            <thead><tr><th style="width:34px;"></th><th>Төлөв</th><th>Барааны код</th><th>Загварын код</th><th>Размер</th><th>Нэр</th><th>Үнэ</th></tr></thead>
+            <tbody id="productImportBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" data-close="productImportModal">Цуцлах</button>
+      <button class="btn" id="confirmProductImportBtn" disabled>Сонгосныг импортлох</button>
     </div>
   </div>
 </div>
@@ -1076,20 +1112,21 @@ function renderShops(){
 function renderProducts(){
   const q = (document.getElementById('productSearch').value||'').toLowerCase();
   const body = document.getElementById('productsBody');
-  const rows = data.products.filter(p => !q || (p.name+(p.company||'')+p.category+p.code).toLowerCase().includes(q));
+  const rows = data.products.filter(p => !q || ((p.itemCode||'')+(p.code||'')+(p.company||'')+(p.name||'')+(p.itemName||'')).toLowerCase().includes(q));
   body.innerHTML = rows.length ? rows.map(p => `
     <tr>
-      <td>${esc(p.name)}</td>
-      <td>${esc(p.company||'—')}</td>
-      <td>${esc(p.category||'—')}</td>
+      <td>${esc(p.itemCode||'—')}</td>
       <td>${esc(p.code||'—')}</td>
       <td>${esc(p.size||'—')}</td>
+      <td>${esc(p.company||'—')}</td>
+      <td>${esc(p.name)}</td>
+      <td>${esc(p.itemName||'—')}</td>
       <td>${money(p.price)} ₮</td>
       <td style="text-align:right;white-space:nowrap;">
         <button class="rowbtn" onclick="editProduct('${p.id}')">Засах</button>
         <button class="rowbtn" onclick="deleteProduct('${p.id}')">Устгах</button>
       </td>
-    </tr>`).join('') : `<tr class="empty-row"><td colspan="7">Бүтээгдэхүүн бүртгэгдээгүй байна</td></tr>`;
+    </tr>`).join('') : `<tr class="empty-row"><td colspan="8">Бүтээгдэхүүн бүртгэгдээгүй байна</td></tr>`;
 }
 
 function renderOrders(){
@@ -1159,7 +1196,6 @@ function refreshProductDatalists(){
     if (el) el.innerHTML = values.map(v=>`<option value="${esc(v)}"></option>`).join('');
   };
   fill('companyList', distinct('company'));
-  fill('categoryList', distinct('category'));
   fill('codeList', distinct('code'));
   fill('sizeList', distinct('size'));
 }
@@ -1238,18 +1274,19 @@ document.getElementById('saveShopBtn').addEventListener('click', () => {
 /* ---------------- Products CRUD ---------------- */
 document.getElementById('addProductBtn').addEventListener('click', () => {
   document.getElementById('productModalTitle').textContent = 'Бүтээгдэхүүн нэмэх';
-  ['productId','productName','productCompany','productCategory','productCode','productSize','productPrice'].forEach(id => document.getElementById(id).value = '');
+  ['productId','productItemCode','productName','productItemName','productCompany','productCode','productSize','productPrice'].forEach(id => document.getElementById(id).value = '');
   openModal('productModal');
 });
 function editProduct(id){
   const p = data.products.find(x=>x.id===id); if (!p) return;
   document.getElementById('productModalTitle').textContent = 'Бүтээгдэхүүн засах';
   document.getElementById('productId').value = p.id;
-  document.getElementById('productName').value = p.name||'';
-  document.getElementById('productCompany').value = p.company||'';
-  document.getElementById('productCategory').value = p.category||'';
+  document.getElementById('productItemCode').value = p.itemCode||'';
   document.getElementById('productCode').value = p.code||'';
   document.getElementById('productSize').value = p.size||'';
+  document.getElementById('productCompany').value = p.company||'';
+  document.getElementById('productName').value = p.name||'';
+  document.getElementById('productItemName').value = p.itemName||'';
   document.getElementById('productPrice').value = p.price||'';
   openModal('productModal');
 }
@@ -1267,11 +1304,12 @@ document.getElementById('saveProductBtn').addEventListener('click', () => {
   const id = document.getElementById('productId').value;
   const obj = {
     id: id || uid(),
-    name,
-    company: document.getElementById('productCompany').value.trim(),
-    category: document.getElementById('productCategory').value.trim(),
+    itemCode: document.getElementById('productItemCode').value.trim(),
     code: document.getElementById('productCode').value.trim(),
     size: document.getElementById('productSize').value.trim(),
+    company: document.getElementById('productCompany').value.trim(),
+    name,
+    itemName: document.getElementById('productItemName').value.trim(),
     price,
     createdAt: id ? (data.products.find(x=>x.id===id)||{}).createdAt||Date.now() : Date.now(),
     updatedAt: Date.now()
@@ -1280,6 +1318,124 @@ document.getElementById('saveProductBtn').addEventListener('click', () => {
   else { data.products.push(obj); }
   queueSave(); render(); closeModal('productModal');
   toast('Бүтээгдэхүүн хадгалагдлаа', 'ok');
+});
+
+/* ---------------- Products Excel import ---------------- */
+let productImportRows = [];
+const PRODUCT_IMPORT_HEADERS = {
+  itemCode: 'Барааны код',
+  code: 'Загварын код',
+  size: 'Размер',
+  company: 'Компани',
+  name: 'Бүтээгдэхүүний нэр',
+  itemName: 'Барааны нэр',
+  price: 'Нэгж үнэ'
+};
+document.getElementById('importProductsBtn').addEventListener('click', () => {
+  productImportRows = [];
+  document.getElementById('productImportFile').value = '';
+  document.getElementById('productImportStatus').textContent = '';
+  document.getElementById('productImportPreviewWrap').style.display = 'none';
+  document.getElementById('confirmProductImportBtn').disabled = true;
+  openModal('productImportModal');
+});
+document.getElementById('productImportFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('productImportStatus');
+  statusEl.textContent = 'Уншиж байна...';
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const wb = XLSX.read(ev.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      parseProductImportRows(raw);
+      statusEl.textContent = raw.length ? '' : 'Файлд мөр олдсонгүй.';
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Файл уншихад алдаа гарлаа. Excel (.xlsx) файл эсэхийг шалгана уу.';
+    }
+  };
+  reader.onerror = () => { statusEl.textContent = 'Файл уншихад алдаа гарлаа.'; };
+  reader.readAsArrayBuffer(file);
+});
+function parseProductImportRows(raw){
+  const byItemCode = {};
+  data.products.forEach(p => { if (p.itemCode) byItemCode[p.itemCode] = p; });
+  productImportRows = raw.map(r => {
+    const itemCode = String(r[PRODUCT_IMPORT_HEADERS.itemCode] ?? '').trim();
+    const code = String(r[PRODUCT_IMPORT_HEADERS.code] ?? '').trim();
+    const size = String(r[PRODUCT_IMPORT_HEADERS.size] ?? '').trim();
+    const company = String(r[PRODUCT_IMPORT_HEADERS.company] ?? '').trim();
+    const name = String(r[PRODUCT_IMPORT_HEADERS.name] ?? '').trim();
+    const itemName = String(r[PRODUCT_IMPORT_HEADERS.itemName] ?? '').trim();
+    const price = Number(r[PRODUCT_IMPORT_HEADERS.price] || 0);
+    const isEmpty = !itemCode && !code && !name && !itemName;
+    const existing = itemCode ? byItemCode[itemCode] : null;
+    return {
+      itemCode, code, size, company, name, itemName, price,
+      isEmpty,
+      existingId: existing ? existing.id : null,
+      existingLabel: existing ? `${existing.itemName||existing.name||'—'} · ${money(existing.price)}₮` : '',
+      checked: !isEmpty
+    };
+  });
+  renderProductImportPreview();
+}
+function renderProductImportPreview(){
+  const body = document.getElementById('productImportBody');
+  const rows = productImportRows;
+  const newCount = rows.filter(r=>!r.isEmpty && !r.existingId).length;
+  const dupCount = rows.filter(r=>!r.isEmpty && r.existingId).length;
+  const skipCount = rows.filter(r=>r.isEmpty).length;
+  document.getElementById('importCountNew').textContent = newCount;
+  document.getElementById('importCountDup').textContent = dupCount;
+  document.getElementById('importCountSkip').textContent = skipCount;
+  body.innerHTML = rows.map((r, idx) => {
+    const badge = r.isEmpty ? '<span style="color:var(--muted);">хоосон</span>' : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>');
+    const sub = r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : '';
+    return `<tr>
+      <td><input type="checkbox" data-idx="${idx}" class="importRowChk" ${r.checked?'checked':''} ${r.isEmpty?'disabled':''}></td>
+      <td>${badge}</td>
+      <td>${esc(r.itemCode||'—')}</td>
+      <td>${esc(r.code||'—')}</td>
+      <td>${esc(r.size||'—')}</td>
+      <td>${esc(r.itemName||r.name||'—')}${sub}</td>
+      <td>${money(r.price)} ₮</td>
+    </tr>`;
+  }).join('');
+  document.querySelectorAll('.importRowChk').forEach(chk => {
+    chk.addEventListener('change', () => { productImportRows[Number(chk.dataset.idx)].checked = chk.checked; });
+  });
+  document.getElementById('productImportPreviewWrap').style.display = rows.length ? '' : 'none';
+  document.getElementById('confirmProductImportBtn').disabled = !(newCount + dupCount);
+}
+document.getElementById('confirmProductImportBtn').addEventListener('click', () => {
+  const toApply = productImportRows.filter(r => r.checked && !r.isEmpty);
+  if (!toApply.length) return;
+  let added = 0, updated = 0;
+  toApply.forEach(r => {
+    if (r.existingId) {
+      data.products = data.products.map(p => p.id === r.existingId ? {
+        ...p,
+        itemCode: r.itemCode, code: r.code, size: r.size, company: r.company,
+        name: r.name || p.name, itemName: r.itemName,
+        price: r.price || p.price,
+        updatedAt: Date.now()
+      } : p);
+      updated++;
+    } else {
+      data.products.push({
+        id: uid(), itemCode: r.itemCode, code: r.code, size: r.size, company: r.company,
+        name: r.name || r.itemName || 'Нэргүй', itemName: r.itemName, price: r.price,
+        createdAt: Date.now(), updatedAt: Date.now()
+      });
+      added++;
+    }
+  });
+  queueSave(); render(); closeModal('productImportModal');
+  toast(`Импортлогдлоо: ${added} шинэ, ${updated} шинэчлэгдсэн`, 'ok');
 });
 
 /* ---------------- Orders CRUD ---------------- */
