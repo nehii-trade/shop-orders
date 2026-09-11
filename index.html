@@ -416,6 +416,9 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             <h2>Дэлгүүрүүд</h2>
             <div style="display:flex;gap:10px;">
               <input type="text" class="search" id="shopSearch" placeholder="Дэлгүүр хайх...">
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;">
+                <input type="checkbox" id="shopShowArchived"> Архивласан харуулах
+              </label>
               <button class="btn" id="addShopBtn">+ Дэлгүүр нэмэх</button>
             </div>
           </div>
@@ -435,6 +438,9 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             <h2>Бүтээгдэхүүн</h2>
             <div style="display:flex;gap:10px;">
               <input type="text" class="search" id="productSearch" placeholder="Бүтээгдэхүүн хайх...">
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;">
+                <input type="checkbox" id="productShowArchived"> Архивласан харуулах
+              </label>
               <button class="btn secondary" id="importProductsBtn">Excel-с импортлох</button>
               <button class="btn" id="addProductBtn">+ Бүтээгдэхүүн нэмэх</button>
             </div>
@@ -462,6 +468,9 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
                 <option value="done">Дууссан</option>
                 <option value="cancelled">Цуцлагдсан</option>
               </select>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;">
+                <input type="checkbox" id="orderShowArchived"> Архивласан харуулах
+              </label>
               <button class="btn" id="addOrderBtn">+ Захиалга нэмэх</button>
             </div>
           </div>
@@ -718,6 +727,19 @@ function todayStr(){ return new Date().toISOString().slice(0,10); }
 /* ---------------- Tombstones (устгалт зэрэгцүүлэх) ---------------- */
 const TOMB_KEEP_DAYS = 90;
 function tombstone(id){ if (id) data.tombstones[id] = Date.now(); }
+/* ---------------- Архивлалт (soft delete) ---------------- */
+function archiveRecord(arr, id){
+  const rec = arr.find(x=>x.id===id);
+  if (rec) { rec.archived = true; rec.updatedAt = Date.now(); }
+}
+function restoreRecord(arr, id){
+  const rec = arr.find(x=>x.id===id);
+  if (rec) { rec.archived = false; rec.updatedAt = Date.now(); }
+}
+function hardDeleteRecord(arrName, id){
+  tombstone(id);
+  data[arrName] = data[arrName].filter(x=>x.id!==id);
+}
 function isTombstoned(item){
   const t = data.tombstones[item.id];
   // Устгасны дараа тухайн бичлэгийг дахин засварласан бол (updatedAt > устгасан цаг) хүчинтэй хэвээр үлдэнэ
@@ -1102,16 +1124,19 @@ function orderItemsSummary(o, limit){
 function orderItemsQtySum(o){ return (o.items||[]).reduce((s,it)=>s+Number(it.qty||0),0); }
 
 function renderDashboard(){
-  document.getElementById('statShops').textContent = data.shops.length;
-  document.getElementById('statProducts').textContent = data.products.length;
-  document.getElementById('statOrders').textContent = data.orders.length;
-  const pending = data.orders.filter(o => o.status === 'new' || o.status === 'confirmed').length;
+  const activeShops = data.shops.filter(s=>!s.archived);
+  const activeProducts = data.products.filter(p=>!p.archived);
+  const activeOrders = data.orders.filter(o=>!o.archived);
+  document.getElementById('statShops').textContent = activeShops.length;
+  document.getElementById('statProducts').textContent = activeProducts.length;
+  document.getElementById('statOrders').textContent = activeOrders.length;
+  const pending = activeOrders.filter(o => o.status === 'new' || o.status === 'confirmed').length;
   document.getElementById('statPending').textContent = pending;
-  const revenue = data.orders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
+  const revenue = activeOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
   document.getElementById('statRevenue').innerHTML = money(revenue) + ' <small>₮</small>';
 
   const body = document.getElementById('recentOrdersBody');
-  const rows = [...data.orders].sort((a,b)=> (b.orderDate||'').localeCompare(a.orderDate||'')).slice(0,8);
+  const rows = [...activeOrders].sort((a,b)=> (b.orderDate||'').localeCompare(a.orderDate||'')).slice(0,8);
   body.innerHTML = rows.length ? rows.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     return `<tr>
@@ -1128,11 +1153,17 @@ function renderDashboard(){
 
 function renderShops(){
   const q = (document.getElementById('shopSearch').value||'').toLowerCase();
+  const showArchived = document.getElementById('shopShowArchived').checked;
   const body = document.getElementById('shopsBody');
-  const rows = data.shops.filter(s => !q || (s.name+s.aimag+s.sum).toLowerCase().includes(q));
+  const rows = data.shops.filter(s => !!s.archived === showArchived && (!q || (s.name+s.aimag+s.sum).toLowerCase().includes(q)));
   body.innerHTML = rows.length ? rows.map(s => {
     const phones = [s.phone1, s.phone2].filter(Boolean).join(' / ') || '—';
     const fb = s.facebook ? `<a href="${esc(s.facebook)}" target="_blank" rel="noopener" title="Facebook хуудас руу очих" style="color:var(--saddle);font-weight:600;">FB ↗</a>` : '—';
+    const actions = showArchived
+      ? `<button class="rowbtn" onclick="restoreShop('${s.id}')">Сэргээх</button>
+         <button class="rowbtn" onclick="hardDeleteShop('${s.id}')">Бүрмөсөн устгах</button>`
+      : `<button class="rowbtn" onclick="editShop('${s.id}')">Засах</button>
+         <button class="rowbtn" onclick="deleteShop('${s.id}')">Устгах</button>`;
     return `
     <tr>
       <td>${esc(s.name)}</td>
@@ -1141,19 +1172,23 @@ function renderShops(){
       <td>${esc(s.contact||'—')}</td>
       <td>${phones}</td>
       <td>${fb}</td>
-      <td style="text-align:right;white-space:nowrap;">
-        <button class="rowbtn" onclick="editShop('${s.id}')">Засах</button>
-        <button class="rowbtn" onclick="deleteShop('${s.id}')">Устгах</button>
-      </td>
+      <td style="text-align:right;white-space:nowrap;">${actions}</td>
     </tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="7">Дэлгүүр бүртгэгдээгүй байна</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="7">${showArchived ? 'Архивласан дэлгүүр алга' : 'Дэлгүүр бүртгэгдээгүй байна'}</td></tr>`;
 }
 
 function renderProducts(){
   const q = (document.getElementById('productSearch').value||'').toLowerCase();
+  const showArchived = document.getElementById('productShowArchived').checked;
   const body = document.getElementById('productsBody');
-  const rows = data.products.filter(p => !q || ((p.itemCode||'')+(p.code||'')+(p.company||'')+(p.name||'')+(p.itemName||'')).toLowerCase().includes(q));
-  body.innerHTML = rows.length ? rows.map(p => `
+  const rows = data.products.filter(p => !!p.archived === showArchived && (!q || ((p.itemCode||'')+(p.code||'')+(p.company||'')+(p.name||'')+(p.itemName||'')).toLowerCase().includes(q)));
+  body.innerHTML = rows.length ? rows.map(p => {
+    const actions = showArchived
+      ? `<button class="rowbtn" onclick="restoreProduct('${p.id}')">Сэргээх</button>
+         <button class="rowbtn" onclick="hardDeleteProduct('${p.id}')">Бүрмөсөн устгах</button>`
+      : `<button class="rowbtn" onclick="editProduct('${p.id}')">Засах</button>
+         <button class="rowbtn" onclick="deleteProduct('${p.id}')">Устгах</button>`;
+    return `
     <tr>
       <td>${esc(p.itemCode||'—')}</td>
       <td>${esc(p.code||'—')}</td>
@@ -1162,20 +1197,25 @@ function renderProducts(){
       <td>${esc(p.name)}</td>
       <td>${esc(p.itemName||'—')}</td>
       <td>${money(p.price)} ₮</td>
-      <td style="text-align:right;white-space:nowrap;">
-        <button class="rowbtn" onclick="editProduct('${p.id}')">Засах</button>
-        <button class="rowbtn" onclick="deleteProduct('${p.id}')">Устгах</button>
-      </td>
-    </tr>`).join('') : `<tr class="empty-row"><td colspan="8">Бүтээгдэхүүн бүртгэгдээгүй байна</td></tr>`;
+      <td style="text-align:right;white-space:nowrap;">${actions}</td>
+    </tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="8">${showArchived ? 'Архивласан бүтээгдэхүүн алга' : 'Бүтээгдэхүүн бүртгэгдээгүй байна'}</td></tr>`;
 }
 
 function renderOrders(){
   const filter = document.getElementById('orderStatusFilter').value;
+  const showArchived = document.getElementById('orderShowArchived').checked;
   const body = document.getElementById('ordersBody');
-  let rows = [...data.orders].sort((a,b)=> (b.orderDate||'').localeCompare(a.orderDate||''));
+  let rows = data.orders.filter(o => !!o.archived === showArchived);
+  rows = [...rows].sort((a,b)=> (b.orderDate||'').localeCompare(a.orderDate||''));
   if (filter) rows = rows.filter(o => o.status === filter);
   body.innerHTML = rows.length ? rows.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
+    const actions = showArchived
+      ? `<button class="rowbtn" onclick="restoreOrder('${o.id}')">Сэргээх</button>
+         <button class="rowbtn" onclick="hardDeleteOrder('${o.id}')">Бүрмөсөн устгах</button>`
+      : `<button class="rowbtn" onclick="editOrder('${o.id}')">Засах</button>
+         <button class="rowbtn" onclick="deleteOrder('${o.id}')">Устгах</button>`;
     return `<tr>
       <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
       <td>${esc(o.orderDate||'—')}</td>
@@ -1184,12 +1224,9 @@ function renderOrders(){
       <td>${orderItemsQtySum(o)}</td>
       <td>${money(o.total)} ₮</td>
       <td><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></td>
-      <td style="text-align:right;white-space:nowrap;">
-        <button class="rowbtn" onclick="editOrder('${o.id}')">Засах</button>
-        <button class="rowbtn" onclick="deleteOrder('${o.id}')">Устгах</button>
-      </td>
+      <td style="text-align:right;white-space:nowrap;">${actions}</td>
     </tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="8">Захиалга бүртгэгдээгүй байна</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="8">${showArchived ? 'Архивласан захиалга алга' : 'Захиалга бүртгэгдээгүй байна'}</td></tr>`;
 }
 
 function renderReports(){
@@ -1217,15 +1254,20 @@ function renderReports(){
     </tr>`).join('') : `<tr class="empty-row"><td colspan="4">Өгөгдөл алга</td></tr>`;
 }
 
-function fillSelectOptions(){
+function fillSelectOptions(extraShopId){
   const shopSel = document.getElementById('orderShop');
   const curShop = shopSel.value;
-  shopSel.innerHTML = data.shops.map(s => `<option value="${s.id}">${esc(s.name)}${s.aimag?' — '+esc(s.aimag):''}</option>`).join('') || '<option value="">Дэлгүүр байхгүй</option>';
+  let shopsToShow = data.shops.filter(s=>!s.archived);
+  if (extraShopId && !shopsToShow.some(s=>s.id===extraShopId)) {
+    const archivedShop = data.shops.find(s=>s.id===extraShopId);
+    if (archivedShop) shopsToShow = [...shopsToShow, archivedShop];
+  }
+  shopSel.innerHTML = shopsToShow.map(s => `<option value="${s.id}">${esc(s.name)}${s.aimag?' — '+esc(s.aimag):''}${s.archived?' (архивлагдсан)':''}</option>`).join('') || '<option value="">Дэлгүүр байхгүй</option>';
   if (curShop) shopSel.value = curShop;
 
   const itemProdSel = document.getElementById('itemProduct');
   if (itemProdSel) {
-    itemProdSel.innerHTML = data.products.map(p => `<option value="${p.id}">${esc(p.name)}${p.company?' — '+esc(p.company):''}</option>`).join('') || '<option value="" disabled>Бүтээгдэхүүн байхгүй</option>';
+    itemProdSel.innerHTML = data.products.filter(p=>!p.archived).map(p => `<option value="${p.id}">${esc(p.name)}${p.company?' — '+esc(p.company):''}</option>`).join('') || '<option value="" disabled>Бүтээгдэхүүн байхгүй</option>';
   }
 }
 
@@ -1246,8 +1288,11 @@ function esc(s){
 
 /* ---------------- Search / filter listeners ---------------- */
 document.getElementById('shopSearch').addEventListener('input', renderShops);
+document.getElementById('shopShowArchived').addEventListener('change', renderShops);
 document.getElementById('productSearch').addEventListener('input', renderProducts);
+document.getElementById('productShowArchived').addEventListener('change', renderProducts);
 document.getElementById('orderStatusFilter').addEventListener('change', renderOrders);
+document.getElementById('orderShowArchived').addEventListener('change', renderOrders);
 
 /* ---------------- Modal helpers ---------------- */
 function openModal(id){ document.getElementById(id).classList.add('show'); }
@@ -1281,11 +1326,21 @@ function editShop(id){
   openModal('shopModal');
 }
 function deleteShop(id){
-  if (!confirm('Энэ дэлгүүрийг устгах уу?')) return;
-  tombstone(id);
-  data.shops = data.shops.filter(x=>x.id!==id);
+  if (!confirm('Энэ дэлгүүрийг архивлах уу? (Идэвхтэй жагсаалтаас нуугдана, дараа нь сэргээж болно)')) return;
+  archiveRecord(data.shops, id);
   queueSave(); render();
-  toast('Дэлгүүр устгагдлаа');
+  toast('Дэлгүүр архивлагдлаа');
+}
+function restoreShop(id){
+  restoreRecord(data.shops, id);
+  queueSave(); render();
+  toast('Дэлгүүр сэргээгдлээ', 'ok');
+}
+function hardDeleteShop(id){
+  if (!confirm('Энэ дэлгүүрийг бүрмөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй!')) return;
+  hardDeleteRecord('shops', id);
+  queueSave(); render();
+  toast('Дэлгүүр бүрмөсөн устгагдлаа');
 }
 document.getElementById('saveShopBtn').addEventListener('click', () => {
   const name = document.getElementById('shopName').value.trim();
@@ -1331,11 +1386,21 @@ function editProduct(id){
   openModal('productModal');
 }
 function deleteProduct(id){
-  if (!confirm('Энэ бүтээгдэхүүнийг устгах уу?')) return;
-  tombstone(id);
-  data.products = data.products.filter(x=>x.id!==id);
+  if (!confirm('Энэ бүтээгдэхүүнийг архивлах уу? (Идэвхтэй жагсаалтаас нуугдана, дараа нь сэргээж болно)')) return;
+  archiveRecord(data.products, id);
   queueSave(); render();
-  toast('Бүтээгдэхүүн устгагдлаа');
+  toast('Бүтээгдэхүүн архивлагдлаа');
+}
+function restoreProduct(id){
+  restoreRecord(data.products, id);
+  queueSave(); render();
+  toast('Бүтээгдэхүүн сэргээгдлээ', 'ok');
+}
+function hardDeleteProduct(id){
+  if (!confirm('Энэ бүтээгдэхүүнийг бүрмөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй!')) return;
+  hardDeleteRecord('products', id);
+  queueSave(); render();
+  toast('Бүтээгдэхүүн бүрмөсөн устгагдлаа');
 }
 document.getElementById('saveProductBtn').addEventListener('click', () => {
   const name = document.getElementById('productName').value.trim();
@@ -1585,8 +1650,8 @@ document.getElementById('addItemRowBtn').addEventListener('click', () => {
 });
 
 document.getElementById('addOrderBtn').addEventListener('click', () => {
-  if (!data.shops.length || !data.products.length) {
-    toast('Эхлээд дэлгүүр болон бүтээгдэхүүн бүртгэнэ үү', 'err'); return;
+  if (!data.shops.some(s=>!s.archived) || !data.products.some(p=>!p.archived)) {
+    toast('Эхлээд идэвхтэй дэлгүүр болон бүтээгдэхүүн бүртгэнэ үү', 'err'); return;
   }
   document.getElementById('orderModalTitle').textContent = 'Захиалга нэмэх';
   document.getElementById('orderId').value = '';
@@ -1605,7 +1670,7 @@ document.getElementById('addOrderBtn').addEventListener('click', () => {
 function editOrder(id){
   const o = data.orders.find(x=>x.id===id); if (!o) return;
   document.getElementById('orderModalTitle').textContent = 'Захиалга засах' + (o.orderNo ? ' — №'+o.orderNo : '');
-  fillSelectOptions();
+  fillSelectOptions(o.shopId);
   document.getElementById('orderId').value = o.id;
   document.getElementById('orderShop').value = o.shopId;
   document.getElementById('orderDate').value = o.orderDate||todayStr();
@@ -1618,11 +1683,21 @@ function editOrder(id){
   openModal('orderModal');
 }
 function deleteOrder(id){
-  if (!confirm('Энэ захиалгыг устгах уу?')) return;
-  tombstone(id);
-  data.orders = data.orders.filter(x=>x.id!==id);
+  if (!confirm('Энэ захиалгыг архивлах уу? (Идэвхтэй жагсаалтаас нуугдана, дараа нь сэргээж болно)')) return;
+  archiveRecord(data.orders, id);
   queueSave(); render();
-  toast('Захиалга устгагдлаа');
+  toast('Захиалга архивлагдлаа');
+}
+function restoreOrder(id){
+  restoreRecord(data.orders, id);
+  queueSave(); render();
+  toast('Захиалга сэргээгдлээ', 'ok');
+}
+function hardDeleteOrder(id){
+  if (!confirm('Энэ захиалгыг бүрмөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй!')) return;
+  hardDeleteRecord('orders', id);
+  queueSave(); render();
+  toast('Захиалга бүрмөсөн устгагдлаа');
 }
 document.getElementById('saveOrderBtn').addEventListener('click', () => {
   const shopId = document.getElementById('orderShop').value;
