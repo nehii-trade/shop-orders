@@ -916,13 +916,35 @@ document.getElementById('signOutBtn').addEventListener('click', signOutLocal);
 async function driveFetch(url, opts){
   opts = opts || {};
   opts.headers = Object.assign({}, opts.headers, { Authorization: 'Bearer ' + accessToken });
-  let res = await fetch(url, opts);
-  if (res.status === 401) {
-    await silentRefresh();
-    opts.headers.Authorization = 'Bearer ' + accessToken;
-    res = await fetch(url, opts);
+
+  const maxAttempts = 3;
+  const baseDelayMs = 600; // 600ms → 1200ms → (сүүлчийн оролдлого, хүлээхгүй)
+  let lastErr = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      let res = await fetch(url, opts);
+      if (res.status === 401) {
+        await silentRefresh();
+        opts.headers.Authorization = 'Bearer ' + accessToken;
+        res = await fetch(url, opts);
+      }
+      // Түр зуурын серверийн алдаа (5xx) эсвэл rate limit (429) үед дахин оролдоно
+      if ((res.status >= 500 || res.status === 429) && attempt < maxAttempts) {
+        await new Promise(r => setTimeout(r, baseDelayMs * Math.pow(2, attempt - 1)));
+        continue;
+      }
+      return res;
+    } catch (networkErr) {
+      // Сүлжээ тасарсан гэх мэт fetch өөрөө шидсэн алдаа
+      lastErr = networkErr;
+      if (attempt < maxAttempts) {
+        await new Promise(r => setTimeout(r, baseDelayMs * Math.pow(2, attempt - 1)));
+        continue;
+      }
+    }
   }
-  return res;
+  throw lastErr || new Error('Сүлжээний холболт тасарсан тул хүсэлт амжилтгүй боллоо');
 }
 
 async function findDriveFolder(){
