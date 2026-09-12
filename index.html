@@ -235,6 +235,7 @@ nav.navlist button.active{background:var(--saddle);color:var(--white);}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--moss);flex:none;}
 .dot.busy{background:var(--amber);animation:pulse 1s infinite;}
 .dot.err{background:var(--brick);}
+.unsaved-banner{margin-top:5px;display:inline-flex;align-items:center;gap:6px;background:var(--amber-dim);color:var(--amber);border-radius:var(--radius);padding:3px 9px;font-size:11.5px;font-weight:600;}
 @keyframes pulse{50%{opacity:.35;}}
 .user-row{display:flex;align-items:center;gap:9px;}
 .user-row img{width:28px;height:28px;border-radius:50%;}
@@ -326,13 +327,14 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 .overlay.show{display:flex;}
 .modal{
   background:var(--paper);width:100%;max-width:480px;
-  max-height:88vh;overflow-y:auto;
+  max-height:88vh;
   border:1px solid var(--line);
+  display:flex;flex-direction:column;
 }
-.modal-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
 .modal-head h3{font-size:17px;font-weight:600;}
 .modal-close{background:none;border:none;font-size:20px;color:var(--muted);line-height:1;}
-.modal-body{padding:20px 22px;}
+.modal-body{padding:20px 22px;overflow-y:auto;flex:1 1 auto;min-height:0;}
 .field{margin-bottom:15px;}
 .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;}
 .field input,.field select,.field textarea{
@@ -341,7 +343,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 }
 .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--saddle-dim);outline-offset:0;border-color:var(--saddle);}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.modal-foot{padding:16px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;}
+.modal-foot{padding:16px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0;}
 
 /* reports */
 .aimag-table td.num, .aimag-table th.num{text-align:right;}
@@ -395,6 +397,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
   .field-row{grid-template-columns:1fr;}
   .content{padding:20px 16px 40px;}
   .topbar{padding:16px;}
+  .modal{max-height:94vh;}
 }
 </style>
 </head>
@@ -468,6 +471,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <div>
           <h1 id="viewTitle">Хяналтын самбар</h1>
           <div class="sub" id="viewSub">Ерөнхий тойм</div>
+          <div id="unsavedBanner" class="unsaved-banner" style="display:none;">Хадгалагдаагүй өөрчлөлт — дахин оролдож байна…</div>
         </div>
       </div>
       <div style="display:flex;gap:10px;">
@@ -615,21 +619,21 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
     <div class="modal-head"><h3 id="shopModalTitle">Дэлгүүр нэмэх</h3><button class="modal-close" data-close="shopModal">&times;</button></div>
     <div class="modal-body">
       <input type="hidden" id="shopId">
-      <div class="field"><label>Дэлгүүрийн нэр *</label><input type="text" id="shopName"></div>
+      <div class="field"><label for="shopName">Дэлгүүрийн нэр *</label><input type="text" id="shopName"></div>
       <div class="field-row">
-        <div class="field"><label>Аймаг *</label><input type="text" id="shopAimag" placeholder="жиш: Дархан-Уул"></div>
-        <div class="field"><label>Сум</label><input type="text" id="shopSum"></div>
+        <div class="field"><label for="shopAimag">Аймаг *</label><input type="text" id="shopAimag" placeholder="жиш: Дархан-Уул"></div>
+        <div class="field"><label for="shopSum">Сум</label><input type="text" id="shopSum"></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Холбоо барих хүн</label><input type="text" id="shopContact"></div>
-        <div class="field"><label>Утас 1</label><input type="text" id="shopPhone1" placeholder="99001122"></div>
+        <div class="field"><label for="shopContact">Холбоо барих хүн</label><input type="text" id="shopContact"></div>
+        <div class="field"><label for="shopPhone1">Утас 1</label><input type="text" id="shopPhone1" placeholder="99001122"></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Утас 2</label><input type="text" id="shopPhone2" placeholder="(заавал биш)"></div>
-        <div class="field"><label>Facebook хуудас</label><input type="url" id="shopFacebook" placeholder="https://facebook.com/..."></div>
+        <div class="field"><label for="shopPhone2">Утас 2</label><input type="text" id="shopPhone2" placeholder="(заавал биш)"></div>
+        <div class="field"><label for="shopFacebook">Facebook хуудас</label><input type="url" id="shopFacebook" placeholder="https://facebook.com/..."></div>
       </div>
-      <div class="field"><label>Хаяг</label><input type="text" id="shopAddress"></div>
-      <div class="field"><label>Тэмдэглэл</label><textarea id="shopNotes" rows="2"></textarea></div>
+      <div class="field"><label for="shopAddress">Хаяг</label><input type="text" id="shopAddress"></div>
+      <div class="field"><label for="shopNotes">Тэмдэглэл</label><textarea id="shopNotes" rows="2"></textarea></div>
     </div>
     <div class="modal-foot">
       <button class="btn secondary" data-close="shopModal">Цуцлах</button>
@@ -644,16 +648,16 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
     <div class="modal-body">
       <input type="hidden" id="productId">
       <div class="field-row">
-        <div class="field"><label>Барааны код</label><input type="text" id="productItemCode" placeholder="тухайн размерийн өвөрмөц код"></div>
-        <div class="field"><label>Загварын код</label><input type="text" id="productCode" list="codeList" placeholder="сонгох эсвэл бичих"><datalist id="codeList"></datalist></div>
+        <div class="field"><label for="productItemCode">Барааны код</label><input type="text" id="productItemCode" placeholder="тухайн размерийн өвөрмөц код"></div>
+        <div class="field"><label for="productCode">Загварын код</label><input type="text" id="productCode" list="codeList" placeholder="сонгох эсвэл бичих"><datalist id="codeList"></datalist></div>
       </div>
       <div class="field-row">
-        <div class="field"><label>Размер</label><input type="text" id="productSize" list="sizeList" placeholder="жиш: 48,50,52"><datalist id="sizeList"></datalist></div>
-        <div class="field"><label>Компани</label><input type="text" id="productCompany" list="companyList" placeholder="сонгох эсвэл бичих"><datalist id="companyList"></datalist></div>
+        <div class="field"><label for="productSize">Размер</label><input type="text" id="productSize" list="sizeList" placeholder="жиш: 48,50,52"><datalist id="sizeList"></datalist></div>
+        <div class="field"><label for="productCompany">Компани</label><input type="text" id="productCompany" list="companyList" placeholder="сонгох эсвэл бичих"><datalist id="companyList"></datalist></div>
       </div>
-      <div class="field"><label>Бүтээгдэхүүний нэр *</label><input type="text" id="productName"></div>
-      <div class="field"><label>Барааны нэр</label><input type="text" id="productItemName" placeholder="тухайн барааны нэр (заавал биш)"></div>
-      <div class="field"><label>Нэгж үнэ (₮) *</label><input type="number" id="productPrice" min="0"></div>
+      <div class="field"><label for="productName">Бүтээгдэхүүний нэр *</label><input type="text" id="productName"></div>
+      <div class="field"><label for="productItemName">Барааны нэр</label><input type="text" id="productItemName" placeholder="тухайн барааны нэр (заавал биш)"></div>
+      <div class="field"><label for="productPrice">Нэгж үнэ (₮) *</label><input type="number" id="productPrice" min="0"></div>
     </div>
     <div class="modal-foot">
       <button class="btn secondary" data-close="productModal">Цуцлах</button>
@@ -667,7 +671,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
     <div class="modal-head"><h3>Excel-с бараа импортлох</h3><button class="modal-close" data-close="productImportModal">&times;</button></div>
     <div class="modal-body">
       <div class="field">
-        <label>Excel файл сонгох (.xlsx)</label>
+        <label for="productImportFile">Excel файл сонгох (.xlsx)</label>
         <input type="file" id="productImportFile" accept=".xlsx,.xls">
         <div style="font-size:12.5px;color:var(--muted);margin-top:6px;">
           Багана: Барааны код, Загварын код, Размер, Компани, Бүтээгдэхүүний нэр, Барааны нэр, Нэгж үнэ — эхний мөр толгой байх ёстой.
@@ -701,19 +705,19 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
     <div class="modal-body">
       <input type="hidden" id="orderId">
       <div class="field-row">
-        <div class="field"><label>Дэлгүүр *</label><select id="orderShop"></select></div>
-        <div class="field"><label>Огноо</label><input type="date" id="orderDate"></div>
+        <div class="field"><label for="orderShop">Дэлгүүр *</label><select id="orderShop"></select></div>
+        <div class="field"><label for="orderDate">Огноо</label><input type="date" id="orderDate"></div>
       </div>
 
       <div class="field" style="border:1px solid var(--line);padding:14px;background:var(--white);margin-bottom:16px;">
         <label style="margin-bottom:9px;">Бараа нэмэх</label>
         <div class="field-row">
-          <div class="field"><label>Бүтээгдэхүүн</label><select id="itemProduct" multiple size="4"></select></div>
+          <div class="field"><label for="itemProduct">Бүтээгдэхүүн</label><select id="itemProduct" multiple size="4"></select></div>
           <div class="field"><label>Размер (боломжтой бол)</label><div id="itemSizeChecks" style="font-size:13px;color:var(--muted);">Эхлээд бүтээгдэхүүн сонгоно уу</div></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Тоо ширхэг (нэг размерт)</label><input type="number" id="itemQty" min="1" value="1"></div>
-          <div class="field"><label>Нэгжийн үнэ (₮)</label><input type="number" id="itemUnitPrice" min="0"></div>
+          <div class="field"><label for="itemQty">Тоо ширхэг (нэг размерт)</label><input type="number" id="itemQty" min="1" value="1"></div>
+          <div class="field"><label for="itemUnitPrice">Нэгжийн үнэ (₮)</label><input type="number" id="itemUnitPrice" min="0"></div>
         </div>
         <button type="button" class="btn secondary" id="addItemRowBtn" style="width:100%;justify-content:center;">+ Мөр нэмэх</button>
         <div class="hint">Ctrl (эсвэл Cmd)-той дарж хэдэн ч бүтээгдэхүүнийг зэрэг сонгож болно. Размер сонговол тухайн бараа бүр сонгосон размер тус бүрээр тусдаа мөр болж нэмэгдэнэ.</div>
@@ -730,8 +734,8 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
       </div>
 
       <div class="field-row">
-        <div class="field"><label>Нийт дүн (₮)</label><input type="text" id="orderGrandTotal" readonly style="background:var(--stone);font-weight:600;"></div>
-        <div class="field"><label>Төлөв</label>
+        <div class="field"><label for="orderGrandTotal">Нийт дүн (₮)</label><input type="text" id="orderGrandTotal" readonly style="background:var(--stone);font-weight:600;"></div>
+        <div class="field"><label for="orderStatus">Төлөв</label>
           <select id="orderStatus">
             <option value="new">Шинэ</option>
             <option value="confirmed">Батлагдсан</option>
@@ -741,7 +745,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           </select>
         </div>
       </div>
-      <div class="field"><label>Тэмдэглэл</label><textarea id="orderNotes" rows="2"></textarea></div>
+      <div class="field"><label for="orderNotes">Тэмдэглэл</label><textarea id="orderNotes" rows="2"></textarea></div>
     </div>
     <div class="modal-foot">
       <button class="btn secondary" data-close="orderModal">Цуцлах</button>
@@ -768,6 +772,8 @@ const LOCAL_KEY = 'nehiitrade_orders_cache_v1';
 let accessToken = null;
 let tokenExpiresAt = 0;
 let tokenClient = null;
+let authCallbackMode = 'login'; // 'login' | 'refresh' — tokenClient.callback дахин бичигдэхгүй, зөвхөн энэ flag-аар чиглэнэ
+let pendingRefreshResolve = null;
 let driveFolderId = null;
 let driveFileId = null;
 let saveTimer = null;
@@ -959,6 +965,17 @@ function initGSI(){
     client_id: CLIENT_ID,
     scope: SCOPES,
     callback: async (resp) => {
+      if (authCallbackMode === 'refresh') {
+        if (!resp.error) {
+          accessToken = resp.access_token;
+          tokenExpiresAt = Date.now() + (Number(resp.expires_in || 3600) * 1000);
+          if (pendingRefreshResolve) pendingRefreshResolve(true);
+        } else {
+          if (pendingRefreshResolve) pendingRefreshResolve(false);
+        }
+        pendingRefreshResolve = null;
+        return;
+      }
       if (resp.error) {
         showLoginError('Нэвтрэхэд алдаа гарлаа: ' + resp.error);
         return;
@@ -978,6 +995,7 @@ function initGSI(){
   btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="#fff" d="M21.35 11.1h-9.17v2.92h5.27c-.23 1.44-1.62 4.22-5.27 4.22-3.17 0-5.76-2.62-5.76-5.85s2.59-5.85 5.76-5.85c1.8 0 3.01.77 3.7 1.43l2.52-2.43C16.96 3.9 14.7 2.8 11.99 2.8 6.98 2.8 2.9 6.9 2.9 11.9s4.08 9.1 9.09 9.1c5.25 0 8.73-3.69 8.73-8.89 0-.6-.06-1.05-.16-1.51z"/></svg> Google-ээр нэвтрэх';
   btn.addEventListener('click', () => {
     hideLoginError();
+    authCallbackMode = 'login';
     tokenClient.requestAccessToken({ prompt: '' });
   });
   host.appendChild(btn);
@@ -1030,15 +1048,8 @@ function tokenExpiringSoon(){
 function silentRefresh(){
   return new Promise((resolve) => {
     if (!tokenClient) { resolve(false); return; }
-    tokenClient.callback = (resp) => {
-      if (!resp.error) {
-        accessToken = resp.access_token;
-        tokenExpiresAt = Date.now() + (Number(resp.expires_in || 3600) * 1000);
-        resolve(true);
-      } else {
-        resolve(false);
-      }
-    };
+    authCallbackMode = 'refresh';
+    pendingRefreshResolve = resolve;
     tokenClient.requestAccessToken({ prompt: '' });
   });
 }
@@ -1058,6 +1069,8 @@ function signOutLocal(){
     google.accounts.oauth2.revoke(accessToken, () => {});
   }
   cancelSaveRetry();
+  authCallbackMode = 'login';
+  pendingRefreshResolve = null;
   accessToken = null;
   tokenExpiresAt = 0;
   driveFileId = null;
@@ -1209,6 +1222,8 @@ let saveRetryAttempts = 0;
 const SAVE_RETRY_DELAYS = [10000, 30000, 60000]; // 10с → 30с → 60с, тэгээд 60с-аар үргэлжилнэ
 
 function scheduleSaveRetry(){
+  const banner = document.getElementById('unsavedBanner');
+  if (banner) banner.style.display = '';
   if (saveRetryTimer) return; // аль хэдийн дахин оролдлого товлогдсон бол давхар товлохгүй
   const delay = SAVE_RETRY_DELAYS[Math.min(saveRetryAttempts, SAVE_RETRY_DELAYS.length - 1)];
   saveRetryAttempts++;
@@ -1220,6 +1235,8 @@ function scheduleSaveRetry(){
 function cancelSaveRetry(){
   if (saveRetryTimer) { clearTimeout(saveRetryTimer); saveRetryTimer = null; }
   saveRetryAttempts = 0;
+  const banner = document.getElementById('unsavedBanner');
+  if (banner) banner.style.display = 'none';
 }
 
 async function doSave(){
@@ -1357,12 +1374,12 @@ function renderShops(){
   const rows = data.shops.filter(s => !!s.archived === showArchived && (!q || (s.name+s.aimag+s.sum).toLowerCase().includes(q)));
   body.innerHTML = rows.length ? rows.map(s => {
     const phones = [s.phone1, s.phone2].filter(Boolean).join(' / ') || '—';
-    const fb = s.facebook ? `<a href="${esc(s.facebook)}" target="_blank" rel="noopener" title="Facebook хуудас руу очих" style="color:var(--saddle);font-weight:600;">FB ↗</a>` : '—';
+    const fb = isSafeHttpsUrl(s.facebook) ? `<a href="${esc(s.facebook)}" target="_blank" rel="noopener" title="Facebook хуудас руу очих" style="color:var(--saddle);font-weight:600;">FB ↗</a>` : '—';
     const actions = showArchived
       ? `<button class="rowbtn" onclick="restoreShop('${s.id}')">Сэргээх</button>
          <button class="rowbtn" onclick="hardDeleteShop('${s.id}')">Бүрмөсөн устгах</button>`
       : `<button class="rowbtn" onclick="editShop('${s.id}')">Засах</button>
-         <button class="rowbtn" onclick="deleteShop('${s.id}')">Устгах</button>`;
+         <button class="rowbtn" onclick="deleteShop('${s.id}')">Архивлах</button>`;
     return `
     <tr>
       <td>${esc(s.name)}</td>
@@ -1386,7 +1403,7 @@ function renderProducts(){
       ? `<button class="rowbtn" onclick="restoreProduct('${p.id}')">Сэргээх</button>
          <button class="rowbtn" onclick="hardDeleteProduct('${p.id}')">Бүрмөсөн устгах</button>`
       : `<button class="rowbtn" onclick="editProduct('${p.id}')">Засах</button>
-         <button class="rowbtn" onclick="deleteProduct('${p.id}')">Устгах</button>`;
+         <button class="rowbtn" onclick="deleteProduct('${p.id}')">Архивлах</button>`;
     return `
     <tr>
       <td>${esc(p.itemCode||'—')}</td>
@@ -1414,7 +1431,7 @@ function renderOrders(){
       ? `<button class="rowbtn" onclick="restoreOrder('${o.id}')">Сэргээх</button>
          <button class="rowbtn" onclick="hardDeleteOrder('${o.id}')">Бүрмөсөн устгах</button>`
       : `<button class="rowbtn" onclick="editOrder('${o.id}')">Засах</button>
-         <button class="rowbtn" onclick="deleteOrder('${o.id}')">Устгах</button>`;
+         <button class="rowbtn" onclick="deleteOrder('${o.id}')">Архивлах</button>`;
     return `<tr>
       <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
       <td>${esc(o.orderDate||'—')}</td>
@@ -1484,6 +1501,9 @@ function refreshProductDatalists(){
 function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+function isSafeHttpsUrl(url){
+  return /^https:\/\/[^\s]+$/i.test(String(url||'').trim());
+}
 
 /* ---------------- Search / filter listeners ---------------- */
 document.getElementById('shopSearch').addEventListener('input', renderShops);
@@ -1545,6 +1565,10 @@ document.getElementById('saveShopBtn').addEventListener('click', () => {
   const name = document.getElementById('shopName').value.trim();
   const aimag = document.getElementById('shopAimag').value.trim();
   if (!name || !aimag) { toast('Нэр болон аймгийг бөглөнө үү', 'err'); return; }
+  const facebook = document.getElementById('shopFacebook').value.trim();
+  if (facebook && !isSafeHttpsUrl(facebook)) {
+    toast('Facebook холбоос зөвхөн https:// -ээр эхэлсэн байх ёстой', 'err'); return;
+  }
   const id = document.getElementById('shopId').value;
   const obj = {
     id: id || uid(),
@@ -1553,7 +1577,7 @@ document.getElementById('saveShopBtn').addEventListener('click', () => {
     contact: document.getElementById('shopContact').value.trim(),
     phone1: document.getElementById('shopPhone1').value.trim(),
     phone2: document.getElementById('shopPhone2').value.trim(),
-    facebook: document.getElementById('shopFacebook').value.trim(),
+    facebook,
     address: document.getElementById('shopAddress').value.trim(),
     notes: document.getElementById('shopNotes').value.trim(),
     createdAt: id ? (data.shops.find(x=>x.id===id)||{}).createdAt||Date.now() : Date.now(),
