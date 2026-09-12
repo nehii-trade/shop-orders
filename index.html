@@ -999,6 +999,17 @@ function initGSI(){
     tokenClient.requestAccessToken({ prompt: '' });
   });
   host.appendChild(btn);
+
+  attemptSilentRestore();
+}
+
+// F5/дахин ачаалахад Google session идэвхтэй хэвээр байвал дахин товч дарахгүйгээр орно.
+// Амжилтгүй бол (эсвэл session хугацаа дууссан бол) энгийн нэвтрэх дэлгэц хэвээр үлдэнэ.
+async function attemptSilentRestore(){
+  const ok = await silentRefresh();
+  if (ok) {
+    await onSignedIn();
+  }
 }
 
 function showLoginError(msg){
