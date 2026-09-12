@@ -1,0 +1,2063 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Нэхий Трейд — Захиалгын систем</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('nehiitrade_theme_v1');
+    if (t && t !== 'leather') document.documentElement.setAttribute('data-theme', t);
+  } catch(e){}
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+:root{
+  --ink:#241f19;
+  --text:#241f19;
+  --stone:#eae4d8;
+  --stone-dim:#ddd5c4;
+  --paper:#f6f2e9;
+  --line:#d8cfbb;
+  --saddle:#a6592e;
+  --saddle-dim:#c97c4f;
+  --moss:#5f6f4e;
+  --moss-dim:#eef1e7;
+  --brick:#a83b28;
+  --brick-dim:#faeae6;
+  --amber:#b5852b;
+  --amber-dim:#faf1de;
+  --muted:#7a7266;
+  --white:#fffdf9;
+  --radius:3px;
+  --shadow:none;
+  --sidebar-text:#c9bea9;
+  --sidebar-muted:#a89a80;
+  --btn-hover:#3a3227;
+  --btn-danger-hover:#8a2f20;
+  --confirmed-bg:#e6eef7;
+  --confirmed-text:#2c5b8a;
+  --shipping-bg:#f0e7f7;
+  --shipping-text:#6b3fa0;
+}
+
+/* ---------- Theme: Эсгий ба хужир (felt/wool) ---------- */
+html[data-theme="felt"]{
+  --ink:#201d1a;
+  --text:#201d1a;
+  --stone:#e3e0d3;
+  --stone-dim:#d5d1c3;
+  --paper:#efe9df;
+  --line:#d9d3c4;
+  --saddle:#7a2e2e;
+  --saddle-dim:#9c4a4a;
+  --moss:#4f6b6a;
+  --moss-dim:#e8eeed;
+  --brick:#a1402c;
+  --brick-dim:#f5e6e1;
+  --amber:#c08a2e;
+  --amber-dim:#f7ecd7;
+  --muted:#736f63;
+  --white:#fffcf7;
+  --sidebar-text:#beb6a4;
+  --sidebar-muted:#9a9284;
+  --btn-hover:#322d28;
+  --btn-danger-hover:#7c301f;
+  --confirmed-bg:#e6eaf0;
+  --confirmed-text:#3f5773;
+  --shipping-bg:#f0e6ec;
+  --shipping-text:#7a4d67;
+}
+
+/* ---------- Theme: Тэнгэр, наран (sky/sun) ---------- */
+html[data-theme="sky"]{
+  --ink:#14213d;
+  --text:#14213d;
+  --stone:#eaf1fb;
+  --stone-dim:#dbe7f7;
+  --paper:#f7fafd;
+  --line:#cfe0f5;
+  --saddle:#2563eb;
+  --saddle-dim:#5b8def;
+  --moss:#16a34a;
+  --moss-dim:#e7f7ec;
+  --brick:#dc2626;
+  --brick-dim:#fdeaea;
+  --amber:#f97316;
+  --amber-dim:#fff1e0;
+  --muted:#5b6b82;
+  --white:#ffffff;
+  --sidebar-text:#dbe7f7;
+  --sidebar-muted:#93a8c7;
+  --btn-hover:#1d4ed8;
+  --btn-danger-hover:#b91c1c;
+  --confirmed-bg:#dbeafe;
+  --confirmed-text:#1e40af;
+  --shipping-bg:#ede9fe;
+  --shipping-text:#6d28d9;
+}
+
+/* ---------- Theme: Шөнө, од (night mode) ---------- */
+html[data-theme="night"]{
+  --ink:#0b0c0e;
+  --text:#e5e7eb;
+  --stone:#14161a;
+  --stone-dim:#1c1f24;
+  --paper:#1e2128;
+  --line:#2f333c;
+  --saddle:#c9834f;
+  --saddle-dim:#dba578;
+  --moss:#4ade80;
+  --moss-dim:#16321f;
+  --brick:#f87171;
+  --brick-dim:#3a1f1f;
+  --amber:#fbbf24;
+  --amber-dim:#3a2f14;
+  --muted:#9199a8;
+  --white:#f5f6f8;
+  --sidebar-text:#d8dbe3;
+  --sidebar-muted:#8b93a3;
+  --btn-hover:#b3703d;
+  --btn-danger-hover:#e05252;
+  --confirmed-bg:#1c2a3d;
+  --confirmed-text:#7fb0e8;
+  --shipping-bg:#2a2038;
+  --shipping-text:#b794f4;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  font-family:'IBM Plex Sans',sans-serif;
+  background:var(--stone);
+  color:var(--text);
+  font-size:14.5px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.serif{font-family:'Newsreader',serif;}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;font-size:inherit;}
+a{color:inherit;}
+::selection{background:var(--saddle-dim);color:var(--white);}
+
+/* ---------- Login screen ---------- */
+#loginScreen{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(166,89,46,.10), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(95,111,78,.10), transparent 45%),
+    var(--stone);
+  padding:24px;
+}
+.login-card{
+  width:100%;
+  max-width:420px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  padding:48px 40px;
+  text-align:center;
+}
+.login-mark{
+  width:56px;height:56px;
+  margin:0 auto 22px;
+  border:1.5px solid var(--ink);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Newsreader',serif;
+  font-size:26px;
+  font-style:italic;
+}
+.login-card h1{
+  font-size:28px;
+  font-weight:600;
+  letter-spacing:-.01em;
+  margin-bottom:6px;
+}
+.login-card p.sub{
+  color:var(--muted);
+  font-size:14px;
+  margin-bottom:34px;
+}
+#gsiBtnHost{display:flex;justify-content:center;min-height:44px;}
+.login-foot{
+  margin-top:28px;
+  font-size:12.5px;
+  color:var(--muted);
+  border-top:1px solid var(--line);
+  padding-top:18px;
+}
+.login-error{
+  display:none;
+  margin-top:16px;
+  padding:10px 14px;
+  background:var(--brick-dim);
+  color:var(--brick);
+  font-size:13px;
+  text-align:left;
+  border-left:3px solid var(--brick);
+}
+
+/* ---------- App shell ---------- */
+#app{display:none;min-height:100vh;}
+.shell{display:flex;min-height:100vh;}
+
+.sidebar{
+  width:230px;
+  flex:none;
+  background:var(--ink);
+  color:var(--stone);
+  display:flex;
+  flex-direction:column;
+  padding:22px 0;
+}
+.brand{
+  padding:0 22px 22px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+  margin-bottom:14px;
+}
+.brand .name{
+  font-family:'Newsreader',serif;
+  font-style:italic;
+  font-size:21px;
+  color:var(--white);
+}
+.brand .tag{
+  font-size:11.5px;
+  color:var(--sidebar-muted);
+  margin-top:2px;
+}
+nav.navlist{flex:1;padding:0 10px;}
+nav.navlist button{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  width:100%;
+  text-align:left;
+  background:none;
+  border:none;
+  color:var(--sidebar-text);
+  padding:10px 12px;
+  font-size:14px;
+  border-radius:var(--radius);
+  margin-bottom:2px;
+}
+nav.navlist button svg{width:17px;height:17px;flex:none;opacity:.85;}
+nav.navlist button:hover{background:rgba(255,255,255,.06);color:var(--white);}
+nav.navlist button.active{background:var(--saddle);color:var(--white);}
+.sidebar-foot{
+  padding:14px 22px 0;
+  border-top:1px solid rgba(255,255,255,.1);
+  margin-top:12px;
+}
+.sync-row{
+  display:flex;align-items:center;gap:7px;
+  font-size:11.5px;color:var(--sidebar-muted);
+  margin-bottom:10px;
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--moss);flex:none;}
+.dot.busy{background:var(--amber);animation:pulse 1s infinite;}
+.dot.err{background:var(--brick);}
+.unsaved-banner{margin-top:5px;display:inline-flex;align-items:center;gap:6px;background:var(--amber-dim);color:var(--amber);border-radius:var(--radius);padding:3px 9px;font-size:11.5px;font-weight:600;}
+@keyframes pulse{50%{opacity:.35;}}
+.user-row{display:flex;align-items:center;gap:9px;}
+.user-row img{width:28px;height:28px;border-radius:50%;}
+.user-row .uname{font-size:12.5px;color:var(--stone);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.signout{
+  margin-top:10px;
+  width:100%;
+  background:none;border:1px solid rgba(255,255,255,.18);
+  color:var(--sidebar-muted);padding:7px;font-size:12px;border-radius:var(--radius);
+}
+.signout:hover{color:var(--white);border-color:rgba(255,255,255,.4);}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column;}
+.topbar{
+  padding:20px 32px;
+  border-bottom:1px solid var(--line);
+  background:var(--paper);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.topbar h1{font-size:22px;font-weight:600;letter-spacing:-.01em;}
+.topbar .sub{font-size:13px;color:var(--muted);margin-top:2px;}
+.content{flex:1;padding:28px 32px 48px;overflow-y:auto;}
+.view{display:none;}
+.view.active{display:block;}
+
+/* buttons */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 16px;
+  font-size:13.5px;font-weight:500;
+  border-radius:var(--radius);
+  border:1px solid var(--ink);
+  background:var(--ink);color:var(--white);
+}
+.btn:hover{background:var(--btn-hover);}
+.btn.secondary{background:var(--paper);color:var(--ink);border:1px solid var(--line);}
+.btn.secondary:hover{background:var(--white);border-color:var(--ink);}
+.btn.danger{background:var(--brick);border-color:var(--brick);}
+.btn.danger:hover{background:var(--btn-danger-hover);}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn svg{width:15px;height:15px;}
+
+/* cards / stats */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:28px;}
+.stat-card{
+  background:var(--paper);border:1px solid var(--line);
+  padding:18px 20px;
+}
+.stat-card .lbl{font-size:12px;color:var(--muted);margin-bottom:8px;}
+.stat-card .val{font-family:'Newsreader',serif;font-size:30px;font-weight:600;}
+.stat-card .val small{font-size:15px;font-weight:500;color:var(--muted);}
+
+.panel{background:var(--paper);border:1px solid var(--line);}
+.panel-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--line);
+  gap:12px;flex-wrap:wrap;
+}
+.panel-head h2{font-size:16px;font-weight:600;}
+.search{
+  padding:8px 12px;border:1px solid var(--line);background:var(--white);
+  font-size:13px;min-width:200px;border-radius:var(--radius);
+}
+
+table{width:100%;border-collapse:collapse;}
+th{
+  text-align:left;font-size:11.5px;color:var(--muted);font-weight:600;
+  padding:10px 14px;border-bottom:1px solid var(--line);
+  white-space:nowrap;
+}
+td{padding:11px 14px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle;}
+tbody tr:hover{background:rgba(166,89,46,.04);}
+.rowbtn{background:none;border:none;color:var(--muted);padding:4px 6px;border-radius:var(--radius);}
+.rowbtn:hover{color:var(--text);background:var(--stone-dim);}
+.empty-row td{text-align:center;color:var(--muted);padding:40px 14px;}
+
+.badge{display:inline-block;padding:3px 10px;font-size:11.5px;border-radius:20px;font-weight:500;}
+.badge.new{background:var(--amber-dim);color:var(--amber);}
+.badge.confirmed{background:var(--confirmed-bg);color:var(--confirmed-text);}
+.badge.shipping{background:var(--shipping-bg);color:var(--shipping-text);}
+.badge.done{background:var(--moss-dim);color:var(--moss);}
+.badge.cancelled{background:var(--brick-dim);color:var(--brick);}
+
+/* modal */
+.overlay{
+  display:none;position:fixed;inset:0;background:rgba(36,31,25,.5);
+  align-items:center;justify-content:center;z-index:50;padding:20px;
+}
+.overlay.show{display:flex;}
+.modal{
+  background:var(--paper);width:100%;max-width:480px;
+  max-height:88vh;
+  border:1px solid var(--line);
+  display:flex;flex-direction:column;
+}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.modal-head h3{font-size:17px;font-weight:600;}
+.modal-close{background:none;border:none;font-size:20px;color:var(--muted);line-height:1;}
+.modal-body{padding:20px 22px;overflow-y:auto;flex:1 1 auto;min-height:0;}
+.field{margin-bottom:15px;}
+.field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;}
+.field input,.field select,.field textarea{
+  width:100%;padding:9px 11px;border:1px solid var(--line);background:var(--white);
+  border-radius:var(--radius);font-size:14px;
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--saddle-dim);outline-offset:0;border-color:var(--saddle);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.modal-foot{padding:16px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0;}
+
+/* reports */
+.aimag-table td.num, .aimag-table th.num{text-align:right;}
+.export-row{display:flex;gap:10px;}
+
+/* toast */
+#toastHost{position:fixed;bottom:22px;right:22px;z-index:100;display:flex;flex-direction:column;gap:8px;}
+.toast{
+  background:var(--ink);color:var(--white);padding:11px 16px;font-size:13px;
+  border-radius:var(--radius);box-shadow:0 6px 20px rgba(0,0,0,.18);
+  display:flex;align-items:center;gap:8px;min-width:220px;
+  animation:slidein .18s ease-out;
+}
+.toast.err{background:var(--brick);}
+.toast.ok{background:var(--moss);}
+@keyframes slidein{from{transform:translateY(8px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+
+.hint{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6;}
+
+/* theme picker */
+.theme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;}
+.theme-card{
+  border:1.5px solid var(--line);background:var(--white);
+  border-radius:6px;padding:14px;cursor:pointer;text-align:left;
+  transition:border-color .15s;
+}
+.theme-card:hover{border-color:var(--saddle-dim);}
+.theme-card.selected{border-color:var(--saddle);}
+.theme-swatch{display:flex;border-radius:4px;overflow:hidden;height:34px;margin-bottom:10px;}
+.theme-swatch span{flex:1;}
+.theme-card .tname{font-size:13.5px;font-weight:600;margin-bottom:2px;}
+.theme-card .tdesc{font-size:11.5px;color:var(--muted);line-height:1.5;}
+.theme-card .tcheck{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:11.5px;color:var(--saddle);font-weight:500;min-height:15px;}
+
+.menu-toggle{
+  display:none;
+  background:none;border:1px solid var(--line);
+  padding:7px;border-radius:var(--radius);color:var(--text);
+  align-items:center;justify-content:center;
+}
+.menu-toggle svg{width:19px;height:19px;}
+.sidebar-backdrop{
+  display:none;position:fixed;inset:0;background:rgba(36,31,25,.45);z-index:39;
+}
+.sidebar-backdrop.show{display:block;}
+
+@media (max-width:840px){
+  .sidebar{position:fixed;left:-230px;top:0;bottom:0;z-index:40;transition:left .2s;}
+  .sidebar.open{left:0;}
+  .menu-toggle{display:flex;}
+  .field-row{grid-template-columns:1fr;}
+  .content{padding:20px 16px 40px;}
+  .topbar{padding:16px;}
+  .modal{max-height:94vh;}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-mark">НТ</div>
+    <h1>Нэхий Трейд</h1>
+    <p class="sub">Захиалгын удирдлагын систем</p>
+    <div id="gsiBtnHost"></div>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-foot">Өгөгдөл таны Google Drive-д хадгалагдана. Зөвхөн зөвшөөрөгдсөн акаунтаар нэвтэрнэ.</div>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app">
+<div class="shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="name">Нэхий Трейд</div>
+      <div class="tag">Захиалгын систем</div>
+    </div>
+    <nav class="navlist">
+      <button data-view="dashboard" class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        Хяналтын самбар
+      </button>
+      <button data-view="shops">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v10a1 1 0 001 1h14a1 1 0 001-1V9"/><path d="M9 20v-6h6v6"/></svg>
+        Дэлгүүрүүд
+      </button>
+      <button data-view="products">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+        Бүтээгдэхүүн
+      </button>
+      <button data-view="orders">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 2l1 4h10l1-4"/><rect x="4" y="6" width="16" height="16" rx="1"/><path d="M9 11h6M9 15h6"/></svg>
+        Захиалгууд
+      </button>
+      <button data-view="reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+        Нэгтгэл тайлан
+      </button>
+      <button data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.96 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.96a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04z"/></svg>
+        Тохиргоо
+      </button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="sync-row"><span class="dot" id="syncDot"></span><span id="syncLabel">Бэлэн</span></div>
+      <div class="user-row">
+        <img id="userAvatar" src="" alt="">
+        <span class="uname" id="userName">—</span>
+      </div>
+      <button class="signout" id="signOutBtn">Гарах</button>
+    </div>
+  </aside>
+
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="menu-toggle" id="menuToggleBtn" aria-label="Цэс нээх">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        </button>
+        <div>
+          <h1 id="viewTitle">Хяналтын самбар</h1>
+          <div class="sub" id="viewSub">Ерөнхий тойм</div>
+          <div id="unsavedBanner" class="unsaved-banner" style="display:none;">Хадгалагдаагүй өөрчлөлт — дахин оролдож байна…</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn secondary" id="backupExportBtn">Нөөцлөх</button>
+        <button class="btn secondary" id="syncNowBtn">Дахин ачаалах</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <section class="view active" id="view-dashboard">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="lbl">Нийт дэлгүүр</div><div class="val" id="statShops">0</div></div>
+          <div class="stat-card"><div class="lbl">Нийт бүтээгдэхүүн</div><div class="val" id="statProducts">0</div></div>
+          <div class="stat-card"><div class="lbl">Нийт захиалга</div><div class="val" id="statOrders">0</div></div>
+          <div class="stat-card"><div class="lbl">Хүлээгдэж буй</div><div class="val" id="statPending">0</div></div>
+          <div class="stat-card"><div class="lbl">Нийт дүн</div><div class="val" id="statRevenue">0<small> ₮</small></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Сүүлийн захиалгууд</h2></div>
+          <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>№</th><th>Огноо</th><th>Дэлгүүр</th><th>Бүтээгдэхүүн</th><th>Тоо</th><th>Дүн</th><th>Төлөв</th></tr></thead>
+            <tbody id="recentOrdersBody"></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SHOPS -->
+      <section class="view" id="view-shops">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Дэлгүүрүүд</h2>
+            <div style="display:flex;gap:10px;">
+              <input type="text" class="search" id="shopSearch" placeholder="Дэлгүүр хайх...">
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;">
+                <input type="checkbox" id="shopShowArchived"> Архивласан харуулах
+              </label>
+              <button class="btn" id="addShopBtn">+ Дэлгүүр нэмэх</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Нэр</th><th>Аймаг</th><th>Сум</th><th>Холбоо барих</th><th>Утас</th><th>Facebook</th><th></th></tr></thead>
+            <tbody id="shopsBody"></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PRODUCTS -->
+      <section class="view" id="view-products">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Бүтээгдэхүүн</h2>
+            <div style="display:flex;gap:10px;">
+              <input type="text" class="search" id="productSearch" placeholder="Бүтээгдэхүүн хайх...">
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;">
+                <input type="checkbox" id="productShowArchived"> Архивласан харуулах
+              </label>
+              <button class="btn secondary" id="importProductsBtn">Excel-с импортлох</button>
+              <button class="btn" id="addProductBtn">+ Бүтээгдэхүүн нэмэх</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Барааны код</th><th>Загварын код</th><th>Размер</th><th>Компани</th><th>Бүтээгдэхүүний нэр</th><th>Барааны нэр</th><th>Нэгж үнэ</th><th></th></tr></thead>
+            <tbody id="productsBody"></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ORDERS -->
+      <section class="view" id="view-orders">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Захиалгууд</h2>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <select class="search" id="orderStatusFilter">
+                <option value="">Бүх төлөв</option>
+                <option value="new">Шинэ</option>
+                <option value="confirmed">Батлагдсан</option>
+                <option value="shipping">Хүргэлтэд</option>
+                <option value="done">Дууссан</option>
+                <option value="cancelled">Цуцлагдсан</option>
+              </select>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;">
+                <input type="checkbox" id="orderShowArchived"> Архивласан харуулах
+              </label>
+              <button class="btn" id="addOrderBtn">+ Захиалга нэмэх</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>№</th><th>Огноо</th><th>Дэлгүүр</th><th>Бараа</th><th>Тоо</th><th>Дүн</th><th>Төлөв</th><th></th></tr></thead>
+            <tbody id="ordersBody"></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- REPORTS -->
+      <section class="view" id="view-reports">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Аймгаар нэгтгэсэн тайлан</h2>
+            <div class="export-row">
+              <button class="btn secondary" id="exportCsvBtn">CSV татах</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+          <table class="aimag-table">
+            <thead><tr><th>Аймаг</th><th class="num">Дэлгүүр</th><th class="num">Захиалга</th><th class="num">Нийт дүн (₮)</th></tr></thead>
+            <tbody id="reportsBody"></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="view-settings">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Харагдах загвар</h2>
+          </div>
+          <div style="padding:20px;">
+            <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">Системийн өнгө, харагдах загварыг сонгоно уу. Сонголт таны browser дээр хадгалагдана.</p>
+            <div class="theme-grid" id="themeGrid"></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+
+<div class="overlay" id="shopModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="shopModalTitle">Дэлгүүр нэмэх</h3><button class="modal-close" data-close="shopModal">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="shopId">
+      <div class="field"><label for="shopName">Дэлгүүрийн нэр *</label><input type="text" id="shopName"></div>
+      <div class="field-row">
+        <div class="field"><label for="shopAimag">Аймаг *</label><input type="text" id="shopAimag" placeholder="жиш: Дархан-Уул"></div>
+        <div class="field"><label for="shopSum">Сум</label><input type="text" id="shopSum"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="shopContact">Холбоо барих хүн</label><input type="text" id="shopContact"></div>
+        <div class="field"><label for="shopPhone1">Утас 1</label><input type="text" id="shopPhone1" placeholder="99001122"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="shopPhone2">Утас 2</label><input type="text" id="shopPhone2" placeholder="(заавал биш)"></div>
+        <div class="field"><label for="shopFacebook">Facebook хуудас</label><input type="url" id="shopFacebook" placeholder="https://facebook.com/..."></div>
+      </div>
+      <div class="field"><label for="shopAddress">Хаяг</label><input type="text" id="shopAddress"></div>
+      <div class="field"><label for="shopNotes">Тэмдэглэл</label><textarea id="shopNotes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" data-close="shopModal">Цуцлах</button>
+      <button class="btn" id="saveShopBtn">Хадгалах</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="productModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="productModalTitle">Бүтээгдэхүүн нэмэх</h3><button class="modal-close" data-close="productModal">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="productId">
+      <div class="field-row">
+        <div class="field"><label for="productItemCode">Барааны код</label><input type="text" id="productItemCode" placeholder="тухайн размерийн өвөрмөц код"></div>
+        <div class="field"><label for="productCode">Загварын код</label><input type="text" id="productCode" list="codeList" placeholder="сонгох эсвэл бичих"><datalist id="codeList"></datalist></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="productSize">Размер</label><input type="text" id="productSize" list="sizeList" placeholder="жиш: 48,50,52"><datalist id="sizeList"></datalist></div>
+        <div class="field"><label for="productCompany">Компани</label><input type="text" id="productCompany" list="companyList" placeholder="сонгох эсвэл бичих"><datalist id="companyList"></datalist></div>
+      </div>
+      <div class="field"><label for="productName">Бүтээгдэхүүний нэр *</label><input type="text" id="productName"></div>
+      <div class="field"><label for="productItemName">Барааны нэр</label><input type="text" id="productItemName" placeholder="тухайн барааны нэр (заавал биш)"></div>
+      <div class="field"><label for="productPrice">Нэгж үнэ (₮) *</label><input type="number" id="productPrice" min="0"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" data-close="productModal">Цуцлах</button>
+      <button class="btn" id="saveProductBtn">Хадгалах</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="productImportModal">
+  <div class="modal" style="max-width:760px;">
+    <div class="modal-head"><h3>Excel-с бараа импортлох</h3><button class="modal-close" data-close="productImportModal">&times;</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="productImportFile">Excel файл сонгох (.xlsx)</label>
+        <input type="file" id="productImportFile" accept=".xlsx,.xls">
+        <div style="font-size:12.5px;color:var(--muted);margin-top:6px;">
+          Багана: Барааны код, Загварын код, Размер, Компани, Бүтээгдэхүүний нэр, Барааны нэр, Нэгж үнэ — эхний мөр толгой байх ёстой.
+        </div>
+      </div>
+      <div id="productImportStatus" style="font-size:13px;color:var(--muted);margin:10px 0;"></div>
+      <div id="productImportPreviewWrap" style="display:none;">
+        <div style="display:flex;gap:14px;font-size:13px;margin-bottom:10px;">
+          <span><span class="badge new">Шинэ</span> <b id="importCountNew">0</b></span>
+          <span><span class="badge confirmed">Шинэчлэгдэнэ</span> <b id="importCountDup">0</b></span>
+          <span style="color:var(--muted);">Алгасах: <b id="importCountSkip">0</b></span>
+        </div>
+        <div style="max-height:340px;overflow:auto;border:1px solid var(--line);">
+          <table>
+            <thead><tr><th style="width:34px;"></th><th>Төлөв</th><th>Барааны код</th><th>Загварын код</th><th>Размер</th><th>Нэр</th><th>Үнэ</th></tr></thead>
+            <tbody id="productImportBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" data-close="productImportModal">Цуцлах</button>
+      <button class="btn" id="confirmProductImportBtn" disabled>Сонгосныг импортлох</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="orderModal">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-head"><h3 id="orderModalTitle">Захиалга нэмэх</h3><button class="modal-close" data-close="orderModal">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="orderId">
+      <div class="field-row">
+        <div class="field"><label for="orderShop">Дэлгүүр *</label><select id="orderShop"></select></div>
+        <div class="field"><label for="orderDate">Огноо</label><input type="date" id="orderDate"></div>
+      </div>
+
+      <div class="field" style="border:1px solid var(--line);padding:14px;background:var(--white);margin-bottom:16px;">
+        <label style="margin-bottom:9px;">Бараа нэмэх</label>
+        <div class="field-row">
+          <div class="field"><label for="itemProduct">Бүтээгдэхүүн</label><select id="itemProduct" multiple size="4"></select></div>
+          <div class="field"><label>Размер (боломжтой бол)</label><div id="itemSizeChecks" style="font-size:13px;color:var(--muted);">Эхлээд бүтээгдэхүүн сонгоно уу</div></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="itemQty">Тоо ширхэг (нэг размерт)</label><input type="number" id="itemQty" min="1" value="1"></div>
+          <div class="field"><label for="itemUnitPrice">Нэгжийн үнэ (₮)</label><input type="number" id="itemUnitPrice" min="0"></div>
+        </div>
+        <button type="button" class="btn secondary" id="addItemRowBtn" style="width:100%;justify-content:center;">+ Мөр нэмэх</button>
+        <div class="hint">Ctrl (эсвэл Cmd)-той дарж хэдэн ч бүтээгдэхүүнийг зэрэг сонгож болно. Размер сонговол тухайн бараа бүр сонгосон размер тус бүрээр тусдаа мөр болж нэмэгдэнэ.</div>
+      </div>
+
+      <div class="field">
+        <label>Захиалгын мөрүүд</label>
+        <div style="overflow-x:auto;border:1px solid var(--line);">
+          <table>
+            <thead><tr><th>Бараа</th><th>Размер</th><th>Тоо</th><th>Үнэ</th><th>Дүн</th><th></th></tr></thead>
+            <tbody id="orderItemsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field"><label for="orderGrandTotal">Нийт дүн (₮)</label><input type="text" id="orderGrandTotal" readonly style="background:var(--stone);font-weight:600;"></div>
+        <div class="field"><label for="orderStatus">Төлөв</label>
+          <select id="orderStatus">
+            <option value="new">Шинэ</option>
+            <option value="confirmed">Батлагдсан</option>
+            <option value="shipping">Хүргэлтэд</option>
+            <option value="done">Дууссан</option>
+            <option value="cancelled">Цуцлагдсан</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label for="orderNotes">Тэмдэглэл</label><textarea id="orderNotes" rows="2"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" data-close="orderModal">Цуцлах</button>
+      <button class="btn" id="saveOrderBtn">Хадгалах</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastHost"></div>
+
+<script>
+/* ========================================================================
+   TANI: TODO — доорх CLIENT_ID-г Google Cloud Console-с авсан client_id-гаар солино уу
+   ======================================================================== */
+const CLIENT_ID = '419659492139-735svn0e0tir8naaf1o8qhtaujrornah.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+// Зөвхөн энд бичсэн имэйл хаяг(ууд) энэ системд нэвтэрч чадна. Нэмэлт хэрэглэгч зөвшөөрөхийг хүсвэл
+// доор жагсаалтад имэйл хаягийг нь бага үсгээр, таслалаар зааглан нэмнэ үү.
+const ALLOWED_EMAILS = ['munhtsetsegdn@gmail.com'];
+const FOLDER_NAME = 'Нэхий Трейд Захиалга';
+const DATA_FILENAME = 'nehii_trade_orders_data.json';
+const LOCAL_KEY = 'nehiitrade_orders_cache_v1';
+const TOKEN_KEY = 'nehiitrade_token_v1';
+function saveTokenToStorage(){
+  try { localStorage.setItem(TOKEN_KEY, JSON.stringify({ accessToken, tokenExpiresAt })); } catch(e){}
+}
+function loadTokenFromStorage(){
+  try {
+    const raw = localStorage.getItem(TOKEN_KEY);
+    if (!raw) return null;
+    const t = JSON.parse(raw);
+    if (t && t.accessToken && t.tokenExpiresAt && Date.now() < t.tokenExpiresAt - 60000) return t;
+  } catch(e){}
+  return null;
+}
+function clearTokenStorage(){
+  try { localStorage.removeItem(TOKEN_KEY); } catch(e){}
+}
+
+let accessToken = null;
+let tokenExpiresAt = 0;
+let tokenClient = null;
+let authCallbackMode = 'login'; // 'login' | 'refresh' — tokenClient.callback дахин бичигдэхгүй, зөвхөн энэ flag-аар чиглэнэ
+let pendingRefreshResolve = null;
+let driveFolderId = null;
+let driveFileId = null;
+let saveTimer = null;
+
+let data = { shops: [], products: [], orders: [], tombstones: {}, nextOrderNo: 1 };
+
+const STATUS_LABEL = { new:'Шинэ', confirmed:'Батлагдсан', shipping:'Хүргэлтэд', done:'Дууссан', cancelled:'Цуцлагдсан' };
+const STATUS_CLASS = { new:'new', confirmed:'confirmed', shipping:'shipping', done:'done', cancelled:'cancelled' };
+
+/* ---------------- Хуучин форматын өгөгдлийг шинэчлэх ---------------- */
+function migrateShop(s){
+  if (s.phone != null && s.phone1 == null) { s.phone1 = s.phone; delete s.phone; }
+  return s;
+}
+function migrateOrder(o, d){
+  if (!o.items && o.productId) {
+    const qty = Number(o.qty||1), unitPrice = Number(o.unitPrice||0);
+    o.items = [{ productId: o.productId, size: o.size||'', qty, unitPrice, total: Number(o.total != null ? o.total : qty*unitPrice) }];
+    delete o.productId; delete o.size; delete o.qty; delete o.unitPrice;
+  }
+  if (!o.items) o.items = [];
+  if (o.total == null) o.total = o.items.reduce((s,it)=>s+Number(it.total||0),0);
+  // Зам B: snapshot нэргүй хуучин захиалгад (одоо байгаа дэлгүүр/бараагаар) нэг удаа нөхнө,
+  // ингэснээр цаашид тухайн дэлгүүр/бараа устгагдсан ч захиалгын нэр хадгалагдана
+  if (d) {
+    if (!o.shopName) {
+      const shop = (d.shops||[]).find(s=>s.id===o.shopId);
+      if (shop) o.shopName = shop.name;
+    }
+    if (!o.shopAimag) {
+      const shop = (d.shops||[]).find(s=>s.id===o.shopId);
+      if (shop) o.shopAimag = shop.aimag||'';
+    }
+    o.items.forEach(it => {
+      if (!it.productName) {
+        const p = (d.products||[]).find(x=>x.id===it.productId);
+        if (p) it.productName = p.name;
+      }
+    });
+  }
+  return o;
+}
+function migrateData(d){
+  (d.shops||[]).forEach(migrateShop);
+  (d.orders||[]).forEach(o => migrateOrder(o, d));
+  // Хуучин хэрэглэгчид nextOrderNo байхгүй бол одоо байгаа захиалгуудын дугаараас нөхнө
+  if (typeof d.nextOrderNo !== 'number') {
+    let maxNo = 0;
+    (d.orders||[]).forEach(o => { if (typeof o.orderNo === 'number' && o.orderNo > maxNo) maxNo = o.orderNo; });
+    d.nextOrderNo = maxNo + 1;
+  }
+  return d;
+}
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function money(n){ return Number(n||0).toLocaleString('mn-MN'); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+/* ---------------- Tombstones (устгалт зэрэгцүүлэх) ---------------- */
+const TOMB_KEEP_DAYS = 90;
+function tombstone(id){ if (id) data.tombstones[id] = Date.now(); }
+/* ---------------- Архивлалт (soft delete) ---------------- */
+function archiveRecord(arr, id){
+  const rec = arr.find(x=>x.id===id);
+  if (rec) { rec.archived = true; rec.updatedAt = Date.now(); }
+}
+function restoreRecord(arr, id){
+  const rec = arr.find(x=>x.id===id);
+  if (rec) { rec.archived = false; rec.updatedAt = Date.now(); }
+}
+function hardDeleteRecord(arrName, id){
+  tombstone(id);
+  data[arrName] = data[arrName].filter(x=>x.id!==id);
+}
+function isTombstoned(item){
+  const t = data.tombstones[item.id];
+  // Устгасны дараа тухайн бичлэгийг дахин засварласан бол (updatedAt > устгасан цаг) хүчинтэй хэвээр үлдэнэ
+  return t != null && t >= (item.updatedAt || 0);
+}
+function mergeTombstones(remoteT){
+  if (!remoteT) return;
+  for (const id in remoteT) {
+    if (!data.tombstones[id] || data.tombstones[id] < remoteT[id]) data.tombstones[id] = remoteT[id];
+  }
+}
+function purgeTombstones(){
+  const cutoff = Date.now() - TOMB_KEEP_DAYS * 86400000;
+  for (const id in data.tombstones) { if (data.tombstones[id] < cutoff) delete data.tombstones[id]; }
+}
+function mergeById(local, remote){
+  const byId = {};
+  (local||[]).forEach(x => byId[x.id] = x);
+  (remote||[]).forEach(r => { const l = byId[r.id]; if (!l || (r.updatedAt||0) > (l.updatedAt||0)) byId[r.id] = r; });
+  return Object.values(byId).filter(x => !isTombstoned(x));
+}
+
+/* ---------------- Toasts ---------------- */
+function toast(msg, kind){
+  const host = document.getElementById('toastHost');
+  const el = document.createElement('div');
+  el.className = 'toast' + (kind ? ' '+kind : '');
+  el.textContent = msg;
+  host.appendChild(el);
+  setTimeout(()=>{ el.remove(); }, 3200);
+}
+
+/* ---------------- Sync indicator ---------------- */
+function setSync(state, label){
+  const dot = document.getElementById('syncDot');
+  dot.className = 'dot' + (state ? ' '+state : '');
+  document.getElementById('syncLabel').textContent = label;
+}
+
+/* ---------------- Загвар (theme) ---------------- */
+const THEME_KEY = 'nehiitrade_theme_v1';
+const THEMES = [
+  {
+    id: 'leather',
+    name: 'Арьс, шир',
+    desc: 'Одоогийн загвар — саддл хүрэн өнгө, цаас-шир мэдрэмж.',
+    swatch: ['#241f19', '#f6f2e9', '#a6592e', '#5f6f4e', '#b5852b']
+  },
+  {
+    id: 'felt',
+    name: 'Эсгий, хужир',
+    desc: 'Хүйтэн саарал дэвсгэр, бордо улаан өнгө голлосон.',
+    swatch: ['#201d1a', '#efe9df', '#7a2e2e', '#4f6b6a', '#c08a2e']
+  },
+  {
+    id: 'sky',
+    name: 'Тэнгэр, наран',
+    desc: 'Цэнхэр-улбар шар, тод/эрч хүчтэй орчин үеийн загвар.',
+    swatch: ['#14213d', '#eaf1fb', '#2563eb', '#f97316', '#16a34a']
+  },
+  {
+    id: 'night',
+    name: 'Шөнө, од',
+    desc: 'Бараан дэвсгэртэй, шөнийн цагт нүд амраах горим.',
+    swatch: ['#0b0c0e', '#1e2128', '#c9834f', '#fbbf24', '#4ade80']
+  }
+];
+
+function getCurrentTheme(){
+  try { return localStorage.getItem(THEME_KEY) || 'leather'; } catch(e){ return 'leather'; }
+}
+function applyTheme(id){
+  if (id === 'leather') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', id);
+  try { localStorage.setItem(THEME_KEY, id); } catch(e){}
+}
+function renderSettings(){
+  const grid = document.getElementById('themeGrid');
+  if (!grid) return;
+  const current = getCurrentTheme();
+  grid.innerHTML = THEMES.map(t => `
+    <button type="button" class="theme-card${t.id===current?' selected':''}" data-theme-id="${t.id}">
+      <div class="theme-swatch">${t.swatch.map(c=>`<span style="background:${c};"></span>`).join('')}</div>
+      <div class="tname">${esc(t.name)}</div>
+      <div class="tdesc">${esc(t.desc)}</div>
+      <div class="tcheck">${t.id===current?'✓ Идэвхтэй':''}</div>
+    </button>`).join('');
+  grid.querySelectorAll('.theme-card').forEach(card => {
+    card.addEventListener('click', () => {
+      applyTheme(card.dataset.themeId);
+      renderSettings();
+      toast('Загвар солигдлоо', 'ok');
+    });
+  });
+}
+
+/* ---------------- Auth ---------------- */
+window.addEventListener('load', () => {
+  applyTheme(getCurrentTheme());
+  const cachedRaw = localStorage.getItem(LOCAL_KEY);
+  if (cachedRaw) {
+    try { data = JSON.parse(cachedRaw); } catch(e){}
+  }
+  if (!data.tombstones) data.tombstones = {};
+  migrateData(data);
+  if (!Array.isArray(data.shops)) data.shops = [];
+  if (!Array.isArray(data.products)) data.products = [];
+  if (!Array.isArray(data.orders)) data.orders = [];
+  initGSI();
+});
+
+function initGSI(){
+  if (!window.google || !google.accounts) { setTimeout(initGSI, 200); return; }
+
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: () => {}
+  });
+
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if (authCallbackMode === 'refresh') {
+        if (!resp.error) {
+          accessToken = resp.access_token;
+          tokenExpiresAt = Date.now() + (Number(resp.expires_in || 3600) * 1000);
+          saveTokenToStorage();
+          if (pendingRefreshResolve) pendingRefreshResolve(true);
+        } else {
+          if (pendingRefreshResolve) pendingRefreshResolve(false);
+        }
+        pendingRefreshResolve = null;
+        return;
+      }
+      if (resp.error) {
+        showLoginError('Нэвтрэхэд алдаа гарлаа: ' + resp.error);
+        return;
+      }
+      accessToken = resp.access_token;
+      tokenExpiresAt = Date.now() + (Number(resp.expires_in || 3600) * 1000);
+      saveTokenToStorage();
+      await onSignedIn();
+    }
+  });
+
+  // Custom "Sign in with Google" trigger button (styled to match design)
+  const host = document.getElementById('gsiBtnHost');
+  const btn = document.createElement('button');
+  btn.className = 'btn';
+  btn.style.width = '100%';
+  btn.style.justifyContent = 'center';
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="#fff" d="M21.35 11.1h-9.17v2.92h5.27c-.23 1.44-1.62 4.22-5.27 4.22-3.17 0-5.76-2.62-5.76-5.85s2.59-5.85 5.76-5.85c1.8 0 3.01.77 3.7 1.43l2.52-2.43C16.96 3.9 14.7 2.8 11.99 2.8 6.98 2.8 2.9 6.9 2.9 11.9s4.08 9.1 9.09 9.1c5.25 0 8.73-3.69 8.73-8.89 0-.6-.06-1.05-.16-1.51z"/></svg> Google-ээр нэвтрэх';
+  btn.addEventListener('click', () => {
+    hideLoginError();
+    authCallbackMode = 'login';
+    tokenClient.requestAccessToken({ prompt: '' });
+  });
+  host.appendChild(btn);
+
+  attemptSilentRestore();
+}
+
+// F5/дахин ачаалах, шинэ tab нээх үед localStorage-д хүчинтэй токен байвал Google руу огт хандахгүйгээр шууд орно.
+// (Popup дээр суурилсан "чимээгүй" хүсэлт нь хуудас дөнгөж ачаалагдах үед хэрэглэгчийн
+// шууд үйлдэлгүй тул browser-ийн popup blocker-т хаагдах эрсдэлтэй тул ашиглахгүй.)
+async function attemptSilentRestore(){
+  const stored = loadTokenFromStorage();
+  if (!stored) return;
+  accessToken = stored.accessToken;
+  tokenExpiresAt = stored.tokenExpiresAt;
+  await onSignedIn();
+}
+
+function showLoginError(msg){
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideLoginError(){
+  document.getElementById('loginError').style.display = 'none';
+}
+
+let currentUser = null;
+async function onSignedIn(){
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    currentUser = await r.json();
+  } catch(e){
+    clearTokenStorage();
+    showLoginError('Нэвтрэх хугацаа дууссан байна. Дахин нэвтэрнэ үү.');
+    signOutLocal();
+    return;
+  }
+
+  // Зөвшөөрөгдсөн имэйлийн жагсаалт (allowlist) шалгах
+  const email = (currentUser.email || '').toLowerCase().trim();
+  if (ALLOWED_EMAILS.length && !ALLOWED_EMAILS.includes(email)) {
+    showLoginError(`"${currentUser.email || 'тодорхойгүй имэйл'}" хаяг энэ системд нэвтрэх зөвшөөрөлгүй байна.`);
+    signOutLocal();
+    return;
+  }
+
+  document.getElementById('userName').textContent = currentUser.name || currentUser.email || 'Хэрэглэгч';
+  document.getElementById('userAvatar').src = currentUser.picture || '';
+
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+
+  render();
+  await loadFromDrive();
+}
+
+function tokenExpiringSoon(){
+  return !tokenExpiresAt || Date.now() > tokenExpiresAt - 120000; // дуусахаас 2 минутын өмнө
+}
+
+function silentRefresh(){
+  return new Promise((resolve) => {
+    if (!tokenClient) { resolve(false); return; }
+    authCallbackMode = 'refresh';
+    pendingRefreshResolve = resolve;
+    tokenClient.requestAccessToken({ prompt: '' });
+  });
+}
+
+// 30 секунд тутам токены хугацааг шалгаж, дуусахад ойртсон бол нам гүм шинэчилнэ
+setInterval(() => {
+  if (accessToken && tokenExpiringSoon()) silentRefresh();
+}, 30000);
+
+// Хэрэглэгч tab руу буцаж ирэхэд (жиш. унтраасан утаснаасаа буцаж нээхэд) шууд шалгах
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && accessToken && tokenExpiringSoon()) silentRefresh();
+});
+
+function signOutLocal(){
+  if (accessToken) {
+    google.accounts.oauth2.revoke(accessToken, () => {});
+  }
+  cancelSaveRetry();
+  clearTokenStorage();
+  authCallbackMode = 'login';
+  pendingRefreshResolve = null;
+  accessToken = null;
+  tokenExpiresAt = 0;
+  driveFileId = null;
+  driveFolderId = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+document.getElementById('signOutBtn').addEventListener('click', signOutLocal);
+
+/* ---------------- Drive storage ---------------- */
+async function driveFetch(url, opts){
+  opts = opts || {};
+  opts.headers = Object.assign({}, opts.headers, { Authorization: 'Bearer ' + accessToken });
+
+  const maxAttempts = 3;
+  const baseDelayMs = 600; // 600ms → 1200ms → (сүүлчийн оролдлого, хүлээхгүй)
+  let lastErr = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      let res = await fetch(url, opts);
+      if (res.status === 401) {
+        await silentRefresh();
+        opts.headers.Authorization = 'Bearer ' + accessToken;
+        res = await fetch(url, opts);
+      }
+      // Түр зуурын серверийн алдаа (5xx) эсвэл rate limit (429) үед дахин оролдоно
+      if ((res.status >= 500 || res.status === 429) && attempt < maxAttempts) {
+        await new Promise(r => setTimeout(r, baseDelayMs * Math.pow(2, attempt - 1)));
+        continue;
+      }
+      return res;
+    } catch (networkErr) {
+      // Сүлжээ тасарсан гэх мэт fetch өөрөө шидсэн алдаа
+      lastErr = networkErr;
+      if (attempt < maxAttempts) {
+        await new Promise(r => setTimeout(r, baseDelayMs * Math.pow(2, attempt - 1)));
+        continue;
+      }
+    }
+  }
+  throw lastErr || new Error('Сүлжээний холболт тасарсан тул хүсэлт амжилтгүй боллоо');
+}
+
+async function findDriveFolder(){
+  const url = 'https://www.googleapis.com/drive/v3/files?q=' +
+    encodeURIComponent(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`) +
+    '&fields=files(id,name)';
+  const res = await driveFetch(url);
+  const json = await res.json();
+  if (json.files && json.files.length) return json.files[0].id;
+  return null;
+}
+
+async function createDriveFolder(){
+  const res = await driveFetch('https://www.googleapis.com/drive/v3/files?fields=id', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
+  });
+  const json = await res.json();
+  return json.id;
+}
+
+async function ensureDriveFolder(){
+  if (driveFolderId) return driveFolderId;
+  driveFolderId = await findDriveFolder();
+  if (!driveFolderId) driveFolderId = await createDriveFolder();
+  return driveFolderId;
+}
+
+async function findDriveFile(folderId){
+  const url = 'https://www.googleapis.com/drive/v3/files?q=' +
+    encodeURIComponent(`name='${DATA_FILENAME}' and '${folderId}' in parents and trashed=false`) +
+    '&fields=files(id,name)';
+  const res = await driveFetch(url);
+  const json = await res.json();
+  if (json.files && json.files.length) return json.files[0].id;
+  return null;
+}
+
+async function createDriveFile(folderId, initialData){
+  const metadata = { name: DATA_FILENAME, parents: [folderId] };
+  const boundary = '-------nehiitrade' + uid();
+  const body =
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(initialData)}\r\n--${boundary}--`;
+  const res = await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body
+  });
+  const json = await res.json();
+  return json.id;
+}
+
+async function readDriveFile(fileId){
+  const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+  if (!res.ok) throw new Error('read failed');
+  return await res.json();
+}
+
+async function writeDriveFile(fileId, obj){
+  const res = await driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(obj)
+  });
+  if (!res.ok) throw new Error('write failed');
+}
+
+async function loadFromDrive(){
+  setSync('busy', 'Ачааллаж байна...');
+  try {
+    const folderId = await ensureDriveFolder();
+    driveFileId = await findDriveFile(folderId);
+    if (!driveFileId) {
+      driveFileId = await createDriveFile(folderId, data);
+    } else {
+      const remote = await readDriveFile(driveFileId);
+      migrateData(remote);
+      mergeTombstones(remote.tombstones);          // эхлээд устгалтууд, дараа нь бичлэгүүд
+      data.shops = mergeById(data.shops, remote.shops || []);
+      data.products = mergeById(data.products, remote.products || []);
+      data.orders = mergeById(data.orders, remote.orders || []);
+      // Дараалсан тоолуур: sync-ийн зөрчлийг багасгахын тулд хоёр талын хамгийн ихийг авна
+      data.nextOrderNo = Math.max(Number(data.nextOrderNo)||1, Number(remote.nextOrderNo)||1);
+      purgeTombstones();
+    }
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+    setSync('', 'Синк хийгдсэн');
+    render();
+  } catch(e){
+    console.error(e);
+    setSync('err', 'Ачааллахад алдаа гарлаа');
+    toast('Drive-с ачаалахад алдаа гарлаа. Кэш өгөгдлөөр ажиллаж байна.', 'err');
+  }
+}
+
+function queueSave(){
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+  setSync('busy', 'Хадгалж байна...');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(doSave, 600);
+}
+
+let saveRetryTimer = null;
+let saveRetryAttempts = 0;
+const SAVE_RETRY_DELAYS = [10000, 30000, 60000]; // 10с → 30с → 60с, тэгээд 60с-аар үргэлжилнэ
+
+function scheduleSaveRetry(){
+  const banner = document.getElementById('unsavedBanner');
+  if (banner) banner.style.display = '';
+  if (saveRetryTimer) return; // аль хэдийн дахин оролдлого товлогдсон бол давхар товлохгүй
+  const delay = SAVE_RETRY_DELAYS[Math.min(saveRetryAttempts, SAVE_RETRY_DELAYS.length - 1)];
+  saveRetryAttempts++;
+  saveRetryTimer = setTimeout(() => {
+    saveRetryTimer = null;
+    doSave();
+  }, delay);
+}
+function cancelSaveRetry(){
+  if (saveRetryTimer) { clearTimeout(saveRetryTimer); saveRetryTimer = null; }
+  saveRetryAttempts = 0;
+  const banner = document.getElementById('unsavedBanner');
+  if (banner) banner.style.display = 'none';
+}
+
+async function doSave(){
+  if (!driveFileId) {
+    try {
+      const folderId = await ensureDriveFolder();
+      driveFileId = await findDriveFile(folderId) || await createDriveFile(folderId, data);
+    }
+    catch(e){ setSync('err','Холбогдоогүй'); scheduleSaveRetry(); return; }
+  }
+  try {
+    await writeDriveFile(driveFileId, data);
+    setSync('', 'Хадгалагдсан');
+    cancelSaveRetry();
+  } catch(e){
+    console.error(e);
+    setSync('err', 'Хадгалахад алдаа гарлаа');
+    toast('Google Drive рүү хадгалахад алдаа гарлаа. Автоматаар дахин оролдоно.', 'err');
+    scheduleSaveRetry();
+  }
+}
+
+document.getElementById('syncNowBtn').addEventListener('click', loadFromDrive);
+document.getElementById('backupExportBtn').addEventListener('click', () => {
+  const backup = {
+    app: 'Нэхий Трейд — Захиалгын систем',
+    exportedAt: new Date().toISOString(),
+    data
+  };
+  const json = JSON.stringify(backup, null, 2);
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'nehii_trade_backup_' + todayStr() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Нөөцлөлт татагдлаа', 'ok');
+});
+
+/* ---------------- Navigation ---------------- */
+const VIEW_META = {
+  dashboard: { title: 'Хяналтын самбар', sub: 'Ерөнхий тойм' },
+  shops: { title: 'Дэлгүүрүүд', sub: 'Харилцагч дэлгүүрийн бүртгэл' },
+  products: { title: 'Бүтээгдэхүүн', sub: 'Барааны бүртгэл' },
+  orders: { title: 'Захиалгууд', sub: 'Захиалгын удирдлага' },
+  reports: { title: 'Нэгтгэл тайлан', sub: 'Аймгаар нэгтгэсэн статистик' },
+  settings: { title: 'Тохиргоо', sub: 'Харагдах загвар' }
+};
+
+/* ---------------- Mobile sidebar toggle ---------------- */
+function openSidebar(){
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarBackdrop').classList.add('show');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('show');
+}
+document.getElementById('menuToggleBtn').addEventListener('click', openSidebar);
+document.getElementById('sidebarBackdrop').addEventListener('click', closeSidebar);
+
+document.querySelectorAll('nav.navlist button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav.navlist button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const v = btn.dataset.view;
+    document.querySelectorAll('.view').forEach(sec => sec.classList.remove('active'));
+    document.getElementById('view-'+v).classList.add('active');
+    document.getElementById('viewTitle').textContent = VIEW_META[v].title;
+    document.getElementById('viewSub').textContent = VIEW_META[v].sub;
+    render();
+    closeSidebar();
+  });
+});
+
+/* ---------------- Render ---------------- */
+function render(){
+  renderDashboard();
+  renderShops();
+  renderProducts();
+  renderOrders();
+  renderReports();
+  renderSettings();
+  fillSelectOptions();
+  refreshProductDatalists();
+}
+
+function orderItemsSummary(o, limit){
+  limit = limit || 2;
+  const items = o.items || [];
+  const names = items.map(it => {
+    const p = data.products.find(x=>x.id===it.productId);
+    const nm = p ? p.name : (it.productName || 'Устсан бараа');
+    return it.size ? `${nm} (${it.size})` : nm;
+  });
+  if (!names.length) return '—';
+  if (names.length <= limit) return esc(names.join(', '));
+  return esc(names.slice(0,limit).join(', ')) + ` <span style="color:var(--muted);">+${names.length-limit}</span>`;
+}
+function orderItemsQtySum(o){ return (o.items||[]).reduce((s,it)=>s+Number(it.qty||0),0); }
+
+function renderDashboard(){
+  const activeShops = data.shops.filter(s=>!s.archived);
+  const activeProducts = data.products.filter(p=>!p.archived);
+  const activeOrders = data.orders.filter(o=>!o.archived);
+  document.getElementById('statShops').textContent = activeShops.length;
+  document.getElementById('statProducts').textContent = activeProducts.length;
+  document.getElementById('statOrders').textContent = activeOrders.length;
+  const pending = activeOrders.filter(o => o.status === 'new' || o.status === 'confirmed').length;
+  document.getElementById('statPending').textContent = pending;
+  const revenue = activeOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
+  document.getElementById('statRevenue').innerHTML = money(revenue) + ' <small>₮</small>';
+
+  const body = document.getElementById('recentOrdersBody');
+  const rows = [...activeOrders].sort((a,b)=> (b.orderDate||'').localeCompare(a.orderDate||'')).slice(0,8);
+  body.innerHTML = rows.length ? rows.map(o => {
+    const shop = data.shops.find(s=>s.id===o.shopId);
+    return `<tr>
+      <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
+      <td>${esc(o.orderDate||'—')}</td>
+      <td>${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
+      <td>${orderItemsSummary(o)}</td>
+      <td>${orderItemsQtySum(o)}</td>
+      <td>${money(o.total)} ₮</td>
+      <td><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></td>
+    </tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="7">Захиалга бүртгэгдээгүй байна</td></tr>`;
+}
+
+function renderShops(){
+  const q = (document.getElementById('shopSearch').value||'').toLowerCase();
+  const showArchived = document.getElementById('shopShowArchived').checked;
+  const body = document.getElementById('shopsBody');
+  const rows = data.shops.filter(s => !!s.archived === showArchived && (!q || (s.name+s.aimag+s.sum).toLowerCase().includes(q)));
+  body.innerHTML = rows.length ? rows.map(s => {
+    const phones = [s.phone1, s.phone2].filter(Boolean).join(' / ') || '—';
+    const fb = isSafeHttpsUrl(s.facebook) ? `<a href="${esc(s.facebook)}" target="_blank" rel="noopener" title="Facebook хуудас руу очих" style="color:var(--saddle);font-weight:600;">FB ↗</a>` : '—';
+    const actions = showArchived
+      ? `<button class="rowbtn" onclick="restoreShop('${s.id}')">Сэргээх</button>
+         <button class="rowbtn" onclick="hardDeleteShop('${s.id}')">Бүрмөсөн устгах</button>`
+      : `<button class="rowbtn" onclick="editShop('${s.id}')">Засах</button>
+         <button class="rowbtn" onclick="deleteShop('${s.id}')">Архивлах</button>`;
+    return `
+    <tr>
+      <td>${esc(s.name)}</td>
+      <td>${esc(s.aimag||'—')}</td>
+      <td>${esc(s.sum||'—')}</td>
+      <td>${esc(s.contact||'—')}</td>
+      <td>${phones}</td>
+      <td>${fb}</td>
+      <td style="text-align:right;white-space:nowrap;">${actions}</td>
+    </tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="7">${showArchived ? 'Архивласан дэлгүүр алга' : 'Дэлгүүр бүртгэгдээгүй байна'}</td></tr>`;
+}
+
+function renderProducts(){
+  const q = (document.getElementById('productSearch').value||'').toLowerCase();
+  const showArchived = document.getElementById('productShowArchived').checked;
+  const body = document.getElementById('productsBody');
+  const rows = data.products.filter(p => !!p.archived === showArchived && (!q || ((p.itemCode||'')+(p.code||'')+(p.company||'')+(p.name||'')+(p.itemName||'')).toLowerCase().includes(q)));
+  body.innerHTML = rows.length ? rows.map(p => {
+    const actions = showArchived
+      ? `<button class="rowbtn" onclick="restoreProduct('${p.id}')">Сэргээх</button>
+         <button class="rowbtn" onclick="hardDeleteProduct('${p.id}')">Бүрмөсөн устгах</button>`
+      : `<button class="rowbtn" onclick="editProduct('${p.id}')">Засах</button>
+         <button class="rowbtn" onclick="deleteProduct('${p.id}')">Архивлах</button>`;
+    return `
+    <tr>
+      <td>${esc(p.itemCode||'—')}</td>
+      <td>${esc(p.code||'—')}</td>
+      <td>${esc(p.size||'—')}</td>
+      <td>${esc(p.company||'—')}</td>
+      <td>${esc(p.name)}</td>
+      <td>${esc(p.itemName||'—')}</td>
+      <td>${money(p.price)} ₮</td>
+      <td style="text-align:right;white-space:nowrap;">${actions}</td>
+    </tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="8">${showArchived ? 'Архивласан бүтээгдэхүүн алга' : 'Бүтээгдэхүүн бүртгэгдээгүй байна'}</td></tr>`;
+}
+
+function renderOrders(){
+  const filter = document.getElementById('orderStatusFilter').value;
+  const showArchived = document.getElementById('orderShowArchived').checked;
+  const body = document.getElementById('ordersBody');
+  let rows = data.orders.filter(o => !!o.archived === showArchived);
+  rows = [...rows].sort((a,b)=> (b.orderDate||'').localeCompare(a.orderDate||''));
+  if (filter) rows = rows.filter(o => o.status === filter);
+  body.innerHTML = rows.length ? rows.map(o => {
+    const shop = data.shops.find(s=>s.id===o.shopId);
+    const actions = showArchived
+      ? `<button class="rowbtn" onclick="restoreOrder('${o.id}')">Сэргээх</button>
+         <button class="rowbtn" onclick="hardDeleteOrder('${o.id}')">Бүрмөсөн устгах</button>`
+      : `<button class="rowbtn" onclick="editOrder('${o.id}')">Засах</button>
+         <button class="rowbtn" onclick="deleteOrder('${o.id}')">Архивлах</button>`;
+    return `<tr>
+      <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
+      <td>${esc(o.orderDate||'—')}</td>
+      <td>${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
+      <td>${orderItemsSummary(o, 3)}</td>
+      <td>${orderItemsQtySum(o)}</td>
+      <td>${money(o.total)} ₮</td>
+      <td><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></td>
+      <td style="text-align:right;white-space:nowrap;">${actions}</td>
+    </tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="8">${showArchived ? 'Архивласан захиалга алга' : 'Захиалга бүртгэгдээгүй байна'}</td></tr>`;
+}
+
+function renderReports(){
+  const map = {};
+  data.shops.forEach(s => {
+    const key = s.aimag || 'Тодорхойгүй';
+    if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
+    map[key].shops.add(s.id);
+  });
+  data.orders.forEach(o => {
+    const shop = data.shops.find(s=>s.id===o.shopId);
+    const key = shop ? (shop.aimag || 'Тодорхойгүй') : (o.shopAimag || 'Тодорхойгүй');
+    if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
+    map[key].orders += 1;
+    if (o.status !== 'cancelled') map[key].total += Number(o.total||0);
+  });
+  const body = document.getElementById('reportsBody');
+  const keys = Object.keys(map).sort();
+  body.innerHTML = keys.length ? keys.map(k => `
+    <tr>
+      <td>${esc(k)}</td>
+      <td class="num">${map[k].shops.size}</td>
+      <td class="num">${map[k].orders}</td>
+      <td class="num">${money(map[k].total)}</td>
+    </tr>`).join('') : `<tr class="empty-row"><td colspan="4">Өгөгдөл алга</td></tr>`;
+}
+
+function fillSelectOptions(extraShopId){
+  const shopSel = document.getElementById('orderShop');
+  const curShop = shopSel.value;
+  let shopsToShow = data.shops.filter(s=>!s.archived);
+  if (extraShopId && !shopsToShow.some(s=>s.id===extraShopId)) {
+    const archivedShop = data.shops.find(s=>s.id===extraShopId);
+    if (archivedShop) shopsToShow = [...shopsToShow, archivedShop];
+  }
+  shopSel.innerHTML = shopsToShow.map(s => `<option value="${s.id}">${esc(s.name)}${s.aimag?' — '+esc(s.aimag):''}${s.archived?' (архивлагдсан)':''}</option>`).join('') || '<option value="">Дэлгүүр байхгүй</option>';
+  if (curShop) shopSel.value = curShop;
+
+  const itemProdSel = document.getElementById('itemProduct');
+  if (itemProdSel) {
+    itemProdSel.innerHTML = data.products.filter(p=>!p.archived).map(p => `<option value="${p.id}">${esc(p.name)}${p.company?' — '+esc(p.company):''}</option>`).join('') || '<option value="" disabled>Бүтээгдэхүүн байхгүй</option>';
+  }
+}
+
+function refreshProductDatalists(){
+  const distinct = (field) => [...new Set(data.products.map(p=>p[field]).filter(Boolean))];
+  const fill = (listId, values) => {
+    const el = document.getElementById(listId);
+    if (el) el.innerHTML = values.map(v=>`<option value="${esc(v)}"></option>`).join('');
+  };
+  fill('companyList', distinct('company'));
+  fill('codeList', distinct('code'));
+  fill('sizeList', distinct('size'));
+}
+
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function isSafeHttpsUrl(url){
+  return /^https:\/\/[^\s]+$/i.test(String(url||'').trim());
+}
+
+/* ---------------- Search / filter listeners ---------------- */
+document.getElementById('shopSearch').addEventListener('input', renderShops);
+document.getElementById('shopShowArchived').addEventListener('change', renderShops);
+document.getElementById('productSearch').addEventListener('input', renderProducts);
+document.getElementById('productShowArchived').addEventListener('change', renderProducts);
+document.getElementById('orderStatusFilter').addEventListener('change', renderOrders);
+document.getElementById('orderShowArchived').addEventListener('change', renderOrders);
+
+/* ---------------- Modal helpers ---------------- */
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('[data-close]').forEach(el => {
+  el.addEventListener('click', () => closeModal(el.dataset.close));
+});
+document.querySelectorAll('.overlay').forEach(ov => {
+  ov.addEventListener('click', (e) => { if (e.target === ov) closeModal(ov.id); });
+});
+
+/* ---------------- Shops CRUD ---------------- */
+document.getElementById('addShopBtn').addEventListener('click', () => {
+  document.getElementById('shopModalTitle').textContent = 'Дэлгүүр нэмэх';
+  ['shopId','shopName','shopAimag','shopSum','shopContact','shopPhone1','shopPhone2','shopFacebook','shopAddress','shopNotes'].forEach(id => document.getElementById(id).value = '');
+  openModal('shopModal');
+});
+function editShop(id){
+  const s = data.shops.find(x=>x.id===id); if (!s) return;
+  document.getElementById('shopModalTitle').textContent = 'Дэлгүүр засах';
+  document.getElementById('shopId').value = s.id;
+  document.getElementById('shopName').value = s.name||'';
+  document.getElementById('shopAimag').value = s.aimag||'';
+  document.getElementById('shopSum').value = s.sum||'';
+  document.getElementById('shopContact').value = s.contact||'';
+  document.getElementById('shopPhone1').value = s.phone1||'';
+  document.getElementById('shopPhone2').value = s.phone2||'';
+  document.getElementById('shopFacebook').value = s.facebook||'';
+  document.getElementById('shopAddress').value = s.address||'';
+  document.getElementById('shopNotes').value = s.notes||'';
+  openModal('shopModal');
+}
+function deleteShop(id){
+  if (!confirm('Энэ дэлгүүрийг архивлах уу? (Идэвхтэй жагсаалтаас нуугдана, дараа нь сэргээж болно)')) return;
+  archiveRecord(data.shops, id);
+  queueSave(); render();
+  toast('Дэлгүүр архивлагдлаа');
+}
+function restoreShop(id){
+  restoreRecord(data.shops, id);
+  queueSave(); render();
+  toast('Дэлгүүр сэргээгдлээ', 'ok');
+}
+function hardDeleteShop(id){
+  if (!confirm('Энэ дэлгүүрийг бүрмөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй!')) return;
+  hardDeleteRecord('shops', id);
+  queueSave(); render();
+  toast('Дэлгүүр бүрмөсөн устгагдлаа');
+}
+document.getElementById('saveShopBtn').addEventListener('click', () => {
+  const name = document.getElementById('shopName').value.trim();
+  const aimag = document.getElementById('shopAimag').value.trim();
+  if (!name || !aimag) { toast('Нэр болон аймгийг бөглөнө үү', 'err'); return; }
+  const facebook = document.getElementById('shopFacebook').value.trim();
+  if (facebook && !isSafeHttpsUrl(facebook)) {
+    toast('Facebook холбоос зөвхөн https:// -ээр эхэлсэн байх ёстой', 'err'); return;
+  }
+  const id = document.getElementById('shopId').value;
+  const obj = {
+    id: id || uid(),
+    name, aimag,
+    sum: document.getElementById('shopSum').value.trim(),
+    contact: document.getElementById('shopContact').value.trim(),
+    phone1: document.getElementById('shopPhone1').value.trim(),
+    phone2: document.getElementById('shopPhone2').value.trim(),
+    facebook,
+    address: document.getElementById('shopAddress').value.trim(),
+    notes: document.getElementById('shopNotes').value.trim(),
+    createdAt: id ? (data.shops.find(x=>x.id===id)||{}).createdAt||Date.now() : Date.now(),
+    updatedAt: Date.now()
+  };
+  if (id) { data.shops = data.shops.map(x => x.id===id ? obj : x); }
+  else { data.shops.push(obj); }
+  queueSave(); render(); closeModal('shopModal');
+  toast('Дэлгүүр хадгалагдлаа', 'ok');
+});
+
+/* ---------------- Products CRUD ---------------- */
+document.getElementById('addProductBtn').addEventListener('click', () => {
+  document.getElementById('productModalTitle').textContent = 'Бүтээгдэхүүн нэмэх';
+  ['productId','productItemCode','productName','productItemName','productCompany','productCode','productSize','productPrice'].forEach(id => document.getElementById(id).value = '');
+  openModal('productModal');
+});
+function editProduct(id){
+  const p = data.products.find(x=>x.id===id); if (!p) return;
+  document.getElementById('productModalTitle').textContent = 'Бүтээгдэхүүн засах';
+  document.getElementById('productId').value = p.id;
+  document.getElementById('productItemCode').value = p.itemCode||'';
+  document.getElementById('productCode').value = p.code||'';
+  document.getElementById('productSize').value = p.size||'';
+  document.getElementById('productCompany').value = p.company||'';
+  document.getElementById('productName').value = p.name||'';
+  document.getElementById('productItemName').value = p.itemName||'';
+  document.getElementById('productPrice').value = p.price||'';
+  openModal('productModal');
+}
+function deleteProduct(id){
+  if (!confirm('Энэ бүтээгдэхүүнийг архивлах уу? (Идэвхтэй жагсаалтаас нуугдана, дараа нь сэргээж болно)')) return;
+  archiveRecord(data.products, id);
+  queueSave(); render();
+  toast('Бүтээгдэхүүн архивлагдлаа');
+}
+function restoreProduct(id){
+  restoreRecord(data.products, id);
+  queueSave(); render();
+  toast('Бүтээгдэхүүн сэргээгдлээ', 'ok');
+}
+function hardDeleteProduct(id){
+  if (!confirm('Энэ бүтээгдэхүүнийг бүрмөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй!')) return;
+  hardDeleteRecord('products', id);
+  queueSave(); render();
+  toast('Бүтээгдэхүүн бүрмөсөн устгагдлаа');
+}
+document.getElementById('saveProductBtn').addEventListener('click', () => {
+  const name = document.getElementById('productName').value.trim();
+  const price = Number(document.getElementById('productPrice').value || 0);
+  if (!name || !price) { toast('Нэр болон үнийг бөглөнө үү', 'err'); return; }
+  const id = document.getElementById('productId').value;
+  const obj = {
+    id: id || uid(),
+    itemCode: document.getElementById('productItemCode').value.trim(),
+    code: document.getElementById('productCode').value.trim(),
+    size: document.getElementById('productSize').value.trim(),
+    company: document.getElementById('productCompany').value.trim(),
+    name,
+    itemName: document.getElementById('productItemName').value.trim(),
+    price,
+    createdAt: id ? (data.products.find(x=>x.id===id)||{}).createdAt||Date.now() : Date.now(),
+    updatedAt: Date.now()
+  };
+  if (id) { data.products = data.products.map(x => x.id===id ? obj : x); }
+  else { data.products.push(obj); }
+  queueSave(); render(); closeModal('productModal');
+  toast('Бүтээгдэхүүн хадгалагдлаа', 'ok');
+});
+
+/* ---------------- Products Excel import ---------------- */
+let productImportRows = [];
+const PRODUCT_IMPORT_HEADERS = {
+  itemCode: 'Барааны код',
+  code: 'Загварын код',
+  size: 'Размер',
+  company: 'Компани',
+  name: 'Бүтээгдэхүүний нэр',
+  itemName: 'Барааны нэр',
+  price: 'Нэгж үнэ'
+};
+document.getElementById('importProductsBtn').addEventListener('click', () => {
+  productImportRows = [];
+  document.getElementById('productImportFile').value = '';
+  document.getElementById('productImportStatus').textContent = '';
+  document.getElementById('productImportPreviewWrap').style.display = 'none';
+  document.getElementById('confirmProductImportBtn').disabled = true;
+  openModal('productImportModal');
+});
+document.getElementById('productImportFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('productImportStatus');
+  statusEl.textContent = 'Уншиж байна...';
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const wb = XLSX.read(ev.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      parseProductImportRows(raw);
+      statusEl.textContent = raw.length ? '' : 'Файлд мөр олдсонгүй.';
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Файл уншихад алдаа гарлаа. Excel (.xlsx) файл эсэхийг шалгана уу.';
+    }
+  };
+  reader.onerror = () => { statusEl.textContent = 'Файл уншихад алдаа гарлаа.'; };
+  reader.readAsArrayBuffer(file);
+});
+function parseProductImportRows(raw){
+  const byItemCode = {};
+  data.products.forEach(p => { if (p.itemCode) byItemCode[p.itemCode] = p; });
+  productImportRows = raw.map(r => {
+    const itemCode = String(r[PRODUCT_IMPORT_HEADERS.itemCode] ?? '').trim();
+    const code = String(r[PRODUCT_IMPORT_HEADERS.code] ?? '').trim();
+    const size = String(r[PRODUCT_IMPORT_HEADERS.size] ?? '').trim();
+    const company = String(r[PRODUCT_IMPORT_HEADERS.company] ?? '').trim();
+    const name = String(r[PRODUCT_IMPORT_HEADERS.name] ?? '').trim();
+    const itemName = String(r[PRODUCT_IMPORT_HEADERS.itemName] ?? '').trim();
+    const price = Number(r[PRODUCT_IMPORT_HEADERS.price] || 0);
+    const isEmpty = !itemCode && !code && !name && !itemName;
+    const existing = itemCode ? byItemCode[itemCode] : null;
+    return {
+      itemCode, code, size, company, name, itemName, price,
+      isEmpty,
+      existingId: existing ? existing.id : null,
+      existingLabel: existing ? `${existing.itemName||existing.name||'—'} · ${money(existing.price)}₮` : '',
+      checked: !isEmpty
+    };
+  });
+  renderProductImportPreview();
+}
+function renderProductImportPreview(){
+  const body = document.getElementById('productImportBody');
+  const rows = productImportRows;
+  const newCount = rows.filter(r=>!r.isEmpty && !r.existingId).length;
+  const dupCount = rows.filter(r=>!r.isEmpty && r.existingId).length;
+  const skipCount = rows.filter(r=>r.isEmpty).length;
+  document.getElementById('importCountNew').textContent = newCount;
+  document.getElementById('importCountDup').textContent = dupCount;
+  document.getElementById('importCountSkip').textContent = skipCount;
+  body.innerHTML = rows.map((r, idx) => {
+    const badge = r.isEmpty ? '<span style="color:var(--muted);">хоосон</span>' : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>');
+    const sub = r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : '';
+    return `<tr>
+      <td><input type="checkbox" data-idx="${idx}" class="importRowChk" ${r.checked?'checked':''} ${r.isEmpty?'disabled':''}></td>
+      <td>${badge}</td>
+      <td>${esc(r.itemCode||'—')}</td>
+      <td>${esc(r.code||'—')}</td>
+      <td>${esc(r.size||'—')}</td>
+      <td>${esc(r.itemName||r.name||'—')}${sub}</td>
+      <td>${money(r.price)} ₮</td>
+    </tr>`;
+  }).join('');
+  document.querySelectorAll('.importRowChk').forEach(chk => {
+    chk.addEventListener('change', () => { productImportRows[Number(chk.dataset.idx)].checked = chk.checked; });
+  });
+  document.getElementById('productImportPreviewWrap').style.display = rows.length ? '' : 'none';
+  document.getElementById('confirmProductImportBtn').disabled = !(newCount + dupCount);
+}
+document.getElementById('confirmProductImportBtn').addEventListener('click', () => {
+  const toApply = productImportRows.filter(r => r.checked && !r.isEmpty);
+  if (!toApply.length) return;
+  let added = 0, updated = 0;
+  toApply.forEach(r => {
+    if (r.existingId) {
+      data.products = data.products.map(p => p.id === r.existingId ? {
+        ...p,
+        itemCode: r.itemCode, code: r.code, size: r.size, company: r.company,
+        name: r.name || p.name, itemName: r.itemName,
+        price: r.price || p.price,
+        updatedAt: Date.now()
+      } : p);
+      updated++;
+    } else {
+      data.products.push({
+        id: uid(), itemCode: r.itemCode, code: r.code, size: r.size, company: r.company,
+        name: r.name || r.itemName || 'Нэргүй', itemName: r.itemName, price: r.price,
+        createdAt: Date.now(), updatedAt: Date.now()
+      });
+      added++;
+    }
+  });
+  queueSave(); render(); closeModal('productImportModal');
+  toast(`Импортлогдлоо: ${added} шинэ, ${updated} шинэчлэгдсэн`, 'ok');
+});
+
+/* ---------------- Orders CRUD ---------------- */
+/* ---------------- Orders CRUD (multi-item) ---------------- */
+let currentOrderItems = [];
+
+function updateItemSizeChecks(){
+  const sel = document.getElementById('itemProduct');
+  const host = document.getElementById('itemSizeChecks');
+  const selectedIds = [...sel.selectedOptions].map(o=>o.value);
+  if (!selectedIds.length) {
+    host.innerHTML = '<span style="color:var(--muted);">Эхлээд бүтээгдэхүүн сонгоно уу</span>';
+    document.getElementById('itemUnitPrice').value = '';
+    return;
+  }
+  // Хэрэв ганц бараа сонгосон бол тухайн барааны үнийг автоматаар оруулна
+  if (selectedIds.length === 1) {
+    const p = data.products.find(x=>x.id===selectedIds[0]);
+    if (p) document.getElementById('itemUnitPrice').value = p.price;
+  }
+  // Сонгосон бүх барааны размерүүдийг цуглуулж, checkbox болгож харуулна (бараа бүрээр)
+  let html = '';
+  selectedIds.forEach(pid => {
+    const p = data.products.find(x=>x.id===pid);
+    if (!p) return;
+    const sizes = (p.size||'').split(',').map(s=>s.trim()).filter(Boolean);
+    if (!sizes.length) {
+      html += `<label style="display:block;margin-bottom:4px;"><input type="checkbox" class="sizeChk" data-pid="${pid}" data-size="" checked disabled> ${esc(p.name)} (размергүй)</label>`;
+    } else {
+      html += `<div style="margin-bottom:6px;"><div style="font-weight:600;margin-bottom:3px;">${esc(p.name)}</div>`;
+      sizes.forEach(sz => {
+        html += `<label style="display:inline-block;margin:0 10px 4px 0;"><input type="checkbox" class="sizeChk" data-pid="${pid}" data-size="${esc(sz)}"> ${esc(sz)}</label>`;
+      });
+      html += `</div>`;
+    }
+  });
+  host.innerHTML = html;
+}
+document.getElementById('itemProduct').addEventListener('change', updateItemSizeChecks);
+
+function renderOrderItemsTable(){
+  const body = document.getElementById('orderItemsBody');
+  body.innerHTML = currentOrderItems.length ? currentOrderItems.map((it, idx) => {
+    const p = data.products.find(x=>x.id===it.productId);
+    return `<tr>
+      <td>${p ? esc(p.name) : (it.productName ? esc(it.productName) : 'Устсан бараа')}</td>
+      <td>${esc(it.size||'—')}</td>
+      <td><input type="number" min="1" value="${it.qty}" style="width:60px;padding:5px;border:1px solid var(--line);" onchange="updateItemQty(${idx}, this.value)"></td>
+      <td><input type="number" min="0" value="${it.unitPrice}" style="width:80px;padding:5px;border:1px solid var(--line);" onchange="updateItemPrice(${idx}, this.value)"></td>
+      <td>${money(it.total)}</td>
+      <td><button type="button" class="rowbtn" onclick="removeOrderItem(${idx})">✕</button></td>
+    </tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="6">Дээрх маягтаас бараа нэмнэ үү</td></tr>`;
+  const grand = currentOrderItems.reduce((s,it)=>s+Number(it.total||0),0);
+  document.getElementById('orderGrandTotal').value = money(grand) + ' ₮';
+}
+function updateItemQty(idx, val){
+  const it = currentOrderItems[idx]; if (!it) return;
+  it.qty = Number(val||0); it.total = it.qty * it.unitPrice;
+  renderOrderItemsTable();
+}
+function updateItemPrice(idx, val){
+  const it = currentOrderItems[idx]; if (!it) return;
+  it.unitPrice = Number(val||0); it.total = it.qty * it.unitPrice;
+  renderOrderItemsTable();
+}
+function removeOrderItem(idx){
+  currentOrderItems.splice(idx, 1);
+  renderOrderItemsTable();
+}
+
+document.getElementById('addItemRowBtn').addEventListener('click', () => {
+  const sel = document.getElementById('itemProduct');
+  const selectedIds = [...sel.selectedOptions].map(o=>o.value);
+  if (!selectedIds.length) { toast('Бүтээгдэхүүн сонгоно уу', 'err'); return; }
+  const qty = Number(document.getElementById('itemQty').value || 1);
+  const priceOverride = document.getElementById('itemUnitPrice').value;
+  const checks = [...document.querySelectorAll('.sizeChk')];
+  const checkedByProduct = {};
+  checks.forEach(c => {
+    if (c.checked) {
+      (checkedByProduct[c.dataset.pid] = checkedByProduct[c.dataset.pid] || []).push(c.dataset.size);
+    }
+  });
+  let addedAny = false;
+  selectedIds.forEach(pid => {
+    const p = data.products.find(x=>x.id===pid);
+    if (!p) return;
+    const unitPrice = priceOverride !== '' && selectedIds.length===1 ? Number(priceOverride) : p.price;
+    const sizesForProduct = checkedByProduct[pid];
+    if (sizesForProduct && sizesForProduct.length) {
+      sizesForProduct.forEach(sz => {
+        currentOrderItems.push({ productId: pid, productName: p.name, size: sz, qty, unitPrice, total: qty*unitPrice });
+        addedAny = true;
+      });
+    } else if (!(p.size||'').trim()) {
+      currentOrderItems.push({ productId: pid, productName: p.name, size: '', qty, unitPrice, total: qty*unitPrice });
+      addedAny = true;
+    }
+  });
+  if (!addedAny) { toast('Размер сонгоно уу', 'err'); return; }
+  renderOrderItemsTable();
+  sel.selectedIndex = -1;
+  document.getElementById('itemSizeChecks').innerHTML = '<span style="color:var(--muted);">Эхлээд бүтээгдэхүүн сонгоно уу</span>';
+  document.getElementById('itemUnitPrice').value = '';
+  document.getElementById('itemQty').value = 1;
+});
+
+document.getElementById('addOrderBtn').addEventListener('click', () => {
+  if (!data.shops.some(s=>!s.archived) || !data.products.some(p=>!p.archived)) {
+    toast('Эхлээд идэвхтэй дэлгүүр болон бүтээгдэхүүн бүртгэнэ үү', 'err'); return;
+  }
+  document.getElementById('orderModalTitle').textContent = 'Захиалга нэмэх';
+  document.getElementById('orderId').value = '';
+  document.getElementById('orderDate').value = todayStr();
+  document.getElementById('orderStatus').value = 'new';
+  document.getElementById('orderNotes').value = '';
+  document.getElementById('itemQty').value = 1;
+  document.getElementById('itemUnitPrice').value = '';
+  currentOrderItems = [];
+  fillSelectOptions();
+  document.getElementById('itemProduct').selectedIndex = -1;
+  document.getElementById('itemSizeChecks').innerHTML = '<span style="color:var(--muted);">Эхлээд бүтээгдэхүүн сонгоно уу</span>';
+  renderOrderItemsTable();
+  openModal('orderModal');
+});
+function editOrder(id){
+  const o = data.orders.find(x=>x.id===id); if (!o) return;
+  document.getElementById('orderModalTitle').textContent = 'Захиалга засах' + (o.orderNo ? ' — №'+o.orderNo : '');
+  fillSelectOptions(o.shopId);
+  document.getElementById('orderId').value = o.id;
+  document.getElementById('orderShop').value = o.shopId;
+  document.getElementById('orderDate').value = o.orderDate||todayStr();
+  document.getElementById('orderStatus').value = o.status;
+  document.getElementById('orderNotes').value = o.notes||'';
+  currentOrderItems = (o.items||[]).map(it => ({...it}));
+  document.getElementById('itemProduct').selectedIndex = -1;
+  document.getElementById('itemSizeChecks').innerHTML = '<span style="color:var(--muted);">Эхлээд бүтээгдэхүүн сонгоно уу</span>';
+  renderOrderItemsTable();
+  openModal('orderModal');
+}
+function deleteOrder(id){
+  if (!confirm('Энэ захиалгыг архивлах уу? (Идэвхтэй жагсаалтаас нуугдана, дараа нь сэргээж болно)')) return;
+  archiveRecord(data.orders, id);
+  queueSave(); render();
+  toast('Захиалга архивлагдлаа');
+}
+function restoreOrder(id){
+  restoreRecord(data.orders, id);
+  queueSave(); render();
+  toast('Захиалга сэргээгдлээ', 'ok');
+}
+function hardDeleteOrder(id){
+  if (!confirm('Энэ захиалгыг бүрмөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй!')) return;
+  hardDeleteRecord('orders', id);
+  queueSave(); render();
+  toast('Захиалга бүрмөсөн устгагдлаа');
+}
+document.getElementById('saveOrderBtn').addEventListener('click', () => {
+  const shopId = document.getElementById('orderShop').value;
+  if (!shopId) { toast('Дэлгүүр сонгоно уу', 'err'); return; }
+  if (!currentOrderItems.length) { toast('Дор хаяж 1 бараа нэмнэ үү', 'err'); return; }
+  const id = document.getElementById('orderId').value;
+  const total = currentOrderItems.reduce((s,it)=>s+Number(it.total||0),0);
+  const shop = data.shops.find(s=>s.id===shopId);
+  const existingOrder = id ? data.orders.find(x=>x.id===id) : null;
+  let orderNo;
+  if (existingOrder) {
+    orderNo = existingOrder.orderNo;
+  } else {
+    orderNo = data.nextOrderNo || 1;
+    data.nextOrderNo = orderNo + 1;
+  }
+  const obj = {
+    id: id || uid(),
+    orderNo,
+    shopId,
+    shopName: shop ? shop.name : '',
+    shopAimag: shop ? (shop.aimag||'') : '',
+    items: currentOrderItems.map(it => {
+      const p = data.products.find(x=>x.id===it.productId);
+      return { productId: it.productId, productName: p ? p.name : (it.productName||''), size: it.size||'', qty: Number(it.qty||0), unitPrice: Number(it.unitPrice||0), total: Number(it.total||0) };
+    }),
+    total,
+    orderDate: document.getElementById('orderDate').value || todayStr(),
+    status: document.getElementById('orderStatus').value,
+    notes: document.getElementById('orderNotes').value.trim(),
+    createdAt: existingOrder ? (existingOrder.createdAt||Date.now()) : Date.now(),
+    updatedAt: Date.now()
+  };
+  if (id) { data.orders = data.orders.map(x => x.id===id ? obj : x); }
+  else { data.orders.push(obj); }
+  queueSave(); render(); closeModal('orderModal');
+  toast('Захиалга хадгалагдлаа', 'ok');
+});
+
+/* ---------------- CSV export ---------------- */
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  const map = {};
+  data.shops.forEach(s => {
+    const key = s.aimag || 'Тодорхойгүй';
+    if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
+    map[key].shops.add(s.id);
+  });
+  data.orders.forEach(o => {
+    const shop = data.shops.find(s=>s.id===o.shopId);
+    const key = shop ? (shop.aimag || 'Тодорхойгүй') : (o.shopAimag || 'Тодорхойгүй');
+    if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
+    map[key].orders += 1;
+    if (o.status !== 'cancelled') map[key].total += Number(o.total||0);
+  });
+  let csv = 'Аймаг,Дэлгүүр,Захиалга,Нийт дүн\n';
+  Object.keys(map).sort().forEach(k => {
+    csv += `${k},${map[k].shops.size},${map[k].orders},${map[k].total}\n`;
+  });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'aimag_negtgel_' + todayStr() + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
