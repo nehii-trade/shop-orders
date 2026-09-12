@@ -770,11 +770,11 @@ const DATA_FILENAME = 'nehii_trade_orders_data.json';
 const LOCAL_KEY = 'nehiitrade_orders_cache_v1';
 const TOKEN_KEY = 'nehiitrade_token_v1';
 function saveTokenToStorage(){
-  try { sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ accessToken, tokenExpiresAt })); } catch(e){}
+  try { localStorage.setItem(TOKEN_KEY, JSON.stringify({ accessToken, tokenExpiresAt })); } catch(e){}
 }
 function loadTokenFromStorage(){
   try {
-    const raw = sessionStorage.getItem(TOKEN_KEY);
+    const raw = localStorage.getItem(TOKEN_KEY);
     if (!raw) return null;
     const t = JSON.parse(raw);
     if (t && t.accessToken && t.tokenExpiresAt && Date.now() < t.tokenExpiresAt - 60000) return t;
@@ -782,7 +782,7 @@ function loadTokenFromStorage(){
   return null;
 }
 function clearTokenStorage(){
-  try { sessionStorage.removeItem(TOKEN_KEY); } catch(e){}
+  try { localStorage.removeItem(TOKEN_KEY); } catch(e){}
 }
 
 let accessToken = null;
@@ -1021,7 +1021,7 @@ function initGSI(){
   attemptSilentRestore();
 }
 
-// F5/дахин ачаалахад sessionStorage-д хүчинтэй токен байвал Google руу огт хандахгүйгээр шууд орно.
+// F5/дахин ачаалах, шинэ tab нээх үед localStorage-д хүчинтэй токен байвал Google руу огт хандахгүйгээр шууд орно.
 // (Popup дээр суурилсан "чимээгүй" хүсэлт нь хуудас дөнгөж ачаалагдах үед хэрэглэгчийн
 // шууд үйлдэлгүй тул browser-ийн popup blocker-т хаагдах эрсдэлтэй тул ашиглахгүй.)
 async function attemptSilentRestore(){
