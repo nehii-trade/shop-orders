@@ -375,6 +375,12 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 }
 .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--saddle-dim);outline-offset:0;border-color:var(--saddle);}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.item-search-results{margin-top:6px;max-height:230px;overflow-y:auto;}
+.item-search-results .isr-item{padding:9px 11px;border:1px solid var(--line);border-top:none;cursor:pointer;font-size:13.5px;}
+.item-search-results .isr-item:first-child{border-top:1px solid var(--line);}
+.item-search-results .isr-item:hover{background:var(--stone-dim);}
+.item-search-results .isr-item .isr-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+.item-search-results .isr-empty{padding:9px 11px;color:var(--muted);font-size:13px;border:1px solid var(--line);}
 .modal-foot{padding:16px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0;}
 
 /* reports */
@@ -741,18 +747,24 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <div class="field"><label for="orderDate">Огноо</label><input type="date" id="orderDate"></div>
       </div>
 
-      <div class="field" style="border:1px solid var(--line);padding:14px;background:var(--white);margin-bottom:16px;">
+      <div class="field" style="border:1px solid var(--line);padding:14px;background:var(--white);margin-bottom:16px;" id="itemAddPanel">
         <label style="margin-bottom:9px;">Бараа нэмэх</label>
-        <div class="field-row">
-          <div class="field"><label for="itemProduct">Бүтээгдэхүүн</label><select id="itemProduct" multiple size="4"></select></div>
-          <div class="field"><label>Размер (боломжтой бол)</label><div id="itemSizeChecks" style="font-size:13px;color:var(--muted);">Эхлээд бүтээгдэхүүн сонгоно уу</div></div>
+        <div class="field" id="itemSearchWrap">
+          <input type="text" id="itemSearchInput" placeholder="Бүтээгдэхүүн хайх (нэр, код, компани)...">
+          <div id="itemSearchResults" class="item-search-results"></div>
         </div>
-        <div class="field-row">
-          <div class="field"><label for="itemQty">Тоо ширхэг (нэг размерт)</label><input type="number" id="itemQty" min="1" value="1"></div>
-          <div class="field"><label for="itemUnitPrice">Нэгжийн үнэ (₮)</label><input type="number" id="itemUnitPrice" min="0"></div>
+        <div id="itemPickedPanel" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div id="itemPickedName" style="font-weight:600;"></div>
+            <button type="button" class="rowbtn" id="itemPickedBackBtn">← Өөр бараа хайх</button>
+          </div>
+          <div class="field"><label>Размер (боломжтой бол)</label><div id="itemSizeChecks" style="font-size:13px;color:var(--muted);"></div></div>
+          <div class="field-row">
+            <div class="field"><label for="itemQty">Тоо ширхэг (нэг размерт)</label><input type="number" id="itemQty" min="1" value="1"></div>
+            <div class="field"><label for="itemUnitPrice">Нэгжийн үнэ (₮)</label><input type="number" id="itemUnitPrice" min="0"></div>
+          </div>
+          <button type="button" class="btn secondary" id="addItemRowBtn" style="width:100%;justify-content:center;">+ Мөр нэмэх</button>
         </div>
-        <button type="button" class="btn secondary" id="addItemRowBtn" style="width:100%;justify-content:center;">+ Мөр нэмэх</button>
-        <div class="hint">Ctrl (эсвэл Cmd)-той дарж хэдэн ч бүтээгдэхүүнийг зэрэг сонгож болно. Размер сонговол тухайн бараа бүр сонгосон размер тус бүрээр тусдаа мөр болж нэмэгдэнэ.</div>
       </div>
 
       <div class="field">
@@ -1552,11 +1564,6 @@ function fillSelectOptions(extraShopId){
   }
   shopSel.innerHTML = shopsToShow.map(s => `<option value="${s.id}">${esc(s.name)}${s.aimag?' — '+esc(s.aimag):''}${s.archived?' (архивлагдсан)':''}</option>`).join('') || '<option value="">Дэлгүүр байхгүй</option>';
   if (curShop) shopSel.value = curShop;
-
-  const itemProdSel = document.getElementById('itemProduct');
-  if (itemProdSel) {
-    itemProdSel.innerHTML = data.products.filter(p=>!p.archived).map(p => `<option value="${p.id}">${esc(p.name)}${p.company?' — '+esc(p.company):''}</option>`).join('') || '<option value="" disabled>Бүтээгдэхүүн байхгүй</option>';
-  }
 }
 
 function refreshProductDatalists(){
@@ -1842,39 +1849,54 @@ document.getElementById('confirmProductImportBtn').addEventListener('click', () 
 /* ---------------- Orders CRUD (multi-item) ---------------- */
 let currentOrderItems = [];
 
-function updateItemSizeChecks(){
-  const sel = document.getElementById('itemProduct');
-  const host = document.getElementById('itemSizeChecks');
-  const selectedIds = [...sel.selectedOptions].map(o=>o.value);
-  if (!selectedIds.length) {
-    host.innerHTML = '<span style="color:var(--muted);">Эхлээд бүтээгдэхүүн сонгоно уу</span>';
-    document.getElementById('itemUnitPrice').value = '';
-    return;
+let currentPickedProductId = null;
+function buildSizeChecksForProduct(p){
+  const sizes = (p.size||'').split(',').map(s=>s.trim()).filter(Boolean);
+  if (!sizes.length) {
+    return `<label style="display:block;"><input type="checkbox" class="sizeChk" data-size="" checked disabled> Размергүй</label>`;
   }
-  // Хэрэв ганц бараа сонгосон бол тухайн барааны үнийг автоматаар оруулна
-  if (selectedIds.length === 1) {
-    const p = data.products.find(x=>x.id===selectedIds[0]);
-    if (p) document.getElementById('itemUnitPrice').value = p.price;
-  }
-  // Сонгосон бүх барааны размерүүдийг цуглуулж, checkbox болгож харуулна (бараа бүрээр)
-  let html = '';
-  selectedIds.forEach(pid => {
-    const p = data.products.find(x=>x.id===pid);
-    if (!p) return;
-    const sizes = (p.size||'').split(',').map(s=>s.trim()).filter(Boolean);
-    if (!sizes.length) {
-      html += `<label style="display:block;margin-bottom:4px;"><input type="checkbox" class="sizeChk" data-pid="${pid}" data-size="" checked disabled> ${esc(p.name)} (размергүй)</label>`;
-    } else {
-      html += `<div style="margin-bottom:6px;"><div style="font-weight:600;margin-bottom:3px;">${esc(p.name)}</div>`;
-      sizes.forEach(sz => {
-        html += `<label style="display:inline-block;margin:0 10px 4px 0;"><input type="checkbox" class="sizeChk" data-pid="${pid}" data-size="${esc(sz)}"> ${esc(sz)}</label>`;
-      });
-      html += `</div>`;
-    }
-  });
-  host.innerHTML = html;
+  return sizes.map(sz => `<label style="display:inline-block;margin:0 10px 6px 0;"><input type="checkbox" class="sizeChk" data-size="${esc(sz)}"> ${esc(sz)}</label>`).join('');
 }
-document.getElementById('itemProduct').addEventListener('change', updateItemSizeChecks);
+function pickItemProduct(pid){
+  const p = data.products.find(x=>x.id===pid);
+  if (!p) return;
+  currentPickedProductId = pid;
+  document.getElementById('itemSearchWrap').style.display = 'none';
+  document.getElementById('itemPickedPanel').style.display = '';
+  document.getElementById('itemPickedName').textContent = p.name + (p.company ? ' — '+p.company : '') + (p.itemName ? ' · '+p.itemName : '');
+  document.getElementById('itemSizeChecks').innerHTML = buildSizeChecksForProduct(p);
+  document.getElementById('itemUnitPrice').value = p.price || '';
+  document.getElementById('itemQty').value = 1;
+}
+function resetItemPicker(){
+  currentPickedProductId = null;
+  const searchInput = document.getElementById('itemSearchInput');
+  if (searchInput) searchInput.value = '';
+  const results = document.getElementById('itemSearchResults');
+  if (results) results.innerHTML = '';
+  document.getElementById('itemSearchWrap').style.display = '';
+  document.getElementById('itemPickedPanel').style.display = 'none';
+  document.getElementById('itemSizeChecks').innerHTML = '';
+  document.getElementById('itemUnitPrice').value = '';
+  document.getElementById('itemQty').value = 1;
+}
+function renderItemSearchResults(){
+  const q = document.getElementById('itemSearchInput').value.trim().toLowerCase();
+  const host = document.getElementById('itemSearchResults');
+  if (!q) { host.innerHTML = ''; return; }
+  const matches = data.products.filter(p => !p.archived && ((p.name||'')+(p.itemName||'')+(p.company||'')+(p.code||'')+(p.itemCode||'')).toLowerCase().includes(q)).slice(0,8);
+  if (!matches.length) { host.innerHTML = '<div class="isr-empty">Тохирох бараа алга</div>'; return; }
+  host.innerHTML = matches.map(p => `
+    <div class="isr-item" data-pid="${p.id}">
+      <div>${esc(p.name)}${p.itemName?' · '+esc(p.itemName):''}</div>
+      <div class="isr-sub">${esc(p.company||'—')}${p.code?' · '+esc(p.code):''} · ${money(p.price)} ₮</div>
+    </div>`).join('');
+  host.querySelectorAll('.isr-item').forEach(el => {
+    el.addEventListener('click', () => pickItemProduct(el.dataset.pid));
+  });
+}
+document.getElementById('itemSearchInput').addEventListener('input', renderItemSearchResults);
+document.getElementById('itemPickedBackBtn').addEventListener('click', resetItemPicker);
 
 function renderOrderItemsTable(){
   const body = document.getElementById('orderItemsBody');
@@ -1908,40 +1930,19 @@ function removeOrderItem(idx){
 }
 
 document.getElementById('addItemRowBtn').addEventListener('click', () => {
-  const sel = document.getElementById('itemProduct');
-  const selectedIds = [...sel.selectedOptions].map(o=>o.value);
-  if (!selectedIds.length) { toast('Бүтээгдэхүүн сонгоно уу', 'err'); return; }
+  if (!currentPickedProductId) { toast('Эхлээд бүтээгдэхүүн сонгоно уу', 'err'); return; }
+  const p = data.products.find(x=>x.id===currentPickedProductId);
+  if (!p) { toast('Бүтээгдэхүүн олдсонгүй', 'err'); resetItemPicker(); return; }
   const qty = Number(document.getElementById('itemQty').value || 1);
-  const priceOverride = document.getElementById('itemUnitPrice').value;
-  const checks = [...document.querySelectorAll('.sizeChk')];
-  const checkedByProduct = {};
-  checks.forEach(c => {
-    if (c.checked) {
-      (checkedByProduct[c.dataset.pid] = checkedByProduct[c.dataset.pid] || []).push(c.dataset.size);
-    }
+  const unitPrice = Number(document.getElementById('itemUnitPrice').value || p.price || 0);
+  const checkedSizes = [...document.querySelectorAll('.sizeChk')].filter(c=>c.checked).map(c=>c.dataset.size);
+  if (!checkedSizes.length) { toast('Размер сонгоно уу', 'err'); return; }
+  checkedSizes.forEach(sz => {
+    currentOrderItems.push({ productId: p.id, productName: p.name, size: sz, qty, unitPrice, total: qty*unitPrice });
   });
-  let addedAny = false;
-  selectedIds.forEach(pid => {
-    const p = data.products.find(x=>x.id===pid);
-    if (!p) return;
-    const unitPrice = priceOverride !== '' && selectedIds.length===1 ? Number(priceOverride) : p.price;
-    const sizesForProduct = checkedByProduct[pid];
-    if (sizesForProduct && sizesForProduct.length) {
-      sizesForProduct.forEach(sz => {
-        currentOrderItems.push({ productId: pid, productName: p.name, size: sz, qty, unitPrice, total: qty*unitPrice });
-        addedAny = true;
-      });
-    } else if (!(p.size||'').trim()) {
-      currentOrderItems.push({ productId: pid, productName: p.name, size: '', qty, unitPrice, total: qty*unitPrice });
-      addedAny = true;
-    }
-  });
-  if (!addedAny) { toast('Размер сонгоно уу', 'err'); return; }
   renderOrderItemsTable();
-  sel.selectedIndex = -1;
-  document.getElementById('itemSizeChecks').innerHTML = '<span style="color:var(--muted);">Эхлээд бүтээгдэхүүн сонгоно уу</span>';
-  document.getElementById('itemUnitPrice').value = '';
-  document.getElementById('itemQty').value = 1;
+  toast(p.name + ' нэмэгдлээ', 'ok');
+  resetItemPicker();
 });
 
 document.getElementById('addOrderBtn').addEventListener('click', () => {
@@ -1953,12 +1954,9 @@ document.getElementById('addOrderBtn').addEventListener('click', () => {
   document.getElementById('orderDate').value = todayStr();
   document.getElementById('orderStatus').value = 'new';
   document.getElementById('orderNotes').value = '';
-  document.getElementById('itemQty').value = 1;
-  document.getElementById('itemUnitPrice').value = '';
   currentOrderItems = [];
   fillSelectOptions();
-  document.getElementById('itemProduct').selectedIndex = -1;
-  document.getElementById('itemSizeChecks').innerHTML = '<span style="color:var(--muted);">Эхлээд бүтээгдэхүүн сонгоно уу</span>';
+  resetItemPicker();
   renderOrderItemsTable();
   openModal('orderModal');
 });
@@ -1972,8 +1970,7 @@ function editOrder(id){
   document.getElementById('orderStatus').value = o.status;
   document.getElementById('orderNotes').value = o.notes||'';
   currentOrderItems = (o.items||[]).map(it => ({...it}));
-  document.getElementById('itemProduct').selectedIndex = -1;
-  document.getElementById('itemSizeChecks').innerHTML = '<span style="color:var(--muted);">Эхлээд бүтээгдэхүүн сонгоно уу</span>';
+  resetItemPicker();
   renderOrderItemsTable();
   openModal('orderModal');
 }
