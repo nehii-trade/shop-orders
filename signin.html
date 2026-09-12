@@ -462,6 +462,13 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
   .products-table td:last-child{justify-content:flex-end;}
   .products-table td:last-child::before{content:none;}
 }
+@media print {
+  body *{visibility:hidden;}
+  #printArea, #printArea *{visibility:visible;}
+  #printArea{position:absolute;top:0;left:0;width:100%;padding:20px;display:block !important;}
+  #printArea table{width:100%;border-collapse:collapse;margin-top:12px;}
+  #printArea th, #printArea td{border:1px solid #999;padding:6px 8px;text-align:left;font-size:13px;}
+}
 </style>
 </head>
 <body>
@@ -851,10 +858,13 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
     <div class="modal-body" id="orderViewBody"></div>
     <div class="modal-foot">
       <button class="btn secondary" data-close="orderViewModal">Хаах</button>
+      <button class="btn secondary" id="orderViewPrintBtn">Хэвлэх / PDF</button>
+      <button class="btn secondary" id="orderViewWhatsappBtn">WhatsApp</button>
       <button class="btn" id="orderViewEditBtn">Засах</button>
     </div>
   </div>
 </div>
+<div id="printArea" style="display:none;"></div>
 
 <div class="overlay" id="orderModal">
   <div class="modal" style="max-width:640px;">
@@ -2405,6 +2415,53 @@ document.getElementById('orderViewEditBtn').addEventListener('click', () => {
   if (!orderViewCurrentId) return;
   closeModal('orderViewModal');
   editOrder(orderViewCurrentId);
+});
+function buildOrderSummaryLines(o){
+  const shop = data.shops.find(s=>s.id===o.shopId);
+  const shopName = shop ? shop.name : (o.shopName || '—');
+  const lines = [];
+  lines.push('Нэхий Трейд' + (o.orderNo ? ' — Захиалга №'+o.orderNo : ' — Захиалга'));
+  lines.push('Дэлгүүр: ' + shopName);
+  lines.push('Огноо: ' + (o.orderDate||'—'));
+  lines.push('');
+  (o.items||[]).forEach(it => {
+    const p = data.products.find(x=>x.id===it.productId);
+    const name = p ? p.name : (it.productName || 'Устсан бараа');
+    lines.push('- ' + name + (it.size?' ('+it.size+')':'') + ': ' + it.qty + ' ш × ' + money(it.unitPrice) + '₮ = ' + money(it.total) + '₮');
+  });
+  lines.push('');
+  lines.push('Нийт дүн: ' + money(o.total) + '₮');
+  if (o.notes) { lines.push(''); lines.push('Тэмдэглэл: ' + o.notes); }
+  return lines;
+}
+document.getElementById('orderViewPrintBtn').addEventListener('click', () => {
+  if (!orderViewCurrentId) return;
+  const o = data.orders.find(x=>x.id===orderViewCurrentId); if (!o) return;
+  const shop = data.shops.find(s=>s.id===o.shopId);
+  const shopName = shop ? shop.name : (o.shopName || '—');
+  const itemsHtml = (o.items||[]).map(it => {
+    const p = data.products.find(x=>x.id===it.productId);
+    const name = p ? p.name : (it.productName || 'Устсан бараа');
+    return `<tr><td>${esc(name)}</td><td>${esc(it.size||'—')}</td><td>${it.qty}</td><td>${money(it.unitPrice)} ₮</td><td>${money(it.total)} ₮</td></tr>`;
+  }).join('');
+  document.getElementById('printArea').innerHTML = `
+    <h2 style="font-family:Georgia,serif;">Нэхий Трейд ${o.orderNo ? '— Захиалга №'+o.orderNo : ''}</h2>
+    <p><b>Дэлгүүр:</b> ${esc(shopName)}</p>
+    <p><b>Огноо:</b> ${esc(o.orderDate||'—')}</p>
+    <table>
+      <thead><tr><th>Бараа</th><th>Размер</th><th>Тоо</th><th>Нэгж үнэ</th><th>Дүн</th></tr></thead>
+      <tbody>${itemsHtml}</tbody>
+    </table>
+    <p style="margin-top:14px;font-size:16px;"><b>Нийт дүн: ${money(o.total)} ₮</b></p>
+    ${o.notes ? `<p><b>Тэмдэглэл:</b> ${esc(o.notes)}</p>` : ''}
+  `;
+  window.print();
+});
+document.getElementById('orderViewWhatsappBtn').addEventListener('click', () => {
+  if (!orderViewCurrentId) return;
+  const o = data.orders.find(x=>x.id===orderViewCurrentId); if (!o) return;
+  const text = encodeURIComponent(buildOrderSummaryLines(o).join('\n'));
+  window.open('https://wa.me/?text=' + text, '_blank');
 });
 function editOrder(id){
   const o = data.orders.find(x=>x.id===id); if (!o) return;
