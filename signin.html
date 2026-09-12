@@ -1990,6 +1990,22 @@ function esc(s){
 function isSafeHttpsUrl(url){
   return /^https:\/\/[^\s]+$/i.test(String(url||'').trim());
 }
+/* ---------------- Excel импортын header уян хатан танилт ---------------- */
+function normalizeHeaderKey(s){
+  return String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
+}
+function normalizeRowKeys(row){
+  const out = {};
+  Object.keys(row).forEach(k => { out[normalizeHeaderKey(k)] = row[k]; });
+  return out;
+}
+function getFieldFromRow(normalizedRow, aliases){
+  for (const a of aliases) {
+    const key = normalizeHeaderKey(a);
+    if (normalizedRow[key] !== undefined && normalizedRow[key] !== null) return String(normalizedRow[key]).trim();
+  }
+  return '';
+}
 
 /* ---------------- Search / filter listeners ---------------- */
 document.getElementById('shopSearch').addEventListener('input', renderShops);
@@ -2195,6 +2211,15 @@ const PRODUCT_IMPORT_HEADERS = {
   itemName: 'Барааны нэр',
   price: 'Нэгж үнэ'
 };
+const PRODUCT_IMPORT_ALIASES = {
+  itemCode: ['Барааны код'],
+  code: ['Загварын код'],
+  size: ['Размер'],
+  company: ['Компани'],
+  name: ['Бүтээгдэхүүний нэр'],
+  itemName: ['Барааны нэр'],
+  price: ['Нэгж үнэ', 'Үнэ']
+};
 document.getElementById('downloadImportTemplateBtn').addEventListener('click', () => {
   const headers = Object.values(PRODUCT_IMPORT_HEADERS);
   const sampleRow = ['319514090338', '31951409', '38', 'Як ланд ХХК', '05. Ажлын өвлийн гутал', '319-51-409-03 38', 170000];
@@ -2235,14 +2260,15 @@ document.getElementById('productImportFile').addEventListener('change', (e) => {
 function parseProductImportRows(raw){
   const byItemCode = {};
   data.products.forEach(p => { if (p.itemCode) byItemCode[p.itemCode] = p; });
-  productImportRows = raw.map(r => {
-    const itemCode = String(r[PRODUCT_IMPORT_HEADERS.itemCode] ?? '').trim();
-    const code = String(r[PRODUCT_IMPORT_HEADERS.code] ?? '').trim();
-    const size = String(r[PRODUCT_IMPORT_HEADERS.size] ?? '').trim();
-    const company = String(r[PRODUCT_IMPORT_HEADERS.company] ?? '').trim();
-    const name = String(r[PRODUCT_IMPORT_HEADERS.name] ?? '').trim();
-    const itemName = String(r[PRODUCT_IMPORT_HEADERS.itemName] ?? '').trim();
-    const price = Number(r[PRODUCT_IMPORT_HEADERS.price] || 0);
+  productImportRows = raw.map(rawRow => {
+    const r = normalizeRowKeys(rawRow);
+    const itemCode = getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.itemCode);
+    const code = getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.code);
+    const size = getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.size);
+    const company = getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.company);
+    const name = getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.name);
+    const itemName = getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.itemName);
+    const price = Number(getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.price) || 0);
     const isEmpty = !itemCode && !code && !name && !itemName;
     const existing = itemCode ? byItemCode[itemCode] : null;
     return {
@@ -2324,6 +2350,18 @@ const SHOP_IMPORT_HEADERS = {
   address: 'Байршил хаяг',
   notes: 'Тэмдэглэл'
 };
+const SHOP_IMPORT_ALIASES = {
+  name: ['Дэлгүүрийн нэр'],
+  aimag: ['Аймаг'],
+  sum: ['Сум'],
+  category: ['Ангилал'],
+  contact: ['Холбоо барих хүн', 'Холбоо барих'],
+  phone1: ['Утас 1', 'Утас1', 'Утас'],
+  phone2: ['Утас 2', 'Утас2'],
+  facebook: ['Facebook', 'Facebook хуудас', 'FB'],
+  address: ['Байршил хаяг', 'Хаяг', 'Байршил'],
+  notes: ['Тэмдэглэл']
+};
 function parseShopCategoryValue(v){
   const s = String(v||'').trim().toLowerCase();
   if (s.includes('гадн')) return 'foreign';
@@ -2369,26 +2407,31 @@ document.getElementById('shopImportFile').addEventListener('change', (e) => {
 function parseShopImportRows(raw){
   const byName = {};
   data.shops.forEach(s => { if (s.name) byName[s.name.trim().toLowerCase()] = s; });
-  shopImportRows = raw.map(r => {
-    const name = String(r[SHOP_IMPORT_HEADERS.name] ?? '').trim();
-    const aimag = String(r[SHOP_IMPORT_HEADERS.aimag] ?? '').trim();
-    const sum = String(r[SHOP_IMPORT_HEADERS.sum] ?? '').trim();
-    const category = parseShopCategoryValue(r[SHOP_IMPORT_HEADERS.category]);
-    const contact = String(r[SHOP_IMPORT_HEADERS.contact] ?? '').trim();
-    const phone1 = String(r[SHOP_IMPORT_HEADERS.phone1] ?? '').trim();
-    const phone2 = String(r[SHOP_IMPORT_HEADERS.phone2] ?? '').trim();
-    let facebook = String(r[SHOP_IMPORT_HEADERS.facebook] ?? '').trim();
+  const seenInBatch = {};
+  shopImportRows = raw.map(rawRow => {
+    const r = normalizeRowKeys(rawRow);
+    const name = getFieldFromRow(r, SHOP_IMPORT_ALIASES.name);
+    const aimag = getFieldFromRow(r, SHOP_IMPORT_ALIASES.aimag);
+    const sum = getFieldFromRow(r, SHOP_IMPORT_ALIASES.sum);
+    const category = parseShopCategoryValue(getFieldFromRow(r, SHOP_IMPORT_ALIASES.category));
+    const contact = getFieldFromRow(r, SHOP_IMPORT_ALIASES.contact);
+    const phone1 = getFieldFromRow(r, SHOP_IMPORT_ALIASES.phone1);
+    const phone2 = getFieldFromRow(r, SHOP_IMPORT_ALIASES.phone2);
+    let facebook = getFieldFromRow(r, SHOP_IMPORT_ALIASES.facebook);
     if (facebook && !isSafeHttpsUrl(facebook)) facebook = '';
-    const address = String(r[SHOP_IMPORT_HEADERS.address] ?? '').trim();
-    const notes = String(r[SHOP_IMPORT_HEADERS.notes] ?? '').trim();
+    const address = getFieldFromRow(r, SHOP_IMPORT_ALIASES.address);
+    const notes = getFieldFromRow(r, SHOP_IMPORT_ALIASES.notes);
     const isEmpty = !name && !aimag;
-    const existing = name ? byName[name.trim().toLowerCase()] : null;
+    const nameKey = name.trim().toLowerCase();
+    const isDuplicateInFile = !isEmpty && !!nameKey && !!seenInBatch[nameKey];
+    if (!isEmpty && nameKey) seenInBatch[nameKey] = (seenInBatch[nameKey]||0) + 1;
+    const existing = name ? byName[nameKey] : null;
     return {
       name, aimag, sum, category, contact, phone1, phone2, facebook, address, notes,
-      isEmpty,
+      isEmpty, isDuplicateInFile,
       existingId: existing ? existing.id : null,
       existingLabel: existing ? `${existing.aimag||'—'} · ${existing.contact||'—'}` : '',
-      checked: !isEmpty
+      checked: !isEmpty && !isDuplicateInFile
     };
   });
   renderShopImportPreview();
@@ -2403,8 +2446,10 @@ function renderShopImportPreview(){
   document.getElementById('shopImportCountDup').textContent = dupCount;
   document.getElementById('shopImportCountSkip').textContent = skipCount;
   body.innerHTML = rows.map((r, idx) => {
-    const badge = r.isEmpty ? '<span style="color:var(--muted);">хоосон</span>' : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>');
-    const sub = r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : '';
+    const badge = r.isEmpty ? '<span style="color:var(--muted);">хоосон</span>'
+      : (r.isDuplicateInFile ? '<span class="badge cancelled">Файлд давхардсан</span>'
+      : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>'));
+    const sub = r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : (r.isDuplicateInFile ? `<div style="font-size:11px;color:var(--brick);">Энэ нэр файл дотроо дахин давтагдсан</div>` : '');
     const phones = [r.phone1, r.phone2].filter(Boolean).join(' / ') || '—';
     return `<tr>
       <td><input type="checkbox" data-idx="${idx}" class="shopImportRowChk" ${r.checked?'checked':''} ${r.isEmpty?'disabled':''}></td>
