@@ -598,7 +598,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           </div>
           <div style="overflow-x:auto;">
           <table>
-            <thead><tr><th>Нэр</th><th>Аймаг</th><th>Сум</th><th>Холбоо барих</th><th>Утас</th><th>Facebook</th><th></th></tr></thead>
+            <thead><tr><th>Нэр</th><th>Аймаг</th><th>Сум</th><th>Ангилал</th><th>Холбоо барих</th><th>Утас</th><th>Facebook</th><th></th></tr></thead>
             <tbody id="shopsBody"></tbody>
           </table>
           </div>
@@ -687,6 +687,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             </select>
             <select id="reportShopFilter"><option value="">Бүх дэлгүүр</option></select>
             <select id="reportAimagFilter"><option value="">Бүх аймаг</option></select>
+            <select id="reportProductFilter"><option value="">Бүх бараа</option></select>
             <select id="reportStatusFilter">
               <option value="">Бүх төлөв</option>
               <option value="new">Шинэ</option>
@@ -766,13 +767,19 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <div class="field"><label for="shopSum">Сум</label><input type="text" id="shopSum"></div>
       </div>
       <div class="field-row">
+        <div class="field"><label for="shopCategory">Ангилал</label>
+          <select id="shopCategory">
+            <option value="domestic">Дотоодын дэлгүүр</option>
+            <option value="foreign">Гадны дэлгүүр</option>
+          </select>
+        </div>
         <div class="field"><label for="shopContact">Холбоо барих хүн</label><input type="text" id="shopContact"></div>
-        <div class="field"><label for="shopPhone1">Утас 1</label><input type="text" id="shopPhone1" placeholder="99001122"></div>
       </div>
       <div class="field-row">
+        <div class="field"><label for="shopPhone1">Утас 1</label><input type="text" id="shopPhone1" placeholder="99001122"></div>
         <div class="field"><label for="shopPhone2">Утас 2</label><input type="text" id="shopPhone2" placeholder="(заавал биш)"></div>
-        <div class="field"><label for="shopFacebook">Facebook хуудас</label><input type="url" id="shopFacebook" placeholder="https://facebook.com/..."></div>
       </div>
+      <div class="field"><label for="shopFacebook">Facebook хуудас</label><input type="url" id="shopFacebook" placeholder="https://facebook.com/..."></div>
       <div class="field"><label for="shopAddress">Хаяг</label><input type="text" id="shopAddress"></div>
       <div class="field"><label for="shopNotes">Тэмдэглэл</label><textarea id="shopNotes" rows="2"></textarea></div>
     </div>
@@ -970,6 +977,7 @@ let saveTimer = null;
 let data = { shops: [], products: [], orders: [], tombstones: {}, nextOrderNo: 1 };
 
 const STATUS_LABEL = { new:'Шинэ', confirmed:'Батлагдсан', shipping:'Хүргэлтэд', done:'Дууссан', cancelled:'Цуцлагдсан' };
+const SHOP_CATEGORY_LABEL = { domestic:'Дотоодын дэлгүүр', foreign:'Гадны дэлгүүр' };
 const STATUS_CLASS = { new:'new', confirmed:'confirmed', shipping:'shipping', done:'done', cancelled:'cancelled' };
 
 /* ---------------- Хуучин форматын өгөгдлийг шинэчлэх ---------------- */
@@ -1664,12 +1672,13 @@ function renderShops(){
       <td>${esc(s.name)}</td>
       <td>${esc(s.aimag||'—')}</td>
       <td>${esc(s.sum||'—')}</td>
+      <td>${SHOP_CATEGORY_LABEL[s.category] || SHOP_CATEGORY_LABEL.domestic}</td>
       <td>${esc(s.contact||'—')}</td>
       <td>${phones}</td>
       <td>${fb}</td>
       <td style="text-align:right;white-space:nowrap;">${actions}</td>
     </tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="7">${showArchived ? 'Архивласан дэлгүүр алга' : 'Дэлгүүр бүртгэгдээгүй байна'}</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="8">${showArchived ? 'Архивласан дэлгүүр алга' : 'Дэлгүүр бүртгэгдээгүй байна'}</td></tr>`;
 }
 
 function populateProductCompanyFilterOptions(){
@@ -1773,12 +1782,14 @@ function getReportFilteredOrders(){
   const rangeSel = document.getElementById('reportDateRange').value;
   const shopSel = document.getElementById('reportShopFilter').value;
   const aimagSel = document.getElementById('reportAimagFilter').value;
+  const productSel = document.getElementById('reportProductFilter').value;
   const statusSel = document.getElementById('reportStatusFilter').value;
   const { start } = getDateRangeBounds(rangeSel);
   return data.orders.filter(o => {
     if (start && (o.orderDate||'') < start) return false;
     if (shopSel && o.shopId !== shopSel) return false;
     if (statusSel && o.status !== statusSel) return false;
+    if (productSel && !(o.items||[]).some(it => it.productId === productSel)) return false;
     if (aimagSel) {
       const shop = data.shops.find(s=>s.id===o.shopId);
       const aimag = shop ? (shop.aimag||'Тодорхойгүй') : (o.shopAimag||'Тодорхойгүй');
@@ -1798,6 +1809,12 @@ function populateReportFilterOptions(){
   const aimags = [...new Set(data.shops.map(s=>s.aimag).filter(Boolean))].sort();
   aimagSel.innerHTML = '<option value="">Бүх аймаг</option>' + aimags.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join('');
   if (curAimag) aimagSel.value = curAimag;
+
+  const productSel = document.getElementById('reportProductFilter');
+  const curProduct = productSel.value;
+  const productsSorted = [...data.products].sort((a,b)=>a.name.localeCompare(b.name));
+  productSel.innerHTML = '<option value="">Бүх бараа</option>' + productsSorted.map(p=>`<option value="${p.id}">${esc(p.name)}${p.itemName?' · '+esc(p.itemName):''}</option>`).join('');
+  if (curProduct) productSel.value = curProduct;
 }
 function renderReportChart(orders){
   const host = document.getElementById('reportChart');
@@ -1905,7 +1922,7 @@ function renderReports(){
   renderReportTopLists(orders);
   renderReportSizeDemand(orders);
 }
-['reportDateRange','reportShopFilter','reportAimagFilter','reportStatusFilter'].forEach(id => {
+['reportDateRange','reportShopFilter','reportAimagFilter','reportProductFilter','reportStatusFilter'].forEach(id => {
   document.getElementById(id).addEventListener('change', renderReports);
 });
 
@@ -1965,6 +1982,7 @@ document.querySelectorAll('.overlay').forEach(ov => {
 document.getElementById('addShopBtn').addEventListener('click', () => {
   document.getElementById('shopModalTitle').textContent = 'Дэлгүүр нэмэх';
   ['shopId','shopName','shopAimag','shopSum','shopContact','shopPhone1','shopPhone2','shopFacebook','shopAddress','shopNotes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('shopCategory').value = 'domestic';
   openModal('shopModal');
 });
 let shopViewCurrentId = null;
@@ -1985,7 +2003,10 @@ function viewShop(id){
       <div><div class="ov-label">Сум</div><div class="ov-val">${esc(s.sum||'—')}</div></div>
     </div>
     <div class="field-row">
+      <div><div class="ov-label">Ангилал</div><div class="ov-val">${SHOP_CATEGORY_LABEL[s.category] || SHOP_CATEGORY_LABEL.domestic}</div></div>
       <div><div class="ov-label">Холбоо барих</div><div class="ov-val">${esc(s.contact||'—')}</div></div>
+    </div>
+    <div class="field-row">
       <div><div class="ov-label">Утас</div><div class="ov-val">${esc(phones)}</div></div>
     </div>
     <div class="field-row">
@@ -2014,6 +2035,7 @@ function editShop(id){
   document.getElementById('shopName').value = s.name||'';
   document.getElementById('shopAimag').value = s.aimag||'';
   document.getElementById('shopSum').value = s.sum||'';
+  document.getElementById('shopCategory').value = s.category||'domestic';
   document.getElementById('shopContact').value = s.contact||'';
   document.getElementById('shopPhone1').value = s.phone1||'';
   document.getElementById('shopPhone2').value = s.phone2||'';
@@ -2052,6 +2074,7 @@ document.getElementById('saveShopBtn').addEventListener('click', () => {
     id: id || uid(),
     name, aimag,
     sum: document.getElementById('shopSum').value.trim(),
+    category: document.getElementById('shopCategory').value || 'domestic',
     contact: document.getElementById('shopContact').value.trim(),
     phone1: document.getElementById('shopPhone1').value.trim(),
     phone2: document.getElementById('shopPhone2').value.trim(),
