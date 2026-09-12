@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Нэхий Трейд — Захиалгын систем</title>
+<script>
+(function(){
+  try {
+    var t = localStorage.getItem('nehiitrade_theme_v1');
+    if (t && t !== 'leather') document.documentElement.setAttribute('data-theme', t);
+  } catch(e){}
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -28,6 +36,68 @@
   --white:#fffdf9;
   --radius:3px;
   --shadow:none;
+  --sidebar-text:#c9bea9;
+  --sidebar-muted:#a89a80;
+  --btn-hover:#3a3227;
+  --btn-danger-hover:#8a2f20;
+  --confirmed-bg:#e6eef7;
+  --confirmed-text:#2c5b8a;
+  --shipping-bg:#f0e7f7;
+  --shipping-text:#6b3fa0;
+}
+
+/* ---------- Theme: Эсгий ба хужир (felt/wool) ---------- */
+html[data-theme="felt"]{
+  --ink:#201d1a;
+  --stone:#e3e0d3;
+  --stone-dim:#d5d1c3;
+  --paper:#efe9df;
+  --line:#d9d3c4;
+  --saddle:#7a2e2e;
+  --saddle-dim:#9c4a4a;
+  --moss:#4f6b6a;
+  --moss-dim:#e8eeed;
+  --brick:#a1402c;
+  --brick-dim:#f5e6e1;
+  --amber:#c08a2e;
+  --amber-dim:#f7ecd7;
+  --muted:#736f63;
+  --white:#fffcf7;
+  --sidebar-text:#beb6a4;
+  --sidebar-muted:#9a9284;
+  --btn-hover:#322d28;
+  --btn-danger-hover:#7c301f;
+  --confirmed-bg:#e6eaf0;
+  --confirmed-text:#3f5773;
+  --shipping-bg:#f0e6ec;
+  --shipping-text:#7a4d67;
+}
+
+/* ---------- Theme: Дэвтэр ба лацдан тамга (ledger/seal) ---------- */
+html[data-theme="ledger"]{
+  --ink:#191919;
+  --stone:#ece9e0;
+  --stone-dim:#dfdbd0;
+  --paper:#f6f4ee;
+  --line:#ddd8cb;
+  --saddle:#a3271f;
+  --saddle-dim:#c1564c;
+  --moss:#5c6354;
+  --moss-dim:#e9ebe3;
+  --brick:#7c1f19;
+  --brick-dim:#f3e3e1;
+  --amber:#8a7440;
+  --amber-dim:#f0ece0;
+  --muted:#726d61;
+  --white:#fbfaf6;
+  --sidebar-text:#c7c2b5;
+  --sidebar-muted:#94907f;
+  --btn-hover:#2c2c2c;
+  --btn-danger-hover:#671a15;
+  --confirmed-bg:#e6e6e6;
+  --confirmed-text:#3d3d3d;
+  --shipping-bg:#eeeae0;
+  --shipping-text:#5c5648;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
@@ -131,7 +201,7 @@ a{color:inherit;}
 }
 .brand .tag{
   font-size:11.5px;
-  color:#a89a80;
+  color:var(--sidebar-muted);
   margin-top:2px;
 }
 nav.navlist{flex:1;padding:0 10px;}
@@ -143,7 +213,7 @@ nav.navlist button{
   text-align:left;
   background:none;
   border:none;
-  color:#c9bea9;
+  color:var(--sidebar-text);
   padding:10px 12px;
   font-size:14px;
   border-radius:var(--radius);
@@ -159,7 +229,7 @@ nav.navlist button.active{background:var(--saddle);color:var(--white);}
 }
 .sync-row{
   display:flex;align-items:center;gap:7px;
-  font-size:11.5px;color:#a89a80;
+  font-size:11.5px;color:var(--sidebar-muted);
   margin-bottom:10px;
 }
 .dot{width:7px;height:7px;border-radius:50%;background:var(--moss);flex:none;}
@@ -173,7 +243,7 @@ nav.navlist button.active{background:var(--saddle);color:var(--white);}
   margin-top:10px;
   width:100%;
   background:none;border:1px solid rgba(255,255,255,.18);
-  color:#a89a80;padding:7px;font-size:12px;border-radius:var(--radius);
+  color:var(--sidebar-muted);padding:7px;font-size:12px;border-radius:var(--radius);
 }
 .signout:hover{color:var(--white);border-color:rgba(255,255,255,.4);}
 
@@ -199,11 +269,11 @@ nav.navlist button.active{background:var(--saddle);color:var(--white);}
   border:1px solid var(--ink);
   background:var(--ink);color:var(--white);
 }
-.btn:hover{background:#3a3227;}
+.btn:hover{background:var(--btn-hover);}
 .btn.secondary{background:var(--paper);color:var(--ink);border:1px solid var(--line);}
 .btn.secondary:hover{background:var(--white);border-color:var(--ink);}
 .btn.danger{background:var(--brick);border-color:var(--brick);}
-.btn.danger:hover{background:#8a2f20;}
+.btn.danger:hover{background:var(--btn-danger-hover);}
 .btn:disabled{opacity:.5;cursor:not-allowed;}
 .btn svg{width:15px;height:15px;}
 
@@ -243,8 +313,8 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 
 .badge{display:inline-block;padding:3px 10px;font-size:11.5px;border-radius:20px;font-weight:500;}
 .badge.new{background:var(--amber-dim);color:var(--amber);}
-.badge.confirmed{background:#e6eef7;color:#2c5b8a;}
-.badge.shipping{background:#f0e7f7;color:#6b3fa0;}
+.badge.confirmed{background:var(--confirmed-bg);color:var(--confirmed-text);}
+.badge.shipping{background:var(--shipping-bg);color:var(--shipping-text);}
 .badge.done{background:var(--moss-dim);color:var(--moss);}
 .badge.cancelled{background:var(--brick-dim);color:var(--brick);}
 
@@ -290,6 +360,21 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 @keyframes slidein{from{transform:translateY(8px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 
 .hint{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6;}
+
+/* theme picker */
+.theme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;}
+.theme-card{
+  border:1.5px solid var(--line);background:var(--white);
+  border-radius:6px;padding:14px;cursor:pointer;text-align:left;
+  transition:border-color .15s;
+}
+.theme-card:hover{border-color:var(--saddle-dim);}
+.theme-card.selected{border-color:var(--saddle);}
+.theme-swatch{display:flex;border-radius:4px;overflow:hidden;height:34px;margin-bottom:10px;}
+.theme-swatch span{flex:1;}
+.theme-card .tname{font-size:13.5px;font-weight:600;margin-bottom:2px;}
+.theme-card .tdesc{font-size:11.5px;color:var(--muted);line-height:1.5;}
+.theme-card .tcheck{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:11.5px;color:var(--saddle);font-weight:500;min-height:15px;}
 
 .menu-toggle{
   display:none;
@@ -356,6 +441,10 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
       <button data-view="reports">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
         Нэгтгэл тайлан
+      </button>
+      <button data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.96 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.96a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04z"/></svg>
+        Тохиргоо
       </button>
     </nav>
     <div class="sidebar-foot">
@@ -497,6 +586,19 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             <thead><tr><th>Аймаг</th><th class="num">Дэлгүүр</th><th class="num">Захиалга</th><th class="num">Нийт дүн (₮)</th></tr></thead>
             <tbody id="reportsBody"></tbody>
           </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="view-settings">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Харагдах загвар</h2>
+          </div>
+          <div style="padding:20px;">
+            <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">Системийн өнгө, харагдах загварыг сонгоно уу. Сонголт таны browser дээр хадгалагдана.</p>
+            <div class="theme-grid" id="themeGrid"></div>
           </div>
         </div>
       </section>
@@ -779,8 +881,60 @@ function setSync(state, label){
   document.getElementById('syncLabel').textContent = label;
 }
 
+/* ---------------- Загвар (theme) ---------------- */
+const THEME_KEY = 'nehiitrade_theme_v1';
+const THEMES = [
+  {
+    id: 'leather',
+    name: 'Арьс, шир',
+    desc: 'Одоогийн загвар — саддл хүрэн өнгө, цаас-шир мэдрэмж.',
+    swatch: ['#241f19', '#f6f2e9', '#a6592e', '#5f6f4e', '#b5852b']
+  },
+  {
+    id: 'felt',
+    name: 'Эсгий, хужир',
+    desc: 'Хүйтэн саарал дэвсгэр, бордо улаан өнгө голлосон.',
+    swatch: ['#201d1a', '#efe9df', '#7a2e2e', '#4f6b6a', '#c08a2e']
+  },
+  {
+    id: 'ledger',
+    name: 'Дэвтэр, лацдан тамга',
+    desc: 'Бараг цагаан-хар, лацны улаанаар онцолсон загвар.',
+    swatch: ['#191919', '#f6f4ee', '#a3271f', '#5c6354', '#8a7440']
+  }
+];
+
+function getCurrentTheme(){
+  try { return localStorage.getItem(THEME_KEY) || 'leather'; } catch(e){ return 'leather'; }
+}
+function applyTheme(id){
+  if (id === 'leather') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', id);
+  try { localStorage.setItem(THEME_KEY, id); } catch(e){}
+}
+function renderSettings(){
+  const grid = document.getElementById('themeGrid');
+  if (!grid) return;
+  const current = getCurrentTheme();
+  grid.innerHTML = THEMES.map(t => `
+    <button type="button" class="theme-card${t.id===current?' selected':''}" data-theme-id="${t.id}">
+      <div class="theme-swatch">${t.swatch.map(c=>`<span style="background:${c};"></span>`).join('')}</div>
+      <div class="tname">${esc(t.name)}</div>
+      <div class="tdesc">${esc(t.desc)}</div>
+      <div class="tcheck">${t.id===current?'✓ Идэвхтэй':''}</div>
+    </button>`).join('');
+  grid.querySelectorAll('.theme-card').forEach(card => {
+    card.addEventListener('click', () => {
+      applyTheme(card.dataset.themeId);
+      renderSettings();
+      toast('Загвар солигдлоо', 'ok');
+    });
+  });
+}
+
 /* ---------------- Auth ---------------- */
 window.addEventListener('load', () => {
+  applyTheme(getCurrentTheme());
   const cachedRaw = localStorage.getItem(LOCAL_KEY);
   if (cachedRaw) {
     try { data = JSON.parse(cachedRaw); } catch(e){}
@@ -1112,7 +1266,8 @@ const VIEW_META = {
   shops: { title: 'Дэлгүүрүүд', sub: 'Харилцагч дэлгүүрийн бүртгэл' },
   products: { title: 'Бүтээгдэхүүн', sub: 'Барааны бүртгэл' },
   orders: { title: 'Захиалгууд', sub: 'Захиалгын удирдлага' },
-  reports: { title: 'Нэгтгэл тайлан', sub: 'Аймгаар нэгтгэсэн статистик' }
+  reports: { title: 'Нэгтгэл тайлан', sub: 'Аймгаар нэгтгэсэн статистик' },
+  settings: { title: 'Тохиргоо', sub: 'Харагдах загвар' }
 };
 
 /* ---------------- Mobile sidebar toggle ---------------- */
@@ -1148,6 +1303,7 @@ function render(){
   renderProducts();
   renderOrders();
   renderReports();
+  renderSettings();
   fillSelectOptions();
   refreshProductDatalists();
 }
