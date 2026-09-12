@@ -579,8 +579,9 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <div class="panel">
           <div class="panel-head">
             <h2>Бүтээгдэхүүн</h2>
-            <div style="display:flex;gap:10px;">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <input type="text" class="search" id="productSearch" placeholder="Бүтээгдэхүүн хайх...">
+              <select class="search" id="productCompanyFilter"><option value="">Бүх компани</option></select>
               <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;">
                 <input type="checkbox" id="productShowArchived"> Архивласан харуулах
               </label>
@@ -603,6 +604,15 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           <div class="panel-head">
             <h2>Захиалгууд</h2>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <input type="text" class="search" id="orderSearch" placeholder="Хайх (дэлгүүр, бараа, дугаар)...">
+              <select class="search" id="orderShopFilterSelect"><option value="">Бүх дэлгүүр</option></select>
+              <select class="search" id="orderDateFilter">
+                <option value="all">Бүх хугацаа</option>
+                <option value="today">Өнөөдөр</option>
+                <option value="7d">7 хоног</option>
+                <option value="30d">30 хоног</option>
+                <option value="month">Энэ сар</option>
+              </select>
               <select class="search" id="orderStatusFilter">
                 <option value="">Бүх төлөв</option>
                 <option value="new">Шинэ</option>
@@ -1540,11 +1550,22 @@ function renderShops(){
   }).join('') : `<tr class="empty-row"><td colspan="7">${showArchived ? 'Архивласан дэлгүүр алга' : 'Дэлгүүр бүртгэгдээгүй байна'}</td></tr>`;
 }
 
+function populateProductCompanyFilterOptions(){
+  const sel = document.getElementById('productCompanyFilter');
+  const cur = sel.value;
+  const companies = [...new Set(data.products.map(p=>p.company).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Бүх компани</option>' + companies.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if (cur) sel.value = cur;
+}
 function renderProducts(){
+  populateProductCompanyFilterOptions();
   const q = (document.getElementById('productSearch').value||'').toLowerCase();
   const showArchived = document.getElementById('productShowArchived').checked;
+  const companyFilter = document.getElementById('productCompanyFilter').value;
   const body = document.getElementById('productsBody');
-  const rows = data.products.filter(p => !!p.archived === showArchived && (!q || ((p.itemCode||'')+(p.code||'')+(p.company||'')+(p.name||'')+(p.itemName||'')).toLowerCase().includes(q)));
+  const rows = data.products.filter(p => !!p.archived === showArchived
+    && (!q || ((p.itemCode||'')+(p.code||'')+(p.company||'')+(p.name||'')+(p.itemName||'')).toLowerCase().includes(q))
+    && (!companyFilter || p.company === companyFilter));
   body.innerHTML = rows.length ? rows.map(p => {
     const actions = showArchived
       ? `<button class="rowbtn" onclick="restoreProduct('${p.id}')">Сэргээх</button>
@@ -1562,16 +1583,39 @@ function renderProducts(){
       <td>${money(p.price)} ₮</td>
       <td style="text-align:right;white-space:nowrap;">${actions}</td>
     </tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="8">${showArchived ? 'Архивласан бүтээгдэхүүн алга' : 'Бүтээгдэхүүн бүртгэгдээгүй байна'}</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="8">${showArchived ? 'Архивласан бүтээгдэхүүн алга' : (q||companyFilter ? 'Хайлтад тохирох бүтээгдэхүүн алга' : 'Бүтээгдэхүүн бүртгэгдээгүй байна')}</td></tr>`;
 }
 
+function populateOrderShopFilterOptions(){
+  const sel = document.getElementById('orderShopFilterSelect');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Бүх дэлгүүр</option>' + data.shops.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  if (cur) sel.value = cur;
+}
 function renderOrders(){
+  populateOrderShopFilterOptions();
   const filter = document.getElementById('orderStatusFilter').value;
   const showArchived = document.getElementById('orderShowArchived').checked;
+  const q = (document.getElementById('orderSearch').value||'').trim().toLowerCase();
+  const shopFilterId = document.getElementById('orderShopFilterSelect').value;
+  const { start } = getDateRangeBounds(document.getElementById('orderDateFilter').value);
   const body = document.getElementById('ordersBody');
   let rows = data.orders.filter(o => !!o.archived === showArchived);
   rows = [...rows].sort((a,b)=> (b.orderDate||'').localeCompare(a.orderDate||''));
   if (filter) rows = rows.filter(o => o.status === filter);
+  if (shopFilterId) rows = rows.filter(o => o.shopId === shopFilterId);
+  if (start) rows = rows.filter(o => (o.orderDate||'') >= start);
+  if (q) {
+    rows = rows.filter(o => {
+      const shop = data.shops.find(s=>s.id===o.shopId);
+      const shopName = shop ? shop.name : (o.shopName||'');
+      const itemNames = (o.items||[]).map(it => {
+        const p = data.products.find(x=>x.id===it.productId);
+        return p ? p.name : (it.productName||'');
+      }).join(' ');
+      return (shopName+' '+(o.orderNo||'')+' '+itemNames).toLowerCase().includes(q);
+    });
+  }
   body.innerHTML = rows.length ? rows.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     const actions = showArchived
@@ -1589,7 +1633,7 @@ function renderOrders(){
       <td><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></td>
       <td style="text-align:right;white-space:nowrap;">${actions}</td>
     </tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="8">${showArchived ? 'Архивласан захиалга алга' : 'Захиалга бүртгэгдээгүй байна'}</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="8">${showArchived ? 'Архивласан захиалга алга' : (q||filter||shopFilterId||start ? 'Хайлтад тохирох захиалга алга' : 'Захиалга бүртгэгдээгүй байна')}</td></tr>`;
 }
 
 function getDateRangeBounds(preset){
@@ -1776,8 +1820,12 @@ document.getElementById('shopSearch').addEventListener('input', renderShops);
 document.getElementById('shopShowArchived').addEventListener('change', renderShops);
 document.getElementById('productSearch').addEventListener('input', renderProducts);
 document.getElementById('productShowArchived').addEventListener('change', renderProducts);
+document.getElementById('productCompanyFilter').addEventListener('change', renderProducts);
 document.getElementById('orderStatusFilter').addEventListener('change', renderOrders);
 document.getElementById('orderShowArchived').addEventListener('change', renderOrders);
+document.getElementById('orderSearch').addEventListener('input', renderOrders);
+document.getElementById('orderShopFilterSelect').addEventListener('change', renderOrders);
+document.getElementById('orderDateFilter').addEventListener('change', renderOrders);
 
 /* ---------------- Modal helpers ---------------- */
 function openModal(id){ document.getElementById(id).classList.add('show'); }
