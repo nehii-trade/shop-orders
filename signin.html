@@ -385,6 +385,18 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 
 /* reports */
 .aimag-table td.num, .aimag-table th.num{text-align:right;}
+.report-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:20px;}
+.report-kpi{border:1px solid var(--line);background:var(--white);padding:14px 16px;border-radius:var(--radius);}
+.report-kpi .rk-label{font-size:12px;color:var(--muted);margin-bottom:5px;}
+.report-kpi .rk-val{font-family:'Newsreader',serif;font-size:22px;font-weight:600;}
+.rc-chart{display:flex;align-items:flex-end;gap:5px;height:160px;padding:10px 4px 0;overflow-x:auto;}
+.rc-bar-wrap{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:26px;flex:1;}
+.rc-bar{width:100%;background:var(--saddle);border-radius:2px 2px 0 0;min-height:2px;}
+.rc-label{font-size:10px;color:var(--muted);margin-top:4px;white-space:nowrap;}
+.rlist-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);background:var(--white);margin-bottom:6px;font-size:13.5px;}
+.rlist-rank{width:18px;color:var(--muted);font-weight:600;flex:none;}
+.rlist-name{flex:1;}
+.rlist-val{font-weight:600;white-space:nowrap;}
 .export-row{display:flex;gap:10px;}
 
 /* toast */
@@ -618,16 +630,66 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
       <section class="view" id="view-reports">
         <div class="panel">
           <div class="panel-head">
-            <h2>Аймгаар нэгтгэсэн тайлан</h2>
+            <h2>Нэгтгэл тайлан</h2>
             <div class="export-row">
               <button class="btn secondary" id="exportCsvBtn">CSV татах</button>
             </div>
           </div>
-          <div style="overflow-x:auto;">
-          <table class="aimag-table">
-            <thead><tr><th>Аймаг</th><th class="num">Дэлгүүр</th><th class="num">Захиалга</th><th class="num">Нийт дүн (₮)</th></tr></thead>
-            <tbody id="reportsBody"></tbody>
-          </table>
+
+          <div style="padding:16px 20px 0;display:flex;gap:10px;flex-wrap:wrap;">
+            <select id="reportDateRange">
+              <option value="all">Бүх хугацаа</option>
+              <option value="today">Өнөөдөр</option>
+              <option value="7d">Сүүлийн 7 хоног</option>
+              <option value="30d">Сүүлийн 30 хоног</option>
+              <option value="month">Энэ сар</option>
+            </select>
+            <select id="reportShopFilter"><option value="">Бүх дэлгүүр</option></select>
+            <select id="reportAimagFilter"><option value="">Бүх аймаг</option></select>
+            <select id="reportStatusFilter">
+              <option value="">Бүх төлөв</option>
+              <option value="new">Шинэ</option>
+              <option value="confirmed">Батлагдсан</option>
+              <option value="shipping">Хүргэлтэд</option>
+              <option value="done">Дууссан</option>
+              <option value="cancelled">Цуцлагдсан</option>
+            </select>
+          </div>
+
+          <div class="report-kpis">
+            <div class="report-kpi"><div class="rk-label">Нийт борлуулалт</div><div class="rk-val" id="repKpiRevenue">—</div></div>
+            <div class="report-kpi"><div class="rk-label">Захиалга</div><div class="rk-val" id="repKpiOrders">—</div></div>
+            <div class="report-kpi"><div class="rk-label">Дундаж захиалга</div><div class="rk-val" id="repKpiAvg">—</div></div>
+            <div class="report-kpi"><div class="rk-label">Цуцлалтын хувь</div><div class="rk-val" id="repKpiCancelRate">—</div></div>
+          </div>
+
+          <div style="padding:0 20px;">
+            <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Борлуулалтын тренд</h3>
+            <div id="reportChart"></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:20px;">
+            <div>
+              <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Шилдэг бүтээгдэхүүн</h3>
+              <div id="repTopProducts"></div>
+            </div>
+            <div>
+              <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Шилдэг дэлгүүр</h3>
+              <div id="repTopShops"></div>
+            </div>
+          </div>
+
+          <div style="padding:0 20px 20px;">
+            <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Размерын эрэлт</h3>
+            <div id="repSizeDemand"></div>
+          </div>
+
+          <div style="overflow-x:auto;padding:0 20px 20px;">
+            <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Аймгаар нэгтгэсэн</h3>
+            <table class="aimag-table">
+              <thead><tr><th>Аймаг</th><th class="num">Дэлгүүр</th><th class="num">Захиалга</th><th class="num">Нийт дүн (₮)</th></tr></thead>
+              <tbody id="reportsBody"></tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -714,6 +776,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <div style="font-size:12.5px;color:var(--muted);margin-top:6px;">
           Багана: Барааны код, Загварын код, Размер, Компани, Бүтээгдэхүүний нэр, Барааны нэр, Нэгж үнэ — эхний мөр толгой байх ёстой.
         </div>
+        <button type="button" class="btn secondary" id="downloadImportTemplateBtn" style="margin-top:10px;">Жишээ Excel файл татах</button>
       </div>
       <div id="productImportStatus" style="font-size:13px;color:var(--muted);margin:10px 0;"></div>
       <div id="productImportPreviewWrap" style="display:none;">
@@ -1367,7 +1430,7 @@ const VIEW_META = {
   shops: { title: 'Дэлгүүрүүд', sub: 'Харилцагч дэлгүүрийн бүртгэл' },
   products: { title: 'Бүтээгдэхүүн', sub: 'Барааны бүртгэл' },
   orders: { title: 'Захиалгууд', sub: 'Захиалгын удирдлага' },
-  reports: { title: 'Нэгтгэл тайлан', sub: 'Аймгаар нэгтгэсэн статистик' },
+  reports: { title: 'Нэгтгэл тайлан', sub: 'Шүүлт, тренд, шилдэг үзүүлэлт' },
   settings: { title: 'Тохиргоо', sub: 'Харагдах загвар' }
 };
 
@@ -1529,14 +1592,131 @@ function renderOrders(){
   }).join('') : `<tr class="empty-row"><td colspan="8">${showArchived ? 'Архивласан захиалга алга' : 'Захиалга бүртгэгдээгүй байна'}</td></tr>`;
 }
 
+function getDateRangeBounds(preset){
+  const now = new Date();
+  let start = null;
+  if (preset === 'today') start = todayStr();
+  else if (preset === '7d') { const d = new Date(now); d.setDate(d.getDate()-6); start = d.toISOString().slice(0,10); }
+  else if (preset === '30d') { const d = new Date(now); d.setDate(d.getDate()-29); start = d.toISOString().slice(0,10); }
+  else if (preset === 'month') { start = todayStr().slice(0,7)+'-01'; }
+  return { start, end: todayStr() };
+}
+function getReportFilteredOrders(){
+  const rangeSel = document.getElementById('reportDateRange').value;
+  const shopSel = document.getElementById('reportShopFilter').value;
+  const aimagSel = document.getElementById('reportAimagFilter').value;
+  const statusSel = document.getElementById('reportStatusFilter').value;
+  const { start } = getDateRangeBounds(rangeSel);
+  return data.orders.filter(o => {
+    if (start && (o.orderDate||'') < start) return false;
+    if (shopSel && o.shopId !== shopSel) return false;
+    if (statusSel && o.status !== statusSel) return false;
+    if (aimagSel) {
+      const shop = data.shops.find(s=>s.id===o.shopId);
+      const aimag = shop ? (shop.aimag||'Тодорхойгүй') : (o.shopAimag||'Тодорхойгүй');
+      if (aimag !== aimagSel) return false;
+    }
+    return true;
+  });
+}
+function populateReportFilterOptions(){
+  const shopSel = document.getElementById('reportShopFilter');
+  const curShop = shopSel.value;
+  shopSel.innerHTML = '<option value="">Бүх дэлгүүр</option>' + data.shops.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  if (curShop) shopSel.value = curShop;
+
+  const aimagSel = document.getElementById('reportAimagFilter');
+  const curAimag = aimagSel.value;
+  const aimags = [...new Set(data.shops.map(s=>s.aimag).filter(Boolean))].sort();
+  aimagSel.innerHTML = '<option value="">Бүх аймаг</option>' + aimags.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join('');
+  if (curAimag) aimagSel.value = curAimag;
+}
+function renderReportChart(orders){
+  const host = document.getElementById('reportChart');
+  const active = orders.filter(o=>o.status!=='cancelled' && o.orderDate);
+  if (!active.length) { host.innerHTML = '<div class="empty-row" style="padding:30px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>'; return; }
+  const dates = active.map(o=>o.orderDate).sort();
+  const spanDays = (new Date(dates[dates.length-1]) - new Date(dates[0])) / 86400000;
+  const byMonth = spanDays > 62;
+  const groups = {};
+  active.forEach(o => {
+    const key = byMonth ? o.orderDate.slice(0,7) : o.orderDate;
+    groups[key] = (groups[key]||0) + Number(o.total||0);
+  });
+  const keys = Object.keys(groups).sort();
+  const max = Math.max(...keys.map(k=>groups[k]), 1);
+  host.innerHTML = `<div class="rc-chart">${keys.map(k => {
+    const pct = Math.max(2, Math.round(groups[k]/max*100));
+    const label = byMonth ? k : k.slice(5);
+    return `<div class="rc-bar-wrap" title="${esc(k)}: ${money(groups[k])} ₮">
+      <div class="rc-bar" style="height:${pct}%;"></div>
+      <div class="rc-label">${esc(label)}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+function renderReportTopLists(orders){
+  const active = orders.filter(o=>o.status!=='cancelled');
+  const prodMap = {};
+  active.forEach(o => (o.items||[]).forEach(it => {
+    const p = data.products.find(x=>x.id===it.productId);
+    const name = p ? p.name : (it.productName || 'Устсан бараа');
+    prodMap[name] = (prodMap[name]||0) + Number(it.qty||0);
+  }));
+  const topProducts = Object.entries(prodMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById('repTopProducts').innerHTML = topProducts.length ? topProducts.map(([name,qty],i)=>`
+    <div class="rlist-row"><span class="rlist-rank">${i+1}</span><span class="rlist-name">${esc(name)}</span><span class="rlist-val">${qty} ш</span></div>`).join('')
+    : '<div class="empty-row" style="padding:16px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>';
+
+  const shopMap = {};
+  active.forEach(o => {
+    const shop = data.shops.find(s=>s.id===o.shopId);
+    const name = shop ? shop.name : (o.shopName || 'Тодорхойгүй');
+    shopMap[name] = (shopMap[name]||0) + Number(o.total||0);
+  });
+  const topShops = Object.entries(shopMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById('repTopShops').innerHTML = topShops.length ? topShops.map(([name,total],i)=>`
+    <div class="rlist-row"><span class="rlist-rank">${i+1}</span><span class="rlist-name">${esc(name)}</span><span class="rlist-val">${money(total)} ₮</span></div>`).join('')
+    : '<div class="empty-row" style="padding:16px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>';
+}
+function renderReportSizeDemand(orders){
+  const active = orders.filter(o=>o.status!=='cancelled');
+  const sizeMap = {};
+  active.forEach(o => (o.items||[]).forEach(it => {
+    const sz = (it.size||'').trim();
+    if (!sz) return;
+    sizeMap[sz] = (sizeMap[sz]||0) + Number(it.qty||0);
+  }));
+  const sizes = Object.entries(sizeMap).sort((a,b) => {
+    const na = Number(a[0]), nb = Number(b[0]);
+    if (!isNaN(na) && !isNaN(nb)) return na-nb;
+    return a[0].localeCompare(b[0]);
+  });
+  document.getElementById('repSizeDemand').innerHTML = sizes.length ? sizes.map(([sz,qty]) => `
+    <div class="rlist-row"><span class="rlist-name">${esc(sz)}</span><span class="rlist-val">${qty} ш</span></div>`).join('')
+    : '<div class="empty-row" style="padding:16px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>';
+}
 function renderReports(){
+  populateReportFilterOptions();
+  const orders = getReportFilteredOrders();
+
+  const activeOrders = orders.filter(o=>o.status!=='cancelled');
+  const totalRevenue = activeOrders.reduce((s,o)=>s+Number(o.total||0),0);
+  const totalOrders = orders.length;
+  const avgOrder = activeOrders.length ? totalRevenue/activeOrders.length : 0;
+  const cancelledCount = orders.filter(o=>o.status==='cancelled').length;
+  const cancelRate = totalOrders ? (cancelledCount/totalOrders*100) : 0;
+  document.getElementById('repKpiRevenue').textContent = money(totalRevenue) + ' ₮';
+  document.getElementById('repKpiOrders').textContent = totalOrders;
+  document.getElementById('repKpiAvg').textContent = money(Math.round(avgOrder)) + ' ₮';
+  document.getElementById('repKpiCancelRate').textContent = cancelRate.toFixed(1) + '%';
+
   const map = {};
   data.shops.forEach(s => {
     const key = s.aimag || 'Тодорхойгүй';
     if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
     map[key].shops.add(s.id);
   });
-  data.orders.forEach(o => {
+  orders.forEach(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     const key = shop ? (shop.aimag || 'Тодорхойгүй') : (o.shopAimag || 'Тодорхойгүй');
     if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
@@ -1552,7 +1732,14 @@ function renderReports(){
       <td class="num">${map[k].orders}</td>
       <td class="num">${money(map[k].total)}</td>
     </tr>`).join('') : `<tr class="empty-row"><td colspan="4">Өгөгдөл алга</td></tr>`;
+
+  renderReportChart(orders);
+  renderReportTopLists(orders);
+  renderReportSizeDemand(orders);
 }
+['reportDateRange','reportShopFilter','reportAimagFilter','reportStatusFilter'].forEach(id => {
+  document.getElementById(id).addEventListener('change', renderReports);
+});
 
 function fillSelectOptions(extraShopId){
   const shopSel = document.getElementById('orderShop');
@@ -1738,6 +1925,14 @@ const PRODUCT_IMPORT_HEADERS = {
   itemName: 'Барааны нэр',
   price: 'Нэгж үнэ'
 };
+document.getElementById('downloadImportTemplateBtn').addEventListener('click', () => {
+  const headers = Object.values(PRODUCT_IMPORT_HEADERS);
+  const sampleRow = ['319514090338', '31951409', '38', 'Як ланд ХХК', '05. Ажлын өвлийн гутал', '319-51-409-03 38', 170000];
+  const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Бараа');
+  XLSX.writeFile(wb, 'buteegdehuun_zagvar.xlsx');
+});
 document.getElementById('importProductsBtn').addEventListener('click', () => {
   productImportRows = [];
   document.getElementById('productImportFile').value = '';
@@ -2031,13 +2226,14 @@ document.getElementById('saveOrderBtn').addEventListener('click', () => {
 
 /* ---------------- CSV export ---------------- */
 document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  const orders = getReportFilteredOrders();
   const map = {};
   data.shops.forEach(s => {
     const key = s.aimag || 'Тодорхойгүй';
     if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
     map[key].shops.add(s.id);
   });
-  data.orders.forEach(o => {
+  orders.forEach(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     const key = shop ? (shop.aimag || 'Тодорхойгүй') : (o.shopAimag || 'Тодорхойгүй');
     if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
