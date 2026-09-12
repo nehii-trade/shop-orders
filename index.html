@@ -768,6 +768,22 @@ const ALLOWED_EMAILS = ['munhtsetsegdn@gmail.com'];
 const FOLDER_NAME = 'Нэхий Трейд Захиалга';
 const DATA_FILENAME = 'nehii_trade_orders_data.json';
 const LOCAL_KEY = 'nehiitrade_orders_cache_v1';
+const TOKEN_KEY = 'nehiitrade_token_v1';
+function saveTokenToStorage(){
+  try { sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ accessToken, tokenExpiresAt })); } catch(e){}
+}
+function loadTokenFromStorage(){
+  try {
+    const raw = sessionStorage.getItem(TOKEN_KEY);
+    if (!raw) return null;
+    const t = JSON.parse(raw);
+    if (t && t.accessToken && t.tokenExpiresAt && Date.now() < t.tokenExpiresAt - 60000) return t;
+  } catch(e){}
+  return null;
+}
+function clearTokenStorage(){
+  try { sessionStorage.removeItem(TOKEN_KEY); } catch(e){}
+}
 
 let accessToken = null;
 let tokenExpiresAt = 0;
@@ -969,6 +985,7 @@ function initGSI(){
         if (!resp.error) {
           accessToken = resp.access_token;
           tokenExpiresAt = Date.now() + (Number(resp.expires_in || 3600) * 1000);
+          saveTokenToStorage();
           if (pendingRefreshResolve) pendingRefreshResolve(true);
         } else {
           if (pendingRefreshResolve) pendingRefreshResolve(false);
@@ -982,6 +999,7 @@ function initGSI(){
       }
       accessToken = resp.access_token;
       tokenExpiresAt = Date.now() + (Number(resp.expires_in || 3600) * 1000);
+      saveTokenToStorage();
       await onSignedIn();
     }
   });
@@ -1003,13 +1021,15 @@ function initGSI(){
   attemptSilentRestore();
 }
 
-// F5/дахин ачаалахад Google session идэвхтэй хэвээр байвал дахин товч дарахгүйгээр орно.
-// Амжилтгүй бол (эсвэл session хугацаа дууссан бол) энгийн нэвтрэх дэлгэц хэвээр үлдэнэ.
+// F5/дахин ачаалахад sessionStorage-д хүчинтэй токен байвал Google руу огт хандахгүйгээр шууд орно.
+// (Popup дээр суурилсан "чимээгүй" хүсэлт нь хуудас дөнгөж ачаалагдах үед хэрэглэгчийн
+// шууд үйлдэлгүй тул browser-ийн popup blocker-т хаагдах эрсдэлтэй тул ашиглахгүй.)
 async function attemptSilentRestore(){
-  const ok = await silentRefresh();
-  if (ok) {
-    await onSignedIn();
-  }
+  const stored = loadTokenFromStorage();
+  if (!stored) return;
+  accessToken = stored.accessToken;
+  tokenExpiresAt = stored.tokenExpiresAt;
+  await onSignedIn();
 }
 
 function showLoginError(msg){
@@ -1027,9 +1047,11 @@ async function onSignedIn(){
     const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: 'Bearer ' + accessToken }
     });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     currentUser = await r.json();
   } catch(e){
-    showLoginError('Хэрэглэгчийн мэдээлэл авахад алдаа гарлаа. Дахин оролдоно уу.');
+    clearTokenStorage();
+    showLoginError('Нэвтрэх хугацаа дууссан байна. Дахин нэвтэрнэ үү.');
     signOutLocal();
     return;
   }
@@ -1080,6 +1102,7 @@ function signOutLocal(){
     google.accounts.oauth2.revoke(accessToken, () => {});
   }
   cancelSaveRetry();
+  clearTokenStorage();
   authCallbackMode = 'login';
   pendingRefreshResolve = null;
   accessToken = null;
