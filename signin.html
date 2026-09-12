@@ -593,6 +593,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
               <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;">
                 <input type="checkbox" id="shopShowArchived"> Архивласан харуулах
               </label>
+              <button class="btn secondary" id="importShopsBtn">Excel-с импортлох</button>
               <button class="btn" id="addShopBtn">+ Дэлгүүр нэмэх</button>
             </div>
           </div>
@@ -780,7 +781,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <div class="field"><label for="shopPhone2">Утас 2</label><input type="text" id="shopPhone2" placeholder="(заавал биш)"></div>
       </div>
       <div class="field"><label for="shopFacebook">Facebook хуудас</label><input type="url" id="shopFacebook" placeholder="https://facebook.com/..."></div>
-      <div class="field"><label for="shopAddress">Хаяг</label><input type="text" id="shopAddress"></div>
+      <div class="field"><label for="shopAddress">Байршил хаяг</label><input type="text" id="shopAddress"></div>
       <div class="field"><label for="shopNotes">Тэмдэглэл</label><textarea id="shopNotes" rows="2"></textarea></div>
     </div>
     <div class="modal-foot">
@@ -844,6 +845,40 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
     <div class="modal-foot">
       <button class="btn secondary" data-close="productImportModal">Цуцлах</button>
       <button class="btn" id="confirmProductImportBtn" disabled>Сонгосныг импортлох</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="shopImportModal">
+  <div class="modal" style="max-width:760px;">
+    <div class="modal-head"><h3>Excel-с дэлгүүр импортлох</h3><button class="modal-close" data-close="shopImportModal">&times;</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="shopImportFile">Excel файл сонгох (.xlsx)</label>
+        <input type="file" id="shopImportFile" accept=".xlsx,.xls">
+        <div style="font-size:12.5px;color:var(--muted);margin-top:6px;">
+          Багана: Дэлгүүрийн нэр, Аймаг, Сум, Ангилал, Холбоо барих хүн, Утас 1, Утас 2, Facebook, Байршил хаяг, Тэмдэглэл — эхний мөр толгой байх ёстой. Ангилал баганад "Дотоодын дэлгүүр" эсвэл "Гадны дэлгүүр" гэж бичнэ.
+        </div>
+        <button type="button" class="btn secondary" id="downloadShopImportTemplateBtn" style="margin-top:10px;">Жишээ Excel файл татах</button>
+      </div>
+      <div id="shopImportStatus" style="font-size:13px;color:var(--muted);margin:10px 0;"></div>
+      <div id="shopImportPreviewWrap" style="display:none;">
+        <div style="display:flex;gap:14px;font-size:13px;margin-bottom:10px;">
+          <span><span class="badge new">Шинэ</span> <b id="shopImportCountNew">0</b></span>
+          <span><span class="badge confirmed">Шинэчлэгдэнэ</span> <b id="shopImportCountDup">0</b></span>
+          <span style="color:var(--muted);">Алгасах: <b id="shopImportCountSkip">0</b></span>
+        </div>
+        <div style="max-height:340px;overflow:auto;border:1px solid var(--line);">
+          <table>
+            <thead><tr><th style="width:34px;"></th><th>Төлөв</th><th>Нэр</th><th>Аймаг</th><th>Ангилал</th><th>Утас</th></tr></thead>
+            <tbody id="shopImportBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn secondary" data-close="shopImportModal">Цуцлах</button>
+      <button class="btn" id="confirmShopImportBtn" disabled>Сонгосныг импортлох</button>
     </div>
   </div>
 </div>
@@ -2011,7 +2046,7 @@ function viewShop(id){
     </div>
     <div class="field-row">
       <div><div class="ov-label">Facebook</div><div class="ov-val">${fb}</div></div>
-      <div><div class="ov-label">Хаяг</div><div class="ov-val">${esc(s.address||'—')}</div></div>
+      <div><div class="ov-label">Байршил хаяг</div><div class="ov-val">${esc(s.address||'—')}</div></div>
     </div>
     <div class="report-kpis" style="padding:4px 0 0;grid-template-columns:repeat(3,1fr);">
       <div class="report-kpi"><div class="rk-label">Нийт захиалга</div><div class="rk-val" style="font-size:18px;">${shopOrders.length}</div></div>
@@ -2272,6 +2307,145 @@ document.getElementById('confirmProductImportBtn').addEventListener('click', () 
     }
   });
   queueSave(); render(); closeModal('productImportModal');
+  toast(`Импортлогдлоо: ${added} шинэ, ${updated} шинэчлэгдсэн`, 'ok');
+});
+
+/* ---------------- Shops Excel import ---------------- */
+let shopImportRows = [];
+const SHOP_IMPORT_HEADERS = {
+  name: 'Дэлгүүрийн нэр',
+  aimag: 'Аймаг',
+  sum: 'Сум',
+  category: 'Ангилал',
+  contact: 'Холбоо барих хүн',
+  phone1: 'Утас 1',
+  phone2: 'Утас 2',
+  facebook: 'Facebook',
+  address: 'Байршил хаяг',
+  notes: 'Тэмдэглэл'
+};
+function parseShopCategoryValue(v){
+  const s = String(v||'').trim().toLowerCase();
+  if (s.includes('гадн')) return 'foreign';
+  return 'domestic';
+}
+document.getElementById('downloadShopImportTemplateBtn').addEventListener('click', () => {
+  const headers = Object.values(SHOP_IMPORT_HEADERS);
+  const sampleRow = ['Ашид гутлын дэлгүүр', 'Дархан-Уул', 'Дархан', 'Дотоодын дэлгүүр', 'Бат-Эрдэнэ', '99001122', '', '', 'Төв зах, 3-р байр', ''];
+  const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Дэлгүүр');
+  XLSX.writeFile(wb, 'delguur_zagvar.xlsx');
+});
+document.getElementById('importShopsBtn').addEventListener('click', () => {
+  shopImportRows = [];
+  document.getElementById('shopImportFile').value = '';
+  document.getElementById('shopImportStatus').textContent = '';
+  document.getElementById('shopImportPreviewWrap').style.display = 'none';
+  document.getElementById('confirmShopImportBtn').disabled = true;
+  openModal('shopImportModal');
+});
+document.getElementById('shopImportFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('shopImportStatus');
+  statusEl.textContent = 'Уншиж байна...';
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const wb = XLSX.read(ev.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      parseShopImportRows(raw);
+      statusEl.textContent = raw.length ? '' : 'Файлд мөр олдсонгүй.';
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Файл уншихад алдаа гарлаа. Excel (.xlsx) файл эсэхийг шалгана уу.';
+    }
+  };
+  reader.onerror = () => { statusEl.textContent = 'Файл уншихад алдаа гарлаа.'; };
+  reader.readAsArrayBuffer(file);
+});
+function parseShopImportRows(raw){
+  const byName = {};
+  data.shops.forEach(s => { if (s.name) byName[s.name.trim().toLowerCase()] = s; });
+  shopImportRows = raw.map(r => {
+    const name = String(r[SHOP_IMPORT_HEADERS.name] ?? '').trim();
+    const aimag = String(r[SHOP_IMPORT_HEADERS.aimag] ?? '').trim();
+    const sum = String(r[SHOP_IMPORT_HEADERS.sum] ?? '').trim();
+    const category = parseShopCategoryValue(r[SHOP_IMPORT_HEADERS.category]);
+    const contact = String(r[SHOP_IMPORT_HEADERS.contact] ?? '').trim();
+    const phone1 = String(r[SHOP_IMPORT_HEADERS.phone1] ?? '').trim();
+    const phone2 = String(r[SHOP_IMPORT_HEADERS.phone2] ?? '').trim();
+    let facebook = String(r[SHOP_IMPORT_HEADERS.facebook] ?? '').trim();
+    if (facebook && !isSafeHttpsUrl(facebook)) facebook = '';
+    const address = String(r[SHOP_IMPORT_HEADERS.address] ?? '').trim();
+    const notes = String(r[SHOP_IMPORT_HEADERS.notes] ?? '').trim();
+    const isEmpty = !name && !aimag;
+    const existing = name ? byName[name.trim().toLowerCase()] : null;
+    return {
+      name, aimag, sum, category, contact, phone1, phone2, facebook, address, notes,
+      isEmpty,
+      existingId: existing ? existing.id : null,
+      existingLabel: existing ? `${existing.aimag||'—'} · ${existing.contact||'—'}` : '',
+      checked: !isEmpty
+    };
+  });
+  renderShopImportPreview();
+}
+function renderShopImportPreview(){
+  const body = document.getElementById('shopImportBody');
+  const rows = shopImportRows;
+  const newCount = rows.filter(r=>!r.isEmpty && !r.existingId).length;
+  const dupCount = rows.filter(r=>!r.isEmpty && r.existingId).length;
+  const skipCount = rows.filter(r=>r.isEmpty).length;
+  document.getElementById('shopImportCountNew').textContent = newCount;
+  document.getElementById('shopImportCountDup').textContent = dupCount;
+  document.getElementById('shopImportCountSkip').textContent = skipCount;
+  body.innerHTML = rows.map((r, idx) => {
+    const badge = r.isEmpty ? '<span style="color:var(--muted);">хоосон</span>' : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>');
+    const sub = r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : '';
+    const phones = [r.phone1, r.phone2].filter(Boolean).join(' / ') || '—';
+    return `<tr>
+      <td><input type="checkbox" data-idx="${idx}" class="shopImportRowChk" ${r.checked?'checked':''} ${r.isEmpty?'disabled':''}></td>
+      <td>${badge}</td>
+      <td>${esc(r.name||'—')}${sub}</td>
+      <td>${esc(r.aimag||'—')}</td>
+      <td>${SHOP_CATEGORY_LABEL[r.category]}</td>
+      <td>${esc(phones)}</td>
+    </tr>`;
+  }).join('');
+  document.querySelectorAll('.shopImportRowChk').forEach(chk => {
+    chk.addEventListener('change', () => { shopImportRows[Number(chk.dataset.idx)].checked = chk.checked; });
+  });
+  document.getElementById('shopImportPreviewWrap').style.display = rows.length ? '' : 'none';
+  document.getElementById('confirmShopImportBtn').disabled = !(newCount + dupCount);
+}
+document.getElementById('confirmShopImportBtn').addEventListener('click', () => {
+  const toApply = shopImportRows.filter(r => r.checked && !r.isEmpty);
+  if (!toApply.length) return;
+  let added = 0, updated = 0;
+  toApply.forEach(r => {
+    if (r.existingId) {
+      data.shops = data.shops.map(s => s.id === r.existingId ? {
+        ...s,
+        name: r.name || s.name, aimag: r.aimag || s.aimag, sum: r.sum, category: r.category,
+        contact: r.contact, phone1: r.phone1, phone2: r.phone2,
+        facebook: r.facebook, address: r.address, notes: r.notes,
+        updatedAt: Date.now()
+      } : s);
+      updated++;
+    } else {
+      data.shops.push({
+        id: uid(), name: r.name, aimag: r.aimag, sum: r.sum, category: r.category,
+        contact: r.contact, phone1: r.phone1, phone2: r.phone2,
+        facebook: r.facebook, address: r.address, notes: r.notes,
+        createdAt: Date.now(), updatedAt: Date.now()
+      });
+      added++;
+    }
+  });
+  queueSave(); render(); closeModal('shopImportModal');
   toast(`Импортлогдлоо: ${added} шинэ, ${updated} шинэчлэгдсэн`, 'ok');
 });
 
