@@ -416,6 +416,8 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 @keyframes slidein{from{transform:translateY(8px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 
 .hint{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6;}
+.ov-label{font-size:12px;color:var(--muted);margin-bottom:3px;}
+.ov-val{font-size:14.5px;margin-bottom:14px;}
 
 /* theme picker */
 .theme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;}
@@ -810,6 +812,17 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
     <div class="modal-foot">
       <button class="btn secondary" data-close="productImportModal">Цуцлах</button>
       <button class="btn" id="confirmProductImportBtn" disabled>Сонгосныг импортлох</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="orderViewModal">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-head"><h3 id="orderViewTitle">Захиалгын дэлгэрэнгүй</h3><button class="modal-close" data-close="orderViewModal">&times;</button></div>
+    <div class="modal-body" id="orderViewBody"></div>
+    <div class="modal-foot">
+      <button class="btn secondary" data-close="orderViewModal">Хаах</button>
+      <button class="btn" id="orderViewEditBtn">Засах</button>
     </div>
   </div>
 </div>
@@ -1623,9 +1636,11 @@ function renderOrders(){
   body.innerHTML = rows.length ? rows.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     const actions = showArchived
-      ? `<button class="rowbtn" onclick="restoreOrder('${o.id}')">Сэргээх</button>
+      ? `<button class="rowbtn" onclick="viewOrder('${o.id}')">Харах</button>
+         <button class="rowbtn" onclick="restoreOrder('${o.id}')">Сэргээх</button>
          <button class="rowbtn" onclick="hardDeleteOrder('${o.id}')">Бүрмөсөн устгах</button>`
-      : `<button class="rowbtn" onclick="editOrder('${o.id}')">Засах</button>
+      : `<button class="rowbtn" onclick="viewOrder('${o.id}')">Харах</button>
+         <button class="rowbtn" onclick="editOrder('${o.id}')">Засах</button>
          <button class="rowbtn" onclick="deleteOrder('${o.id}')">Архивлах</button>`;
     return `<tr>
       <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
@@ -2206,6 +2221,55 @@ document.getElementById('addOrderBtn').addEventListener('click', () => {
   resetItemPicker();
   renderOrderItemsTable();
   openModal('orderModal');
+});
+let orderViewCurrentId = null;
+function viewOrder(id){
+  const o = data.orders.find(x=>x.id===id); if (!o) return;
+  orderViewCurrentId = id;
+  const shop = data.shops.find(s=>s.id===o.shopId);
+  document.getElementById('orderViewTitle').textContent = 'Захиалгын дэлгэрэнгүй' + (o.orderNo ? ' — №'+o.orderNo : '');
+  const shopName = shop ? shop.name : (o.shopName || '—');
+  const shopAimag = shop ? (shop.aimag||'') : (o.shopAimag||'');
+  const shopContact = shop ? (shop.contact||'') : '';
+  const shopPhones = shop ? [shop.phone1, shop.phone2].filter(Boolean).join(' / ') : '';
+  const itemsHtml = (o.items||[]).map(it => {
+    const p = data.products.find(x=>x.id===it.productId);
+    const name = p ? p.name : (it.productName || 'Устсан бараа');
+    return `<tr>
+      <td>${esc(name)}</td>
+      <td>${esc(it.size||'—')}</td>
+      <td class="num">${it.qty}</td>
+      <td class="num">${money(it.unitPrice)} ₮</td>
+      <td class="num">${money(it.total)} ₮</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('orderViewBody').innerHTML = `
+    <div class="field-row">
+      <div><div class="ov-label">Дэлгүүр</div><div class="ov-val">${esc(shopName)}${shopAimag?' — '+esc(shopAimag):''}</div></div>
+      <div><div class="ov-label">Огноо</div><div class="ov-val">${esc(o.orderDate||'—')}</div></div>
+    </div>
+    ${(shopContact || shopPhones) ? `<div class="field-row">
+      <div><div class="ov-label">Холбоо барих</div><div class="ov-val">${esc(shopContact||'—')}</div></div>
+      <div><div class="ov-label">Утас</div><div class="ov-val">${esc(shopPhones||'—')}</div></div>
+    </div>` : ''}
+    <div class="field-row">
+      <div><div class="ov-label">Төлөв</div><div class="ov-val"><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></div></div>
+      <div><div class="ov-label">Нийт дүн</div><div class="ov-val" style="font-weight:600;font-size:17px;">${money(o.total)} ₮</div></div>
+    </div>
+    <div class="ov-label" style="margin-top:6px;">Бараа</div>
+    <table class="aimag-table" style="margin-bottom:14px;">
+      <thead><tr><th>Нэр</th><th>Размер</th><th class="num">Тоо</th><th class="num">Нэгж үнэ</th><th class="num">Дүн</th></tr></thead>
+      <tbody>${itemsHtml || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:14px;">Бараа алга</td></tr>'}</tbody>
+    </table>
+    ${o.notes ? `<div class="ov-label">Тэмдэглэл</div><div class="ov-val">${esc(o.notes)}</div>` : ''}
+    ${o.archived ? `<div style="color:var(--brick);font-size:12.5px;">⚠ Энэ захиалга архивлагдсан байна</div>` : ''}
+  `;
+  openModal('orderViewModal');
+}
+document.getElementById('orderViewEditBtn').addEventListener('click', () => {
+  if (!orderViewCurrentId) return;
+  closeModal('orderViewModal');
+  editOrder(orderViewCurrentId);
 });
 function editOrder(id){
   const o = data.orders.find(x=>x.id===id); if (!o) return;
