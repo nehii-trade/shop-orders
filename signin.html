@@ -454,6 +454,13 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
   .content{padding:20px 16px 40px;}
   .topbar{padding:16px;}
   .modal{max-height:94vh;}
+  .products-table thead{display:none;}
+  .products-table, .products-table tbody, .products-table tr, .products-table td{display:block;width:100%;}
+  .products-table tr{border:1px solid var(--line);margin-bottom:10px;padding:10px 12px;background:var(--white);border-radius:var(--radius);}
+  .products-table td{border:none;padding:5px 0;display:flex;justify-content:space-between;gap:10px;text-align:right;}
+  .products-table td::before{content:attr(data-label);font-weight:600;color:var(--muted);font-size:12px;text-align:left;flex:none;}
+  .products-table td:last-child{justify-content:flex-end;}
+  .products-table td:last-child::before{content:none;}
 }
 </style>
 </head>
@@ -532,6 +539,8 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
       </div>
       <div style="display:flex;gap:10px;">
         <button class="btn secondary" id="backupExportBtn">Нөөцлөх</button>
+        <button class="btn secondary" id="backupRestoreBtn">Сэргээх</button>
+        <input type="file" id="backupRestoreFile" accept=".json" style="display:none;">
         <button class="btn secondary" id="syncNowBtn">Дахин ачаалах</button>
       </div>
     </div>
@@ -546,6 +555,15 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           <div class="stat-card"><div class="lbl">Нийт захиалга</div><div class="val" id="statOrders">0</div></div>
           <div class="stat-card"><div class="lbl">Хүлээгдэж буй</div><div class="val" id="statPending">0</div></div>
           <div class="stat-card"><div class="lbl">Нийт дүн</div><div class="val" id="statRevenue">0<small> ₮</small></div></div>
+        </div>
+        <div class="panel" id="pendingConfirmPanel" style="margin-bottom:20px;display:none;">
+          <div class="panel-head"><h2>⚠ Баталгаажуулах шаардлагатай</h2></div>
+          <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>№</th><th>Огноо</th><th>Дэлгүүр</th><th>Дүн</th><th></th></tr></thead>
+            <tbody id="pendingConfirmBody"></tbody>
+          </table>
+          </div>
         </div>
         <div class="panel">
           <div class="panel-head"><h2>Сүүлийн захиалгууд</h2></div>
@@ -596,7 +614,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             </div>
           </div>
           <div style="overflow-x:auto;">
-          <table>
+          <table class="products-table">
             <thead><tr><th>Барааны код</th><th>Загварын код</th><th>Размер</th><th>Компани</th><th>Бүтээгдэхүүний нэр</th><th>Барааны нэр</th><th>Нэгж үнэ</th><th></th></tr></thead>
             <tbody id="productsBody"></tbody>
           </table>
@@ -812,6 +830,17 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
     <div class="modal-foot">
       <button class="btn secondary" data-close="productImportModal">Цуцлах</button>
       <button class="btn" id="confirmProductImportBtn" disabled>Сонгосныг импортлох</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="shopViewModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head"><h3 id="shopViewTitle">Дэлгүүрийн дэлгэрэнгүй</h3><button class="modal-close" data-close="shopViewModal">&times;</button></div>
+    <div class="modal-body" id="shopViewBody"></div>
+    <div class="modal-foot">
+      <button class="btn secondary" data-close="shopViewModal">Хаах</button>
+      <button class="btn" id="shopViewEditBtn">Засах</button>
     </div>
   </div>
 </div>
@@ -1450,6 +1479,42 @@ document.getElementById('backupExportBtn').addEventListener('click', () => {
   URL.revokeObjectURL(url);
   toast('Нөөцлөлт татагдлаа', 'ok');
 });
+document.getElementById('backupRestoreBtn').addEventListener('click', () => {
+  document.getElementById('backupRestoreFile').click();
+});
+document.getElementById('backupRestoreFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    let parsed;
+    try {
+      parsed = JSON.parse(ev.target.result);
+    } catch(err) {
+      toast('Файл уншихад алдаа гарлаа. Зөв .json файл эсэхийг шалгана уу.', 'err');
+      e.target.value = '';
+      return;
+    }
+    const incoming = parsed && parsed.data ? parsed.data : parsed;
+    if (!incoming || !Array.isArray(incoming.shops) || !Array.isArray(incoming.products) || !Array.isArray(incoming.orders)) {
+      toast('Энэ файл танигдахгүй бүтэцтэй байна. Нэхий Трейдийн нөөцлөлтийн файл эсэхийг шалгана уу.', 'err');
+      e.target.value = '';
+      return;
+    }
+    const summary = `Энэ файлд ${incoming.shops.length} дэлгүүр, ${incoming.products.length} бараа, ${incoming.orders.length} захиалга байна.\n\nОДООГИЙН бүх өгөгдлийг ЭНЭ файлаар БҮРЭН СОЛИХ уу? Энэ үйлдлийг буцаах боломжгүй!`;
+    if (!confirm(summary)) { e.target.value = ''; return; }
+    data = incoming;
+    if (!data.tombstones) data.tombstones = {};
+    migrateData(data);
+    driveFileId = null;
+    queueSave();
+    render();
+    e.target.value = '';
+    toast('Өгөгдөл сэргээгдлээ', 'ok');
+  };
+  reader.onerror = () => { toast('Файл уншихад алдаа гарлаа', 'err'); e.target.value = ''; };
+  reader.readAsText(file);
+});
 
 /* ---------------- Navigation ---------------- */
 const VIEW_META = {
@@ -1539,6 +1604,34 @@ function renderDashboard(){
       <td><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></td>
     </tr>`;
   }).join('') : `<tr class="empty-row"><td colspan="7">Захиалга бүртгэгдээгүй байна</td></tr>`;
+  renderPendingConfirm();
+}
+function renderPendingConfirm(){
+  const pending = data.orders.filter(o => !o.archived && o.status === 'new').sort((a,b)=>(a.orderDate||'').localeCompare(b.orderDate||''));
+  const panel = document.getElementById('pendingConfirmPanel');
+  const body = document.getElementById('pendingConfirmBody');
+  if (!pending.length) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  body.innerHTML = pending.map(o => {
+    const shop = data.shops.find(s=>s.id===o.shopId);
+    return `<tr>
+      <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
+      <td>${esc(o.orderDate||'—')}</td>
+      <td>${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
+      <td>${money(o.total)} ₮</td>
+      <td style="text-align:right;white-space:nowrap;">
+        <button class="rowbtn" onclick="quickConfirmOrder('${o.id}')">Батлах</button>
+        <button class="rowbtn" onclick="viewOrder('${o.id}')">Харах</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+function quickConfirmOrder(id){
+  const o = data.orders.find(x=>x.id===id); if (!o) return;
+  o.status = 'confirmed';
+  o.updatedAt = Date.now();
+  queueSave(); render();
+  toast('Захиалга батлагдлаа', 'ok');
 }
 
 function renderShops(){
@@ -1550,9 +1643,11 @@ function renderShops(){
     const phones = [s.phone1, s.phone2].filter(Boolean).join(' / ') || '—';
     const fb = isSafeHttpsUrl(s.facebook) ? `<a href="${esc(s.facebook)}" target="_blank" rel="noopener" title="Facebook хуудас руу очих" style="color:var(--saddle);font-weight:600;">FB ↗</a>` : '—';
     const actions = showArchived
-      ? `<button class="rowbtn" onclick="restoreShop('${s.id}')">Сэргээх</button>
+      ? `<button class="rowbtn" onclick="viewShop('${s.id}')">Харах</button>
+         <button class="rowbtn" onclick="restoreShop('${s.id}')">Сэргээх</button>
          <button class="rowbtn" onclick="hardDeleteShop('${s.id}')">Бүрмөсөн устгах</button>`
-      : `<button class="rowbtn" onclick="editShop('${s.id}')">Засах</button>
+      : `<button class="rowbtn" onclick="viewShop('${s.id}')">Харах</button>
+         <button class="rowbtn" onclick="editShop('${s.id}')">Засах</button>
          <button class="rowbtn" onclick="deleteShop('${s.id}')">Архивлах</button>`;
     return `
     <tr>
@@ -1591,13 +1686,13 @@ function renderProducts(){
          <button class="rowbtn" onclick="deleteProduct('${p.id}')">Архивлах</button>`;
     return `
     <tr>
-      <td>${esc(p.itemCode||'—')}</td>
-      <td>${esc(p.code||'—')}</td>
-      <td>${esc(p.size||'—')}</td>
-      <td>${esc(p.company||'—')}</td>
-      <td>${esc(p.name)}</td>
-      <td>${esc(p.itemName||'—')}</td>
-      <td>${money(p.price)} ₮</td>
+      <td data-label="Барааны код">${esc(p.itemCode||'—')}</td>
+      <td data-label="Загварын код">${esc(p.code||'—')}</td>
+      <td data-label="Размер">${esc(p.size||'—')}</td>
+      <td data-label="Компани">${esc(p.company||'—')}</td>
+      <td data-label="Бүтээгдэхүүний нэр">${esc(p.name)}</td>
+      <td data-label="Барааны нэр">${esc(p.itemName||'—')}</td>
+      <td data-label="Нэгж үнэ">${money(p.price)} ₮</td>
       <td style="text-align:right;white-space:nowrap;">${actions}</td>
     </tr>`;
   }).join('') : `<tr class="empty-row"><td colspan="8">${showArchived ? 'Архивласан бүтээгдэхүүн алга' : (q||companyFilter ? 'Хайлтад тохирох бүтээгдэхүүн алга' : 'Бүтээгдэхүүн бүртгэгдээгүй байна')}</td></tr>`;
@@ -1861,6 +1956,46 @@ document.getElementById('addShopBtn').addEventListener('click', () => {
   document.getElementById('shopModalTitle').textContent = 'Дэлгүүр нэмэх';
   ['shopId','shopName','shopAimag','shopSum','shopContact','shopPhone1','shopPhone2','shopFacebook','shopAddress','shopNotes'].forEach(id => document.getElementById(id).value = '');
   openModal('shopModal');
+});
+let shopViewCurrentId = null;
+function viewShop(id){
+  const s = data.shops.find(x=>x.id===id); if (!s) return;
+  shopViewCurrentId = id;
+  document.getElementById('shopViewTitle').textContent = 'Дэлгүүр — ' + s.name;
+  const shopOrders = data.orders.filter(o => o.shopId === id && !o.archived);
+  const activeOrders = shopOrders.filter(o => o.status !== 'cancelled');
+  const totalRevenue = activeOrders.reduce((sum,o)=>sum+Number(o.total||0),0);
+  const avgOrder = activeOrders.length ? totalRevenue/activeOrders.length : 0;
+  const lastOrder = [...shopOrders].sort((a,b)=>(b.orderDate||'').localeCompare(a.orderDate||''))[0];
+  const phones = [s.phone1, s.phone2].filter(Boolean).join(' / ') || '—';
+  const fb = isSafeHttpsUrl(s.facebook) ? `<a href="${esc(s.facebook)}" target="_blank" rel="noopener" style="color:var(--saddle);font-weight:600;">FB ↗</a>` : '—';
+  document.getElementById('shopViewBody').innerHTML = `
+    <div class="field-row">
+      <div><div class="ov-label">Аймаг</div><div class="ov-val">${esc(s.aimag||'—')}</div></div>
+      <div><div class="ov-label">Сум</div><div class="ov-val">${esc(s.sum||'—')}</div></div>
+    </div>
+    <div class="field-row">
+      <div><div class="ov-label">Холбоо барих</div><div class="ov-val">${esc(s.contact||'—')}</div></div>
+      <div><div class="ov-label">Утас</div><div class="ov-val">${esc(phones)}</div></div>
+    </div>
+    <div class="field-row">
+      <div><div class="ov-label">Facebook</div><div class="ov-val">${fb}</div></div>
+      <div><div class="ov-label">Хаяг</div><div class="ov-val">${esc(s.address||'—')}</div></div>
+    </div>
+    <div class="report-kpis" style="padding:4px 0 0;grid-template-columns:repeat(3,1fr);">
+      <div class="report-kpi"><div class="rk-label">Нийт захиалга</div><div class="rk-val" style="font-size:18px;">${shopOrders.length}</div></div>
+      <div class="report-kpi"><div class="rk-label">Дундаж дүн</div><div class="rk-val" style="font-size:18px;">${money(Math.round(avgOrder))} ₮</div></div>
+      <div class="report-kpi"><div class="rk-label">Сүүлийн идэвх</div><div class="rk-val" style="font-size:18px;">${lastOrder ? esc(lastOrder.orderDate||'—') : '—'}</div></div>
+    </div>
+    ${s.notes ? `<div class="ov-label" style="margin-top:14px;">Тэмдэглэл</div><div class="ov-val">${esc(s.notes)}</div>` : ''}
+    ${s.archived ? `<div style="color:var(--brick);font-size:12.5px;">⚠ Энэ дэлгүүр архивлагдсан байна</div>` : ''}
+  `;
+  openModal('shopViewModal');
+}
+document.getElementById('shopViewEditBtn').addEventListener('click', () => {
+  if (!shopViewCurrentId) return;
+  closeModal('shopViewModal');
+  editShop(shopViewCurrentId);
 });
 function editShop(id){
   const s = data.shops.find(x=>x.id===id); if (!s) return;
