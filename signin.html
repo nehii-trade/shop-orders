@@ -36,6 +36,7 @@
   --amber-dim:#faf1de;
   --muted:#7a7266;
   --white:#fffdf9;
+  --white-text:#241f19;
   --radius:3px;
   --shadow:none;
   --sidebar-text:#c9bea9;
@@ -66,6 +67,7 @@ html[data-theme="felt"]{
   --amber-dim:#f7ecd7;
   --muted:#736f63;
   --white:#fffcf7;
+  --white-text:#201d1a;
   --sidebar-text:#beb6a4;
   --sidebar-muted:#9a9284;
   --btn-hover:#322d28;
@@ -94,6 +96,7 @@ html[data-theme="sky"]{
   --amber-dim:#fff1e0;
   --muted:#5b6b82;
   --white:#ffffff;
+  --white-text:#14213d;
   --sidebar-text:#dbe7f7;
   --sidebar-muted:#93a8c7;
   --btn-hover:#1d4ed8;
@@ -122,6 +125,7 @@ html[data-theme="night"]{
   --amber-dim:#3a2f14;
   --muted:#9199a8;
   --white:#f5f6f8;
+  --white-text:#14161a;
   --sidebar-text:#d8dbe3;
   --sidebar-muted:#8b93a3;
   --btn-hover:#b3703d;
@@ -215,7 +219,7 @@ a{color:inherit;}
   width:230px;
   flex:none;
   background:var(--ink);
-  color:var(--stone);
+  color:var(--sidebar-text);
   display:flex;
   flex-direction:column;
   padding:22px 0;
@@ -271,7 +275,7 @@ nav.navlist button.active{background:var(--saddle);color:var(--white);}
 @keyframes pulse{50%{opacity:.35;}}
 .user-row{display:flex;align-items:center;gap:9px;}
 .user-row img{width:28px;height:28px;border-radius:50%;}
-.user-row .uname{font-size:12.5px;color:var(--stone);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.user-row .uname{font-size:12.5px;color:var(--sidebar-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .signout{
   margin-top:10px;
   width:100%;
@@ -328,7 +332,7 @@ nav.navlist button.active{background:var(--saddle);color:var(--white);}
 }
 .panel-head h2{font-size:16px;font-weight:600;}
 .search{
-  padding:8px 12px;border:1px solid var(--line);background:var(--white);
+  padding:8px 12px;border:1px solid var(--line);background:var(--white);color:var(--white-text);
   font-size:13px;min-width:200px;border-radius:var(--radius);
 }
 
@@ -370,7 +374,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 .field{margin-bottom:15px;}
 .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;}
 .field input,.field select,.field textarea{
-  width:100%;padding:9px 11px;border:1px solid var(--line);background:var(--white);
+  width:100%;padding:9px 11px;border:1px solid var(--line);background:var(--white);color:var(--white-text);
   border-radius:var(--radius);font-size:14px;
 }
 .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--saddle-dim);outline-offset:0;border-color:var(--saddle);}
@@ -386,14 +390,14 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 /* reports */
 .aimag-table td.num, .aimag-table th.num{text-align:right;}
 .report-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:20px;}
-.report-kpi{border:1px solid var(--line);background:var(--white);padding:14px 16px;border-radius:var(--radius);}
+.report-kpi{border:1px solid var(--line);background:var(--white);color:var(--white-text);padding:14px 16px;border-radius:var(--radius);}
 .report-kpi .rk-label{font-size:12px;color:var(--muted);margin-bottom:5px;}
 .report-kpi .rk-val{font-family:'Newsreader',serif;font-size:22px;font-weight:600;}
 .rc-chart{display:flex;align-items:flex-end;gap:5px;height:160px;padding:10px 4px 0;overflow-x:auto;}
 .rc-bar-wrap{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:26px;flex:1;}
 .rc-bar{width:100%;background:var(--saddle);border-radius:2px 2px 0 0;min-height:2px;}
 .rc-label{font-size:10px;color:var(--muted);margin-top:4px;white-space:nowrap;}
-.rlist-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);background:var(--white);margin-bottom:6px;font-size:13.5px;}
+.rlist-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);background:var(--white);color:var(--white-text);margin-bottom:6px;font-size:13.5px;}
 .rlist-rank{width:18px;color:var(--muted);font-weight:600;flex:none;}
 .rlist-name{flex:1;}
 .rlist-val{font-weight:600;white-space:nowrap;}
@@ -416,7 +420,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 /* theme picker */
 .theme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;}
 .theme-card{
-  border:1.5px solid var(--line);background:var(--white);
+  border:1.5px solid var(--line);background:var(--white);color:var(--white-text);
   border-radius:6px;padding:14px;cursor:pointer;text-align:left;
   transition:border-color .15s;
 }
@@ -820,7 +824,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <div class="field"><label for="orderDate">Огноо</label><input type="date" id="orderDate"></div>
       </div>
 
-      <div class="field" style="border:1px solid var(--line);padding:14px;background:var(--white);margin-bottom:16px;" id="itemAddPanel">
+      <div class="field" style="border:1px solid var(--line);padding:14px;background:var(--white);color:var(--white-text);margin-bottom:16px;" id="itemAddPanel">
         <label style="margin-bottom:9px;">Бараа нэмэх</label>
         <div class="field" id="itemSearchWrap">
           <input type="text" id="itemSearchInput" placeholder="Бүтээгдэхүүн хайх (нэр, код, компани)...">
