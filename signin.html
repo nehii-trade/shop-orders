@@ -700,17 +700,17 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           </div>
 
           <div style="padding:16px 20px 0;display:flex;gap:10px;flex-wrap:wrap;">
-            <select id="reportDateRange">
+            <select class="search" id="reportDateRange">
               <option value="all">Бүх хугацаа</option>
               <option value="today">Өнөөдөр</option>
               <option value="7d">Сүүлийн 7 хоног</option>
               <option value="30d">Сүүлийн 30 хоног</option>
               <option value="month">Энэ сар</option>
             </select>
-            <select id="reportShopFilter"><option value="">Бүх дэлгүүр</option></select>
-            <select id="reportAimagFilter"><option value="">Бүх аймаг</option></select>
-            <select id="reportProductFilter"><option value="">Бүх бараа</option></select>
-            <select id="reportStatusFilter">
+            <select class="search" id="reportShopFilter"><option value="">Бүх дэлгүүр</option></select>
+            <select class="search" id="reportAimagFilter"><option value="">Бүх аймаг</option></select>
+            <select class="search" id="reportProductFilter"><option value="">Бүх бараа</option></select>
+            <select class="search" id="reportStatusFilter">
               <option value="">Бүх төлөв</option>
               <option value="new">Шинэ</option>
               <option value="confirmed">Батлагдсан</option>
@@ -1207,6 +1207,18 @@ function toast(msg, kind){
   host.appendChild(el);
   setTimeout(()=>{ el.remove(); }, 3200);
 }
+function safeSetItem(key, value){
+  // localStorage бичихэд QuotaExceededError (эсвэл private-mode-ийн бусад
+  // алдаа) гарвал апп цохигдохгүй, хэрэглэгчид ойлгомжтой мэдэгдэл өгнө.
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    console.error('localStorage бичихэд алдаа гарлаа:', e);
+    toast('Төхөөрөмжийн санах ойн зай дүүрсэн тул хадгалж чадсангүй. Хуучин өгөгдлөө цэвэрлэнэ үү.', 'err');
+    return false;
+  }
+}
 
 /* ---------------- Sync indicator ---------------- */
 function setSync(state, label){
@@ -1569,7 +1581,7 @@ async function loadFromDrive(){
 }
 
 function queueSave(){
-  localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+  safeSetItem(LOCAL_KEY, JSON.stringify(data));
   setSync('busy', 'Хадгалж байна...');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(doSave, 600);
@@ -2339,6 +2351,17 @@ document.getElementById('saveProductBtn').addEventListener('click', () => {
   toast('Бүтээгдэхүүн хадгалагдлаа', 'ok');
 });
 
+/* ---------------- Excel (XLSX) сан бэлэн эсэхийг шалгах ---------------- */
+function ensureXlsxAvailable(){
+  // CDN (jsdelivr) ямар нэг шалтгаанаар ачаалагдаагүй бол global XLSX
+  // undefined хэвээр байна — тэр үед шууд TypeError шидэхээс сэргийлнэ.
+  if (typeof XLSX === 'undefined') {
+    toast('Excel сан ачаалагдаагүй байна. Интернэт холболтоо шалгаад хуудсыг дахин ачаална уу.', 'err');
+    return false;
+  }
+  return true;
+}
+
 /* ---------------- Products Excel import ---------------- */
 let productImportRows = [];
 const PRODUCT_IMPORT_HEADERS = {
@@ -2360,6 +2383,7 @@ const PRODUCT_IMPORT_ALIASES = {
   price: ['Нэгж үнэ', 'Үнэ']
 };
 document.getElementById('downloadImportTemplateBtn').addEventListener('click', () => {
+  if (!ensureXlsxAvailable()) return;
   const headers = Object.values(PRODUCT_IMPORT_HEADERS);
   const sampleRow = ['319514090338', '31951409', '38', 'Як ланд ХХК', '05. Ажлын өвлийн гутал', '319-51-409-03 38', 170000];
   const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
@@ -2379,6 +2403,7 @@ document.getElementById('productImportFile').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
   const statusEl = document.getElementById('productImportStatus');
+  if (!ensureXlsxAvailable()) { statusEl.textContent = ''; return; }
   statusEl.textContent = 'Уншиж байна...';
   const reader = new FileReader();
   reader.onload = (ev) => {
@@ -2399,6 +2424,7 @@ document.getElementById('productImportFile').addEventListener('change', (e) => {
 function parseProductImportRows(raw){
   const byItemCode = {};
   data.products.forEach(p => { if (p.itemCode) byItemCode[p.itemCode] = p; });
+  const seenInBatch = {};
   productImportRows = raw.map(rawRow => {
     const r = normalizeRowKeys(rawRow);
     const itemCode = getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.itemCode);
@@ -2409,13 +2435,16 @@ function parseProductImportRows(raw){
     const itemName = getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.itemName);
     const price = Number(getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.price) || 0);
     const isEmpty = !itemCode && !code && !name && !itemName;
+    const codeKey = itemCode ? String(itemCode).trim().toLowerCase() : '';
+    const isDuplicateInFile = !isEmpty && !!codeKey && !!seenInBatch[codeKey];
+    if (!isEmpty && codeKey) seenInBatch[codeKey] = (seenInBatch[codeKey]||0) + 1;
     const existing = itemCode ? byItemCode[itemCode] : null;
     return {
       itemCode, code, size, company, name, itemName, price,
-      isEmpty,
+      isEmpty, isDuplicateInFile,
       existingId: existing ? existing.id : null,
       existingLabel: existing ? `${existing.itemName||existing.name||'—'} · ${money(existing.price)}₮` : '',
-      checked: !isEmpty
+      checked: !isEmpty && !isDuplicateInFile
     };
   });
   renderProductImportPreview();
@@ -2430,8 +2459,10 @@ function renderProductImportPreview(){
   document.getElementById('importCountDup').textContent = dupCount;
   document.getElementById('importCountSkip').textContent = skipCount;
   body.innerHTML = rows.map((r, idx) => {
-    const badge = r.isEmpty ? '<span style="color:var(--muted);">хоосон</span>' : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>');
-    const sub = r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : '';
+    const badge = r.isEmpty ? '<span style="color:var(--muted);">хоосон</span>'
+      : (r.isDuplicateInFile ? '<span class="badge cancelled">Файлд давхардсан</span>'
+      : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>'));
+    const sub = r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : (r.isDuplicateInFile ? `<div style="font-size:11px;color:var(--brick);">Энэ код файл дотроо дахин давтагдсан</div>` : '');
     return `<tr>
       <td><input type="checkbox" data-idx="${idx}" class="importRowChk" ${r.checked?'checked':''} ${r.isEmpty?'disabled':''}></td>
       <td>${badge}</td>
@@ -2507,6 +2538,7 @@ function parseShopCategoryValue(v){
   return 'domestic';
 }
 document.getElementById('downloadShopImportTemplateBtn').addEventListener('click', () => {
+  if (!ensureXlsxAvailable()) return;
   const headers = Object.values(SHOP_IMPORT_HEADERS);
   const sampleRow = ['Ашид гутлын дэлгүүр', 'Дархан-Уул', 'Дархан', 'Дотоодын дэлгүүр', 'Бат-Эрдэнэ', '99001122', '', '', 'Төв зах, 3-р байр', ''];
   const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
@@ -2526,6 +2558,7 @@ document.getElementById('shopImportFile').addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
   const statusEl = document.getElementById('shopImportStatus');
+  if (!ensureXlsxAvailable()) { statusEl.textContent = ''; return; }
   statusEl.textContent = 'Уншиж байна...';
   const reader = new FileReader();
   reader.onload = (ev) => {
@@ -2914,6 +2947,15 @@ document.getElementById('saveOrderBtn').addEventListener('click', () => {
 });
 
 /* ---------------- CSV export ---------------- */
+function csvField(v){
+  let s = String(v==null?'':v);
+  // Excel/Sheets formula injection хамгаалалт: =,+,-,@ (мөн tab/CR) -ээр эхэлбэл
+  // тэргүүлэх ' (апостроф) нэмж, томьёо гэж тайлагдахаас сэргийлнэ
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+  // Таслал, хашилт, шинэ мөр орсон бол RFC4180 ёсоор хашилтад ороож, дотоод хашилтыг давхарлана
+  if (/[",\n\r]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
 document.getElementById('exportCsvBtn').addEventListener('click', () => {
   const orders = getReportFilteredOrders();
   const map = {};
@@ -2931,7 +2973,7 @@ document.getElementById('exportCsvBtn').addEventListener('click', () => {
   });
   let csv = 'Аймаг,Дэлгүүр,Захиалга,Нийт дүн\n';
   Object.keys(map).sort().forEach(k => {
-    csv += `${k},${map[k].shops.size},${map[k].orders},${map[k].total}\n`;
+    csv += `${csvField(k)},${map[k].shops.size},${map[k].orders},${map[k].total}\n`;
   });
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
