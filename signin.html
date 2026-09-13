@@ -1026,6 +1026,7 @@ let tokenExpiresAt = 0;
 let tokenClient = null;
 let authCallbackMode = 'login'; // 'login' | 'refresh' — tokenClient.callback дахин бичигдэхгүй, зөвхөн энэ flag-аар чиглэнэ
 let pendingRefreshResolve = null;
+let refreshPromise = null; // давхар silentRefresh() дуудлагаас хамгаална
 let driveFolderId = null;
 let driveFileId = null;
 let saveTimer = null;
@@ -1083,7 +1084,8 @@ function migrateData(d){
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 function money(n){ return Number(n||0).toLocaleString('mn-MN'); }
-function todayStr(){ return new Date().toISOString().slice(0,10); }
+function localDateStr(d){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+function todayStr(){ return localDateStr(new Date()); }
 
 /* ---------------- Tombstones (устгалт зэрэгцүүлэх) ---------------- */
 const TOMB_KEEP_DAYS = 90;
@@ -1395,12 +1397,14 @@ function tokenExpiringSoon(){
 }
 
 function silentRefresh(){
-  return new Promise((resolve) => {
+  if (refreshPromise) return refreshPromise; // аль хэдийн давхар яваа бол шинэ хүсэлт үүсгэхгүй, хуучныг буцаана
+  refreshPromise = new Promise((resolve) => {
     if (!tokenClient) { resolve(false); return; }
     authCallbackMode = 'refresh';
     pendingRefreshResolve = resolve;
     tokenClient.requestAccessToken({ prompt: '' });
-  });
+  }).finally(() => { refreshPromise = null; });
+  return refreshPromise;
 }
 
 // 30 секунд тутам токены хугацааг шалгаж, дуусахад ойртсон бол нам гүм шинэчилнэ
@@ -1470,6 +1474,7 @@ async function findDriveFolder(){
     encodeURIComponent(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`) +
     '&fields=files(id,name)';
   const res = await driveFetch(url);
+  if (!res.ok) throw new Error(`Drive folder хайлт амжилтгүй (HTTP ${res.status})`);
   const json = await res.json();
   if (json.files && json.files.length) return json.files[0].id;
   return null;
@@ -1481,6 +1486,7 @@ async function createDriveFolder(){
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
   });
+  if (!res.ok) throw new Error(`Drive folder үүсгэх амжилтгүй (HTTP ${res.status})`);
   const json = await res.json();
   return json.id;
 }
@@ -1497,6 +1503,7 @@ async function findDriveFile(folderId){
     encodeURIComponent(`name='${DATA_FILENAME}' and '${folderId}' in parents and trashed=false`) +
     '&fields=files(id,name)';
   const res = await driveFetch(url);
+  if (!res.ok) throw new Error(`Drive файл хайлт амжилтгүй (HTTP ${res.status})`);
   const json = await res.json();
   if (json.files && json.files.length) return json.files[0].id;
   return null;
@@ -1513,6 +1520,7 @@ async function createDriveFile(folderId, initialData){
     headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
     body
   });
+  if (!res.ok) throw new Error(`Drive файл үүсгэх амжилтгүй (HTTP ${res.status})`);
   const json = await res.json();
   return json.id;
 }
@@ -1767,8 +1775,8 @@ function renderPendingConfirm(){
       <td>${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
       <td>${money(o.total)} ₮</td>
       <td style="text-align:right;white-space:nowrap;">
-        <button class="rowbtn" onclick="quickConfirmOrder('${o.id}')">Батлах</button>
-        <button class="rowbtn" onclick="viewOrder('${o.id}')">Харах</button>
+        <button class="rowbtn" onclick="quickConfirmOrder('${escJsArg(o.id)}')">Батлах</button>
+        <button class="rowbtn" onclick="viewOrder('${escJsArg(o.id)}')">Харах</button>
       </td>
     </tr>`;
   }).join('');
@@ -1791,12 +1799,12 @@ function renderShops(){
     const phones = [s.phone1, s.phone2].filter(Boolean).join(' / ') || '—';
     const fb = isSafeHttpsUrl(s.facebook) ? `<a href="${esc(s.facebook)}" target="_blank" rel="noopener" title="Facebook хуудас руу очих" style="color:var(--saddle);font-weight:600;">FB ↗</a>` : '—';
     const actions = showArchived
-      ? `<button class="rowbtn" onclick="viewShop('${s.id}')">Харах</button>
-         <button class="rowbtn" onclick="restoreShop('${s.id}')">Сэргээх</button>
-         <button class="rowbtn" onclick="hardDeleteShop('${s.id}')">Бүрмөсөн устгах</button>`
-      : `<button class="rowbtn" onclick="viewShop('${s.id}')">Харах</button>
-         <button class="rowbtn" onclick="editShop('${s.id}')">Засах</button>
-         <button class="rowbtn" onclick="deleteShop('${s.id}')">Архивлах</button>`;
+      ? `<button class="rowbtn" onclick="viewShop('${escJsArg(s.id)}')">Харах</button>
+         <button class="rowbtn" onclick="restoreShop('${escJsArg(s.id)}')">Сэргээх</button>
+         <button class="rowbtn" onclick="hardDeleteShop('${escJsArg(s.id)}')">Бүрмөсөн устгах</button>`
+      : `<button class="rowbtn" onclick="viewShop('${escJsArg(s.id)}')">Харах</button>
+         <button class="rowbtn" onclick="editShop('${escJsArg(s.id)}')">Засах</button>
+         <button class="rowbtn" onclick="deleteShop('${escJsArg(s.id)}')">Архивлах</button>`;
     return `
     <tr>
       <td><input type="checkbox" class="shopRowChk" data-id="${s.id}" ${bulkSelection.shops.has(s.id)?'checked':''}></td>
@@ -1833,10 +1841,10 @@ function renderProducts(){
   bulkLastRows.products = rows.map(p=>p.id);
   body.innerHTML = rows.length ? rows.map(p => {
     const actions = showArchived
-      ? `<button class="rowbtn" onclick="restoreProduct('${p.id}')">Сэргээх</button>
-         <button class="rowbtn" onclick="hardDeleteProduct('${p.id}')">Бүрмөсөн устгах</button>`
-      : `<button class="rowbtn" onclick="editProduct('${p.id}')">Засах</button>
-         <button class="rowbtn" onclick="deleteProduct('${p.id}')">Архивлах</button>`;
+      ? `<button class="rowbtn" onclick="restoreProduct('${escJsArg(p.id)}')">Сэргээх</button>
+         <button class="rowbtn" onclick="hardDeleteProduct('${escJsArg(p.id)}')">Бүрмөсөн устгах</button>`
+      : `<button class="rowbtn" onclick="editProduct('${escJsArg(p.id)}')">Засах</button>
+         <button class="rowbtn" onclick="deleteProduct('${escJsArg(p.id)}')">Архивлах</button>`;
     return `
     <tr>
       <td><input type="checkbox" class="productRowChk" data-id="${p.id}" ${bulkSelection.products.has(p.id)?'checked':''}></td>
@@ -1866,13 +1874,14 @@ function renderOrders(){
   const showArchived = document.getElementById('orderShowArchived').checked;
   const q = (document.getElementById('orderSearch').value||'').trim().toLowerCase();
   const shopFilterId = document.getElementById('orderShopFilterSelect').value;
-  const { start } = getDateRangeBounds(document.getElementById('orderDateFilter').value);
+  const { start, end } = getDateRangeBounds(document.getElementById('orderDateFilter').value);
   const body = document.getElementById('ordersBody');
   let rows = data.orders.filter(o => !!o.archived === showArchived);
   rows = [...rows].sort((a,b)=> (b.orderDate||'').localeCompare(a.orderDate||''));
   if (filter) rows = rows.filter(o => o.status === filter);
   if (shopFilterId) rows = rows.filter(o => o.shopId === shopFilterId);
   if (start) rows = rows.filter(o => (o.orderDate||'') >= start);
+  if (end) rows = rows.filter(o => (o.orderDate||'') <= end);
   if (q) {
     rows = rows.filter(o => {
       const shop = data.shops.find(s=>s.id===o.shopId);
@@ -1888,12 +1897,12 @@ function renderOrders(){
   body.innerHTML = rows.length ? rows.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     const actions = showArchived
-      ? `<button class="rowbtn" onclick="viewOrder('${o.id}')">Харах</button>
-         <button class="rowbtn" onclick="restoreOrder('${o.id}')">Сэргээх</button>
-         <button class="rowbtn" onclick="hardDeleteOrder('${o.id}')">Бүрмөсөн устгах</button>`
-      : `<button class="rowbtn" onclick="viewOrder('${o.id}')">Харах</button>
-         <button class="rowbtn" onclick="editOrder('${o.id}')">Засах</button>
-         <button class="rowbtn" onclick="deleteOrder('${o.id}')">Архивлах</button>`;
+      ? `<button class="rowbtn" onclick="viewOrder('${escJsArg(o.id)}')">Харах</button>
+         <button class="rowbtn" onclick="restoreOrder('${escJsArg(o.id)}')">Сэргээх</button>
+         <button class="rowbtn" onclick="hardDeleteOrder('${escJsArg(o.id)}')">Бүрмөсөн устгах</button>`
+      : `<button class="rowbtn" onclick="viewOrder('${escJsArg(o.id)}')">Харах</button>
+         <button class="rowbtn" onclick="editOrder('${escJsArg(o.id)}')">Засах</button>
+         <button class="rowbtn" onclick="deleteOrder('${escJsArg(o.id)}')">Архивлах</button>`;
     return `<tr>
       <td><input type="checkbox" class="orderRowChk" data-id="${o.id}" ${bulkSelection.orders.has(o.id)?'checked':''}></td>
       <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
@@ -1914,8 +1923,8 @@ function getDateRangeBounds(preset){
   const now = new Date();
   let start = null;
   if (preset === 'today') start = todayStr();
-  else if (preset === '7d') { const d = new Date(now); d.setDate(d.getDate()-6); start = d.toISOString().slice(0,10); }
-  else if (preset === '30d') { const d = new Date(now); d.setDate(d.getDate()-29); start = d.toISOString().slice(0,10); }
+  else if (preset === '7d') { const d = new Date(now); d.setDate(d.getDate()-6); start = localDateStr(d); }
+  else if (preset === '30d') { const d = new Date(now); d.setDate(d.getDate()-29); start = localDateStr(d); }
   else if (preset === 'month') { start = todayStr().slice(0,7)+'-01'; }
   return { start, end: todayStr() };
 }
@@ -1925,9 +1934,10 @@ function getReportFilteredOrders(){
   const aimagSel = document.getElementById('reportAimagFilter').value;
   const productSel = document.getElementById('reportProductFilter').value;
   const statusSel = document.getElementById('reportStatusFilter').value;
-  const { start } = getDateRangeBounds(rangeSel);
+  const { start, end } = getDateRangeBounds(rangeSel);
   return data.orders.filter(o => {
     if (start && (o.orderDate||'') < start) return false;
+    if (end && (o.orderDate||'') > end) return false;
     if (shopSel && o.shopId !== shopSel) return false;
     if (statusSel && o.status !== statusSel) return false;
     if (productSel && !(o.items||[]).some(it => it.productId === productSel)) return false;
@@ -2092,6 +2102,17 @@ function refreshProductDatalists(){
 
 function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escJsArg(s){
+  // onclick="fn('${...}')" маягийн inline handler-д зориулсан 2 үетэй escape:
+  // 1) JS single-quoted string дотор аюулгүй болгох (\\, ' escape)
+  // 2) Гадаад HTML атрибут (") -оос гарахгүй байхаар HTML encode хийх
+  const jsSafe = String(s==null?'':s)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r');
+  return jsSafe.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 function isSafeHttpsUrl(url){
   return /^https:\/\/[^\s]+$/i.test(String(url||'').trim());
