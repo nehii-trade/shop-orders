@@ -597,9 +597,16 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
               <button class="btn" id="addShopBtn">+ Дэлгүүр нэмэх</button>
             </div>
           </div>
+          <div class="bulk-bar" id="shopsBulkBar" style="display:none;padding:10px 20px;background:var(--stone-dim);border-bottom:1px solid var(--line);align-items:center;gap:12px;font-size:13px;">
+            <span><b id="shopsBulkCount">0</b> сонгогдсон</span>
+            <button class="btn secondary" id="shopsBulkArchiveBtn">Сонгосныг архивлах</button>
+            <button class="btn secondary" id="shopsBulkRestoreBtn" style="display:none;">Сонгосныг сэргээх</button>
+            <button class="btn secondary" id="shopsBulkHardDeleteBtn" style="display:none;">Сонгосныг бүрмөсөн устгах</button>
+            <button class="rowbtn" id="shopsBulkClearBtn">Цуцлах</button>
+          </div>
           <div style="overflow-x:auto;">
           <table>
-            <thead><tr><th>Нэр</th><th>Аймаг</th><th>Сум</th><th>Ангилал</th><th>Холбоо барих</th><th>Утас</th><th>Facebook</th><th></th></tr></thead>
+            <thead><tr><th style="width:26px;"><input type="checkbox" id="shopsSelectAll"></th><th>Нэр</th><th>Аймаг</th><th>Сум</th><th>Ангилал</th><th>Холбоо барих</th><th>Утас</th><th>Facebook</th><th></th></tr></thead>
             <tbody id="shopsBody"></tbody>
           </table>
           </div>
@@ -621,9 +628,16 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
               <button class="btn" id="addProductBtn">+ Бүтээгдэхүүн нэмэх</button>
             </div>
           </div>
+          <div class="bulk-bar" id="productsBulkBar" style="display:none;padding:10px 20px;background:var(--stone-dim);border-bottom:1px solid var(--line);align-items:center;gap:12px;font-size:13px;">
+            <span><b id="productsBulkCount">0</b> сонгогдсон</span>
+            <button class="btn secondary" id="productsBulkArchiveBtn">Сонгосныг архивлах</button>
+            <button class="btn secondary" id="productsBulkRestoreBtn" style="display:none;">Сонгосныг сэргээх</button>
+            <button class="btn secondary" id="productsBulkHardDeleteBtn" style="display:none;">Сонгосныг бүрмөсөн устгах</button>
+            <button class="rowbtn" id="productsBulkClearBtn">Цуцлах</button>
+          </div>
           <div style="overflow-x:auto;">
           <table class="products-table">
-            <thead><tr><th>Барааны код</th><th>Загварын код</th><th>Размер</th><th>Компани</th><th>Бүтээгдэхүүний нэр</th><th>Барааны нэр</th><th>Нэгж үнэ</th><th></th></tr></thead>
+            <thead><tr><th style="width:26px;"><input type="checkbox" id="productsSelectAll"></th><th>Барааны код</th><th>Загварын код</th><th>Размер</th><th>Компани</th><th>Бүтээгдэхүүний нэр</th><th>Барааны нэр</th><th>Нэгж үнэ</th><th></th></tr></thead>
             <tbody id="productsBody"></tbody>
           </table>
           </div>
@@ -659,9 +673,16 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
               <button class="btn" id="addOrderBtn">+ Захиалга нэмэх</button>
             </div>
           </div>
+          <div class="bulk-bar" id="ordersBulkBar" style="display:none;padding:10px 20px;background:var(--stone-dim);border-bottom:1px solid var(--line);align-items:center;gap:12px;font-size:13px;">
+            <span><b id="ordersBulkCount">0</b> сонгогдсон</span>
+            <button class="btn secondary" id="ordersBulkArchiveBtn">Сонгосныг архивлах</button>
+            <button class="btn secondary" id="ordersBulkRestoreBtn" style="display:none;">Сонгосныг сэргээх</button>
+            <button class="btn secondary" id="ordersBulkHardDeleteBtn" style="display:none;">Сонгосныг бүрмөсөн устгах</button>
+            <button class="rowbtn" id="ordersBulkClearBtn">Цуцлах</button>
+          </div>
           <div style="overflow-x:auto;">
           <table>
-            <thead><tr><th>№</th><th>Огноо</th><th>Дэлгүүр</th><th>Бараа</th><th>Тоо</th><th>Дүн</th><th>Төлөв</th><th></th></tr></thead>
+            <thead><tr><th style="width:26px;"><input type="checkbox" id="ordersSelectAll"></th><th>№</th><th>Огноо</th><th>Дэлгүүр</th><th>Бараа</th><th>Тоо</th><th>Дүн</th><th>Төлөв</th><th></th></tr></thead>
             <tbody id="ordersBody"></tbody>
           </table>
           </div>
@@ -1079,6 +1100,79 @@ function restoreRecord(arr, id){
 function hardDeleteRecord(arrName, id){
   tombstone(id);
   data[arrName] = data[arrName].filter(x=>x.id!==id);
+}
+
+/* ---------------- Bulk selection (Дэлгүүр/Бүтээгдэхүүн/Захиалга ерөнхий) ---------------- */
+const bulkSelection = { shops: new Set(), products: new Set(), orders: new Set() };
+const bulkLastRows = { shops: [], products: [], orders: [] };
+const BULK_LABELS = { shops: 'дэлгүүр', products: 'бараа', orders: 'захиалга' };
+const BULK_ARR_NAME = { shops: 'shops', products: 'products', orders: 'orders' };
+
+function updateBulkBar(entity){
+  const bar = document.getElementById(entity + 'BulkBar');
+  if (!bar) return;
+  const count = bulkSelection[entity].size;
+  bar.style.display = count ? 'flex' : 'none';
+  const countEl = document.getElementById(entity + 'BulkCount');
+  if (countEl) countEl.textContent = count;
+  const showArchived = document.getElementById(entity === 'shops' ? 'shopShowArchived' : entity === 'products' ? 'productShowArchived' : 'orderShowArchived').checked;
+  const archiveBtn = document.getElementById(entity + 'BulkArchiveBtn');
+  const restoreBtn = document.getElementById(entity + 'BulkRestoreBtn');
+  const hardDeleteBtn = document.getElementById(entity + 'BulkHardDeleteBtn');
+  if (archiveBtn) archiveBtn.style.display = showArchived ? 'none' : '';
+  if (restoreBtn) restoreBtn.style.display = showArchived ? '' : 'none';
+  if (hardDeleteBtn) hardDeleteBtn.style.display = showArchived ? '' : 'none';
+}
+function toggleBulkRow(entity, id, checked){
+  if (checked) bulkSelection[entity].add(id); else bulkSelection[entity].delete(id);
+  updateBulkBar(entity);
+}
+function clearBulkSelection(entity){
+  bulkSelection[entity].clear();
+  updateBulkBar(entity);
+}
+function wireBulkCheckboxes(entity, rowClass, selectAllId){
+  document.querySelectorAll('.' + rowClass).forEach(chk => {
+    chk.addEventListener('change', () => toggleBulkRow(entity, chk.dataset.id, chk.checked));
+  });
+  const selectAll = document.getElementById(selectAllId);
+  if (selectAll) {
+    selectAll.checked = bulkLastRows[entity].length > 0 && bulkLastRows[entity].every(id => bulkSelection[entity].has(id));
+    selectAll.onchange = () => {
+      bulkLastRows[entity].forEach(id => {
+        if (selectAll.checked) bulkSelection[entity].add(id); else bulkSelection[entity].delete(id);
+      });
+      updateBulkBar(entity);
+      if (entity === 'shops') renderShops();
+      else if (entity === 'products') renderProducts();
+      else renderOrders();
+    };
+  }
+}
+function bulkArchive(entity){
+  const arr = data[BULK_ARR_NAME[entity]];
+  bulkSelection[entity].forEach(id => archiveRecord(arr, id));
+  const n = bulkSelection[entity].size;
+  clearBulkSelection(entity);
+  queueSave(); render();
+  toast(`${n} ${BULK_LABELS[entity]} архивлагдлаа`);
+}
+function bulkRestore(entity){
+  const arr = data[BULK_ARR_NAME[entity]];
+  bulkSelection[entity].forEach(id => restoreRecord(arr, id));
+  const n = bulkSelection[entity].size;
+  clearBulkSelection(entity);
+  queueSave(); render();
+  toast(`${n} ${BULK_LABELS[entity]} сэргээгдлээ`, 'ok');
+}
+function bulkHardDelete(entity){
+  const n = bulkSelection[entity].size;
+  if (!n) return;
+  if (!confirm(`${n} ${BULK_LABELS[entity]}-ийг бүрмөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй!`)) return;
+  bulkSelection[entity].forEach(id => hardDeleteRecord(BULK_ARR_NAME[entity], id));
+  clearBulkSelection(entity);
+  queueSave(); render();
+  toast(`${n} ${BULK_LABELS[entity]} бүрмөсөн устгагдлаа`);
 }
 function isTombstoned(item){
   const t = data.tombstones[item.id];
@@ -1692,6 +1786,7 @@ function renderShops(){
   const showArchived = document.getElementById('shopShowArchived').checked;
   const body = document.getElementById('shopsBody');
   const rows = data.shops.filter(s => !!s.archived === showArchived && (!q || (s.name+s.aimag+s.sum).toLowerCase().includes(q)));
+  bulkLastRows.shops = rows.map(s=>s.id);
   body.innerHTML = rows.length ? rows.map(s => {
     const phones = [s.phone1, s.phone2].filter(Boolean).join(' / ') || '—';
     const fb = isSafeHttpsUrl(s.facebook) ? `<a href="${esc(s.facebook)}" target="_blank" rel="noopener" title="Facebook хуудас руу очих" style="color:var(--saddle);font-weight:600;">FB ↗</a>` : '—';
@@ -1704,6 +1799,7 @@ function renderShops(){
          <button class="rowbtn" onclick="deleteShop('${s.id}')">Архивлах</button>`;
     return `
     <tr>
+      <td><input type="checkbox" class="shopRowChk" data-id="${s.id}" ${bulkSelection.shops.has(s.id)?'checked':''}></td>
       <td>${esc(s.name)}</td>
       <td>${esc(s.aimag||'—')}</td>
       <td>${esc(s.sum||'—')}</td>
@@ -1713,7 +1809,9 @@ function renderShops(){
       <td>${fb}</td>
       <td style="text-align:right;white-space:nowrap;">${actions}</td>
     </tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="8">${showArchived ? 'Архивласан дэлгүүр алга' : 'Дэлгүүр бүртгэгдээгүй байна'}</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="9">${showArchived ? 'Архивласан дэлгүүр алга' : 'Дэлгүүр бүртгэгдээгүй байна'}</td></tr>`;
+  wireBulkCheckboxes('shops', 'shopRowChk', 'shopsSelectAll');
+  updateBulkBar('shops');
 }
 
 function populateProductCompanyFilterOptions(){
@@ -1732,6 +1830,7 @@ function renderProducts(){
   const rows = data.products.filter(p => !!p.archived === showArchived
     && (!q || ((p.itemCode||'')+(p.code||'')+(p.company||'')+(p.name||'')+(p.itemName||'')).toLowerCase().includes(q))
     && (!companyFilter || p.company === companyFilter));
+  bulkLastRows.products = rows.map(p=>p.id);
   body.innerHTML = rows.length ? rows.map(p => {
     const actions = showArchived
       ? `<button class="rowbtn" onclick="restoreProduct('${p.id}')">Сэргээх</button>
@@ -1740,6 +1839,7 @@ function renderProducts(){
          <button class="rowbtn" onclick="deleteProduct('${p.id}')">Архивлах</button>`;
     return `
     <tr>
+      <td><input type="checkbox" class="productRowChk" data-id="${p.id}" ${bulkSelection.products.has(p.id)?'checked':''}></td>
       <td data-label="Барааны код">${esc(p.itemCode||'—')}</td>
       <td data-label="Загварын код">${esc(p.code||'—')}</td>
       <td data-label="Размер">${esc(p.size||'—')}</td>
@@ -1749,7 +1849,9 @@ function renderProducts(){
       <td data-label="Нэгж үнэ">${money(p.price)} ₮</td>
       <td style="text-align:right;white-space:nowrap;">${actions}</td>
     </tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="8">${showArchived ? 'Архивласан бүтээгдэхүүн алга' : (q||companyFilter ? 'Хайлтад тохирох бүтээгдэхүүн алга' : 'Бүтээгдэхүүн бүртгэгдээгүй байна')}</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="9">${showArchived ? 'Архивласан бүтээгдэхүүн алга' : (q||companyFilter ? 'Хайлтад тохирох бүтээгдэхүүн алга' : 'Бүтээгдэхүүн бүртгэгдээгүй байна')}</td></tr>`;
+  wireBulkCheckboxes('products', 'productRowChk', 'productsSelectAll');
+  updateBulkBar('products');
 }
 
 function populateOrderShopFilterOptions(){
@@ -1782,6 +1884,7 @@ function renderOrders(){
       return (shopName+' '+(o.orderNo||'')+' '+itemNames).toLowerCase().includes(q);
     });
   }
+  bulkLastRows.orders = rows.map(o=>o.id);
   body.innerHTML = rows.length ? rows.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     const actions = showArchived
@@ -1792,6 +1895,7 @@ function renderOrders(){
          <button class="rowbtn" onclick="editOrder('${o.id}')">Засах</button>
          <button class="rowbtn" onclick="deleteOrder('${o.id}')">Архивлах</button>`;
     return `<tr>
+      <td><input type="checkbox" class="orderRowChk" data-id="${o.id}" ${bulkSelection.orders.has(o.id)?'checked':''}></td>
       <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
       <td>${esc(o.orderDate||'—')}</td>
       <td>${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
@@ -1801,7 +1905,9 @@ function renderOrders(){
       <td><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></td>
       <td style="text-align:right;white-space:nowrap;">${actions}</td>
     </tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="8">${showArchived ? 'Архивласан захиалга алга' : (q||filter||shopFilterId||start ? 'Хайлтад тохирох захиалга алга' : 'Захиалга бүртгэгдээгүй байна')}</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="9">${showArchived ? 'Архивласан захиалга алга' : (q||filter||shopFilterId||start ? 'Хайлтад тохирох захиалга алга' : 'Захиалга бүртгэгдээгүй байна')}</td></tr>`;
+  wireBulkCheckboxes('orders', 'orderRowChk', 'ordersSelectAll');
+  updateBulkBar('orders');
 }
 
 function getDateRangeBounds(preset){
@@ -2009,15 +2115,27 @@ function getFieldFromRow(normalizedRow, aliases){
 
 /* ---------------- Search / filter listeners ---------------- */
 document.getElementById('shopSearch').addEventListener('input', renderShops);
-document.getElementById('shopShowArchived').addEventListener('change', renderShops);
+document.getElementById('shopsBulkArchiveBtn').addEventListener('click', () => bulkArchive('shops'));
+document.getElementById('shopsBulkRestoreBtn').addEventListener('click', () => bulkRestore('shops'));
+document.getElementById('shopsBulkHardDeleteBtn').addEventListener('click', () => bulkHardDelete('shops'));
+document.getElementById('shopsBulkClearBtn').addEventListener('click', () => { clearBulkSelection('shops'); renderShops(); });
+document.getElementById('shopShowArchived').addEventListener('change', () => { clearBulkSelection('shops'); renderShops(); });
 document.getElementById('productSearch').addEventListener('input', renderProducts);
-document.getElementById('productShowArchived').addEventListener('change', renderProducts);
+document.getElementById('productShowArchived').addEventListener('change', () => { clearBulkSelection('products'); renderProducts(); });
 document.getElementById('productCompanyFilter').addEventListener('change', renderProducts);
+document.getElementById('productsBulkArchiveBtn').addEventListener('click', () => bulkArchive('products'));
+document.getElementById('productsBulkRestoreBtn').addEventListener('click', () => bulkRestore('products'));
+document.getElementById('productsBulkHardDeleteBtn').addEventListener('click', () => bulkHardDelete('products'));
+document.getElementById('productsBulkClearBtn').addEventListener('click', () => { clearBulkSelection('products'); renderProducts(); });
 document.getElementById('orderStatusFilter').addEventListener('change', renderOrders);
-document.getElementById('orderShowArchived').addEventListener('change', renderOrders);
+document.getElementById('orderShowArchived').addEventListener('change', () => { clearBulkSelection('orders'); renderOrders(); });
 document.getElementById('orderSearch').addEventListener('input', renderOrders);
 document.getElementById('orderShopFilterSelect').addEventListener('change', renderOrders);
 document.getElementById('orderDateFilter').addEventListener('change', renderOrders);
+document.getElementById('ordersBulkArchiveBtn').addEventListener('click', () => bulkArchive('orders'));
+document.getElementById('ordersBulkRestoreBtn').addEventListener('click', () => bulkRestore('orders'));
+document.getElementById('ordersBulkHardDeleteBtn').addEventListener('click', () => bulkHardDelete('orders'));
+document.getElementById('ordersBulkClearBtn').addEventListener('click', () => { clearBulkSelection('orders'); renderOrders(); });
 
 /* ---------------- Modal helpers ---------------- */
 function openModal(id){ document.getElementById(id).classList.add('show'); }
