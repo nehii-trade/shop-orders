@@ -1095,6 +1095,17 @@ function migrateData(d){
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 function money(n){ return Number(n||0).toLocaleString('mn-MN'); }
+function parsePriceValue(raw){
+  // Excel/Google Sheets-с ирэх таслал, зай, ₮/$ тэмдэгттэй утгыг цэвэрлээд
+  // тоо болгож parse хийнэ. Жинхэнэ буруу утга (жиш: "abc") бол
+  // { value: 0, invalid: true } буцаана — NaN хэзээ ч цааш дамжихгүй.
+  const rawStr = String(raw==null?'':raw).trim();
+  if (rawStr === '') return { value: 0, invalid: false };
+  const cleaned = rawStr.replace(/[,\s₮$]/g, '');
+  const n = Number(cleaned);
+  if (!Number.isFinite(n) || n < 0) return { value: 0, invalid: true };
+  return { value: n, invalid: false };
+}
 function localDateStr(d){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
 function todayStr(){ return localDateStr(new Date()); }
 
@@ -1641,6 +1652,38 @@ async function doSave(){
 }
 
 document.getElementById('syncNowBtn').addEventListener('click', loadFromDrive);
+function sanitizeBackupData(incoming){
+  // Нөөцлөлтийн (backup) файл бол дурын гадаад JSON тул мөр бүрийг
+  // цэвэрлэж, апп цохигдохоос болон буруу утга (сөрөг үнэ, танигдахгүй
+  // status гэх мэт) дотогшоо орохоос сэргийлнэ.
+  const isPlainObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
+  const cleanId = (x) => (typeof x.id === 'string' && x.id) ? x.id : uid();
+  const cleanUpdatedAt = (x) => Number.isFinite(x.updatedAt) ? x.updatedAt : Date.now();
+  const cleanNum = (v, fallback) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : fallback; };
+
+  const shops = (Array.isArray(incoming.shops) ? incoming.shops : []).filter(isPlainObj).map(x => ({
+    ...x, id: cleanId(x), updatedAt: cleanUpdatedAt(x)
+  }));
+  const products = (Array.isArray(incoming.products) ? incoming.products : []).filter(isPlainObj).map(x => ({
+    ...x, id: cleanId(x), updatedAt: cleanUpdatedAt(x), price: cleanNum(x.price, 0)
+  }));
+  const orders = (Array.isArray(incoming.orders) ? incoming.orders : []).filter(isPlainObj).map(x => {
+    const items = (Array.isArray(x.items) ? x.items : []).filter(isPlainObj).map(it => {
+      const qty = cleanNum(it.qty, 1) || 1;
+      const unitPrice = cleanNum(it.unitPrice, 0);
+      return { ...it, qty, unitPrice, total: cleanNum(it.total, qty * unitPrice) };
+    });
+    return {
+      ...x,
+      id: cleanId(x),
+      updatedAt: cleanUpdatedAt(x),
+      status: STATUS_LABEL[x.status] ? x.status : 'new',
+      items,
+      total: cleanNum(x.total, items.reduce((sum,it)=>sum+Number(it.total||0),0))
+    };
+  });
+  return { ...incoming, shops, products, orders };
+}
 document.getElementById('backupExportBtn').addEventListener('click', () => {
   const backup = {
     app: 'Нэхий Трейд — Захиалгын систем',
@@ -1673,12 +1716,13 @@ document.getElementById('backupRestoreFile').addEventListener('change', (e) => {
       e.target.value = '';
       return;
     }
-    const incoming = parsed && parsed.data ? parsed.data : parsed;
-    if (!incoming || !Array.isArray(incoming.shops) || !Array.isArray(incoming.products) || !Array.isArray(incoming.orders)) {
+    const rawIncoming = parsed && parsed.data ? parsed.data : parsed;
+    if (!rawIncoming || !Array.isArray(rawIncoming.shops) || !Array.isArray(rawIncoming.products) || !Array.isArray(rawIncoming.orders)) {
       toast('Энэ файл танигдахгүй бүтэцтэй байна. Нэхий Трейдийн нөөцлөлтийн файл эсэхийг шалгана уу.', 'err');
       e.target.value = '';
       return;
     }
+    const incoming = sanitizeBackupData(rawIncoming);
     const summary = `Энэ файлд ${incoming.shops.length} дэлгүүр, ${incoming.products.length} бараа, ${incoming.orders.length} захиалга байна.\n\nОДООГИЙН бүх өгөгдлийг ЭНЭ файлаар БҮРЭН СОЛИХ уу? Энэ үйлдлийг буцаах боломжгүй!`;
     if (!confirm(summary)) { e.target.value = ''; return; }
     data = incoming;
@@ -2434,7 +2478,7 @@ document.getElementById('productImportFile').addEventListener('change', (e) => {
 });
 function parseProductImportRows(raw){
   const byItemCode = {};
-  data.products.forEach(p => { if (p.itemCode) byItemCode[p.itemCode] = p; });
+  data.products.forEach(p => { if (p.itemCode) byItemCode[String(p.itemCode).trim().toLowerCase()] = p; });
   const seenInBatch = {};
   productImportRows = raw.map(rawRow => {
     const r = normalizeRowKeys(rawRow);
@@ -2444,18 +2488,21 @@ function parseProductImportRows(raw){
     const company = getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.company);
     const name = getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.name);
     const itemName = getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.itemName);
-    const price = Number(getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.price) || 0);
+    const priceParsed = parsePriceValue(getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.price));
+    const price = priceParsed.value;
+    const priceInvalid = priceParsed.invalid;
     const isEmpty = !itemCode && !code && !name && !itemName;
+    const itemCodeMissing = !isEmpty && !itemCode;
     const codeKey = itemCode ? String(itemCode).trim().toLowerCase() : '';
     const isDuplicateInFile = !isEmpty && !!codeKey && !!seenInBatch[codeKey];
     if (!isEmpty && codeKey) seenInBatch[codeKey] = (seenInBatch[codeKey]||0) + 1;
-    const existing = itemCode ? byItemCode[itemCode] : null;
+    const existing = codeKey ? byItemCode[codeKey] : null;
     return {
-      itemCode, code, size, company, name, itemName, price,
-      isEmpty, isDuplicateInFile,
+      itemCode, code, size, company, name, itemName, price, priceInvalid,
+      isEmpty, isDuplicateInFile, itemCodeMissing,
       existingId: existing ? existing.id : null,
       existingLabel: existing ? `${existing.itemName||existing.name||'—'} · ${money(existing.price)}₮` : '',
-      checked: !isEmpty && !isDuplicateInFile
+      checked: !isEmpty && !isDuplicateInFile && !priceInvalid && !itemCodeMissing
     };
   });
   renderProductImportPreview();
@@ -2471,17 +2518,23 @@ function renderProductImportPreview(){
   document.getElementById('importCountSkip').textContent = skipCount;
   body.innerHTML = rows.map((r, idx) => {
     const badge = r.isEmpty ? '<span style="color:var(--muted);">хоосон</span>'
+      : (r.itemCodeMissing ? '<span class="badge cancelled">Код алга</span>'
+      : (r.priceInvalid ? '<span class="badge cancelled">Үнэ буруу</span>'
       : (r.isDuplicateInFile ? '<span class="badge cancelled">Файлд давхардсан</span>'
-      : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>'));
-    const sub = r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : (r.isDuplicateInFile ? `<div style="font-size:11px;color:var(--brick);">Энэ код файл дотроо дахин давтагдсан</div>` : '');
+      : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>'))));
+    const sub = r.itemCodeMissing ? `<div style="font-size:11px;color:var(--brick);">Барааны код хоосон — ирээдүйд давхацал/шинэчлэлт таньж чадахгүй</div>`
+      : (r.priceInvalid ? `<div style="font-size:11px;color:var(--brick);">Үнийн баганад тоо бус утга байна — шалгаад дахин сонгоно уу</div>`
+      : (r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : (r.isDuplicateInFile ? `<div style="font-size:11px;color:var(--brick);">Энэ код файл дотроо дахин давтагдсан</div>` : '')));
+    const priceCell = r.priceInvalid ? `<span style="color:var(--brick);">буруу утга</span>` : `${money(r.price)} ₮`;
+    const itemCodeCell = r.itemCodeMissing ? `<span style="color:var(--brick);">хоосон</span>` : esc(r.itemCode||'—');
     return `<tr>
       <td><input type="checkbox" data-idx="${idx}" class="importRowChk" ${r.checked?'checked':''} ${r.isEmpty?'disabled':''}></td>
       <td>${badge}</td>
-      <td>${esc(r.itemCode||'—')}</td>
+      <td>${itemCodeCell}</td>
       <td>${esc(r.code||'—')}</td>
       <td>${esc(r.size||'—')}</td>
       <td>${esc(r.itemName||r.name||'—')}${sub}</td>
-      <td>${money(r.price)} ₮</td>
+      <td>${priceCell}</td>
     </tr>`;
   }).join('');
   document.querySelectorAll('.importRowChk').forEach(chk => {
