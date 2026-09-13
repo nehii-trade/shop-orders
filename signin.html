@@ -346,6 +346,16 @@ td{padding:11px 14px;border-bottom:1px solid var(--line);font-size:13.5px;vertic
 tbody tr:hover{background:rgba(166,89,46,.04);}
 .rowbtn{background:none;border:none;color:var(--muted);padding:4px 6px;border-radius:var(--radius);}
 .rowbtn:hover{color:var(--text);background:var(--stone-dim);}
+.rowbtn-view{color:var(--saddle);}
+.rowbtn-view:hover{color:var(--saddle-dim);background:var(--stone-dim);}
+.rowbtn-edit{color:var(--amber);}
+.rowbtn-edit:hover{background:var(--amber-dim);}
+.rowbtn-danger{color:var(--brick);}
+.rowbtn-danger:hover{background:var(--brick-dim);}
+.rowbtn-restore{color:var(--moss);}
+.rowbtn-restore:hover{background:var(--moss-dim);}
+.rowbtn-confirm{color:var(--moss);font-weight:600;}
+.rowbtn-confirm:hover{background:var(--moss-dim);}
 .empty-row td{text-align:center;color:var(--muted);padding:40px 14px;}
 
 .badge{display:inline-block;padding:3px 10px;font-size:11.5px;border-radius:20px;font-weight:500;}
@@ -383,6 +393,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 .item-search-results .isr-item{padding:9px 11px;border:1px solid var(--line);border-top:none;cursor:pointer;font-size:13.5px;}
 .item-search-results .isr-item:first-child{border-top:1px solid var(--line);}
 .item-search-results .isr-item:hover{background:var(--stone-dim);}
+.item-search-results .isr-item:focus-visible{outline:2px solid var(--saddle);outline-offset:-2px;background:var(--stone-dim);}
 .item-search-results .isr-item .isr-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
 .item-search-results .isr-empty{padding:9px 11px;color:var(--muted);font-size:13px;border:1px solid var(--line);}
 .modal-foot{padding:16px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0;}
@@ -1787,8 +1798,8 @@ function renderPendingConfirm(){
       <td>${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
       <td>${money(o.total)} ₮</td>
       <td style="text-align:right;white-space:nowrap;">
-        <button class="rowbtn" onclick="quickConfirmOrder('${escJsArg(o.id)}')">Батлах</button>
-        <button class="rowbtn" onclick="viewOrder('${escJsArg(o.id)}')">Харах</button>
+        <button class="rowbtn rowbtn-confirm" onclick="quickConfirmOrder('${escJsArg(o.id)}')">Батлах</button>
+        <button class="rowbtn rowbtn-view" onclick="viewOrder('${escJsArg(o.id)}')">Харах</button>
       </td>
     </tr>`;
   }).join('');
@@ -1811,12 +1822,12 @@ function renderShops(){
     const phones = [s.phone1, s.phone2].filter(Boolean).join(' / ') || '—';
     const fb = isSafeHttpsUrl(s.facebook) ? `<a href="${esc(s.facebook)}" target="_blank" rel="noopener" title="Facebook хуудас руу очих" style="color:var(--saddle);font-weight:600;">FB ↗</a>` : '—';
     const actions = showArchived
-      ? `<button class="rowbtn" onclick="viewShop('${escJsArg(s.id)}')">Харах</button>
-         <button class="rowbtn" onclick="restoreShop('${escJsArg(s.id)}')">Сэргээх</button>
-         <button class="rowbtn" onclick="hardDeleteShop('${escJsArg(s.id)}')">Бүрмөсөн устгах</button>`
-      : `<button class="rowbtn" onclick="viewShop('${escJsArg(s.id)}')">Харах</button>
-         <button class="rowbtn" onclick="editShop('${escJsArg(s.id)}')">Засах</button>
-         <button class="rowbtn" onclick="deleteShop('${escJsArg(s.id)}')">Архивлах</button>`;
+      ? `<button class="rowbtn rowbtn-view" onclick="viewShop('${escJsArg(s.id)}')">Харах</button>
+         <button class="rowbtn rowbtn-restore" onclick="restoreShop('${escJsArg(s.id)}')">Сэргээх</button>
+         <button class="rowbtn rowbtn-danger" onclick="hardDeleteShop('${escJsArg(s.id)}')">Бүрмөсөн устгах</button>`
+      : `<button class="rowbtn rowbtn-view" onclick="viewShop('${escJsArg(s.id)}')">Харах</button>
+         <button class="rowbtn rowbtn-edit" onclick="editShop('${escJsArg(s.id)}')">Засах</button>
+         <button class="rowbtn rowbtn-danger" onclick="deleteShop('${escJsArg(s.id)}')">Архивлах</button>`;
     return `
     <tr>
       <td><input type="checkbox" class="shopRowChk" data-id="${s.id}" ${bulkSelection.shops.has(s.id)?'checked':''}></td>
@@ -1853,10 +1864,10 @@ function renderProducts(){
   bulkLastRows.products = rows.map(p=>p.id);
   body.innerHTML = rows.length ? rows.map(p => {
     const actions = showArchived
-      ? `<button class="rowbtn" onclick="restoreProduct('${escJsArg(p.id)}')">Сэргээх</button>
-         <button class="rowbtn" onclick="hardDeleteProduct('${escJsArg(p.id)}')">Бүрмөсөн устгах</button>`
-      : `<button class="rowbtn" onclick="editProduct('${escJsArg(p.id)}')">Засах</button>
-         <button class="rowbtn" onclick="deleteProduct('${escJsArg(p.id)}')">Архивлах</button>`;
+      ? `<button class="rowbtn rowbtn-restore" onclick="restoreProduct('${escJsArg(p.id)}')">Сэргээх</button>
+         <button class="rowbtn rowbtn-danger" onclick="hardDeleteProduct('${escJsArg(p.id)}')">Бүрмөсөн устгах</button>`
+      : `<button class="rowbtn rowbtn-edit" onclick="editProduct('${escJsArg(p.id)}')">Засах</button>
+         <button class="rowbtn rowbtn-danger" onclick="deleteProduct('${escJsArg(p.id)}')">Архивлах</button>`;
     return `
     <tr>
       <td><input type="checkbox" class="productRowChk" data-id="${p.id}" ${bulkSelection.products.has(p.id)?'checked':''}></td>
@@ -1909,12 +1920,12 @@ function renderOrders(){
   body.innerHTML = rows.length ? rows.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     const actions = showArchived
-      ? `<button class="rowbtn" onclick="viewOrder('${escJsArg(o.id)}')">Харах</button>
-         <button class="rowbtn" onclick="restoreOrder('${escJsArg(o.id)}')">Сэргээх</button>
-         <button class="rowbtn" onclick="hardDeleteOrder('${escJsArg(o.id)}')">Бүрмөсөн устгах</button>`
-      : `<button class="rowbtn" onclick="viewOrder('${escJsArg(o.id)}')">Харах</button>
-         <button class="rowbtn" onclick="editOrder('${escJsArg(o.id)}')">Засах</button>
-         <button class="rowbtn" onclick="deleteOrder('${escJsArg(o.id)}')">Архивлах</button>`;
+      ? `<button class="rowbtn rowbtn-view" onclick="viewOrder('${escJsArg(o.id)}')">Харах</button>
+         <button class="rowbtn rowbtn-restore" onclick="restoreOrder('${escJsArg(o.id)}')">Сэргээх</button>
+         <button class="rowbtn rowbtn-danger" onclick="hardDeleteOrder('${escJsArg(o.id)}')">Бүрмөсөн устгах</button>`
+      : `<button class="rowbtn rowbtn-view" onclick="viewOrder('${escJsArg(o.id)}')">Харах</button>
+         <button class="rowbtn rowbtn-edit" onclick="editOrder('${escJsArg(o.id)}')">Засах</button>
+         <button class="rowbtn rowbtn-danger" onclick="deleteOrder('${escJsArg(o.id)}')">Архивлах</button>`;
     return `<tr>
       <td><input type="checkbox" class="orderRowChk" data-id="${o.id}" ${bulkSelection.orders.has(o.id)?'checked':''}></td>
       <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
@@ -2708,12 +2719,18 @@ function renderItemSearchResults(){
   const matches = data.products.filter(p => !p.archived && ((p.name||'')+(p.itemName||'')+(p.company||'')+(p.code||'')+(p.itemCode||'')).toLowerCase().includes(q)).slice(0,8);
   if (!matches.length) { host.innerHTML = '<div class="isr-empty">Тохирох бараа алга</div>'; return; }
   host.innerHTML = matches.map(p => `
-    <div class="isr-item" data-pid="${p.id}">
+    <div class="isr-item" data-pid="${p.id}" tabindex="0" role="button" aria-label="${esc(p.name)} сонгох">
       <div>${esc(p.name)}${p.itemName?' · '+esc(p.itemName):''}</div>
       <div class="isr-sub">${esc(p.company||'—')}${p.code?' · '+esc(p.code):''} · ${money(p.price)} ₮</div>
     </div>`).join('');
   host.querySelectorAll('.isr-item').forEach(el => {
     el.addEventListener('click', () => pickItemProduct(el.dataset.pid));
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        pickItemProduct(el.dataset.pid);
+      }
+    });
   });
 }
 document.getElementById('itemSearchInput').addEventListener('input', renderItemSearchResults);
