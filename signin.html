@@ -838,6 +838,11 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             <div id="repSizeDemand"></div>
           </div>
 
+          <div style="padding:0 20px 20px;">
+            <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Цуцлалтын шалтгаан</h3>
+            <div id="repCancelReasons"></div>
+          </div>
+
           <div style="overflow-x:auto;padding:0 20px 20px;">
             <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Аймгаар нэгтгэсэн</h3>
             <table class="aimag-table">
@@ -1071,6 +1076,17 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           </select>
         </div>
       </div>
+      <div class="field" id="orderCancelReasonWrap" style="display:none;">
+        <label for="orderCancelReason">Цуцлалтын шалтгаан</label>
+        <select id="orderCancelReason">
+          <option value="">— Сонгоно уу —</option>
+          <option value="Хоцорсон хүргэлт">Хоцорсон хүргэлт</option>
+          <option value="Үнэ таарсангүй">Үнэ таарсангүй</option>
+          <option value="Дэлгүүрийн хүсэлтээр">Дэлгүүрийн хүсэлтээр</option>
+          <option value="Барааны нөөц дутсан">Барааны нөөц дутсан</option>
+          <option value="Бусад">Бусад</option>
+        </select>
+      </div>
       <div class="field"><label for="orderNotes">Тэмдэглэл</label><textarea id="orderNotes" rows="2"></textarea></div>
     </div>
     <div class="modal-foot">
@@ -1140,6 +1156,11 @@ function migrateOrder(o, d){
   }
   if (!o.items) o.items = [];
   if (o.total == null) o.total = o.items.reduce((s,it)=>s+Number(it.total||0),0);
+  // Статусын түүх (audit trail) байхгүй хуучин захиалгад одоогийн статусаар
+  // 1 удаагийн эхлэлийн бичлэг үүсгэж нөхнө.
+  if (!Array.isArray(o.statusHistory) || !o.statusHistory.length) {
+    o.statusHistory = [{ status: o.status||'new', changedAt: o.updatedAt || o.createdAt || Date.now() }];
+  }
   // Зам B: snapshot нэргүй хуучин захиалгад (одоо байгаа дэлгүүр/бараагаар) нэг удаа нөхнө,
   // ингэснээр цаашид тухайн дэлгүүр/бараа устгагдсан ч захиалгын нэр хадгалагдана
   if (d) {
@@ -1763,11 +1784,20 @@ function sanitizeBackupData(incoming){
       const unitPrice = cleanNum(it.unitPrice, 0);
       return { ...it, qty, unitPrice, total: cleanNum(it.total, qty * unitPrice) };
     });
+    const safeStatus = STATUS_LABEL[x.status] ? x.status : 'new';
+    const updatedAt = cleanUpdatedAt(x);
+    let statusHistory = (Array.isArray(x.statusHistory) ? x.statusHistory : [])
+      .filter(isPlainObj)
+      .filter(h => STATUS_LABEL[h.status])
+      .map(h => ({ status: h.status, changedAt: Number.isFinite(h.changedAt) ? h.changedAt : updatedAt }));
+    if (!statusHistory.length) statusHistory = [{ status: safeStatus, changedAt: updatedAt }];
     return {
       ...x,
       id: cleanId(x),
-      updatedAt: cleanUpdatedAt(x),
-      status: STATUS_LABEL[x.status] ? x.status : 'new',
+      updatedAt,
+      status: safeStatus,
+      cancelReason: safeStatus === 'cancelled' ? String(x.cancelReason||'').slice(0,200) : '',
+      statusHistory,
       items,
       total: cleanNum(x.total, items.reduce((sum,it)=>sum+Number(it.total||0),0))
     };
@@ -2119,6 +2149,8 @@ function quickConfirmOrder(id){
   const o = data.orders.find(x=>x.id===id); if (!o) return;
   o.status = 'confirmed';
   o.updatedAt = Date.now();
+  if (!Array.isArray(o.statusHistory)) o.statusHistory = [];
+  o.statusHistory.push({ status: 'confirmed', changedAt: o.updatedAt });
   queueSave(); render();
   toast('Захиалга батлагдлаа', 'ok');
 }
@@ -2516,6 +2548,19 @@ function renderReportSizeDemand(orders){
     <div class="rlist-row"><span class="rlist-name">${esc(sz)}</span><span class="rlist-val">${qty} ш</span></div>`).join('')
     : '<div class="empty-row" style="padding:16px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>';
 }
+function renderReportCancelReasons(orders){
+  const host = document.getElementById('repCancelReasons');
+  const cancelled = orders.filter(o=>o.status==='cancelled');
+  if (!cancelled.length) { host.innerHTML = '<div class="empty-row" style="padding:16px;text-align:center;color:var(--muted);">Цуцлагдсан захиалга алга</div>'; return; }
+  const reasonMap = {};
+  cancelled.forEach(o => {
+    const reason = (o.cancelReason||'').trim() || 'Тодорхойгүй';
+    reasonMap[reason] = (reasonMap[reason]||0) + 1;
+  });
+  const entries = Object.entries(reasonMap).sort((a,b)=>b[1]-a[1]);
+  host.innerHTML = entries.map(([reason,count]) => `
+    <div class="rlist-row"><span class="rlist-name">${esc(reason)}</span><span class="rlist-val">${count} захиалга</span></div>`).join('');
+}
 function renderReports(){
   populateReportFilterOptions();
   const orders = getReportFilteredOrders();
@@ -2579,6 +2624,7 @@ function renderReports(){
   renderReportABC(orders);
   renderReportRFM(orders);
   renderReportSizeDemand(orders);
+  renderReportCancelReasons(orders);
 }
 ['reportDateRange','reportShopFilter','reportAimagFilter','reportProductFilter','reportStatusFilter'].forEach(id => {
   document.getElementById(id).addEventListener('change', renderReports);
@@ -2656,6 +2702,10 @@ document.getElementById('productsBulkRestoreBtn').addEventListener('click', () =
 document.getElementById('productsBulkHardDeleteBtn').addEventListener('click', () => bulkHardDelete('products'));
 document.getElementById('productsBulkClearBtn').addEventListener('click', () => { clearBulkSelection('products'); renderProducts(); });
 document.getElementById('orderStatusFilter').addEventListener('change', renderOrders);
+document.getElementById('orderStatus').addEventListener('change', () => {
+  const wrap = document.getElementById('orderCancelReasonWrap');
+  wrap.style.display = document.getElementById('orderStatus').value === 'cancelled' ? '' : 'none';
+});
 document.getElementById('orderShowArchived').addEventListener('change', () => { clearBulkSelection('orders'); renderOrders(); });
 document.getElementById('orderSearch').addEventListener('input', renderOrders);
 document.getElementById('orderShopFilterSelect').addEventListener('change', renderOrders);
@@ -3284,6 +3334,7 @@ document.getElementById('addOrderBtn').addEventListener('click', () => {
   document.getElementById('orderId').value = '';
   document.getElementById('orderDate').value = todayStr();
   document.getElementById('orderStatus').value = 'new';
+  document.getElementById('orderCancelReasonWrap').style.display = 'none';
   document.getElementById('orderNotes').value = '';
   currentOrderItems = [];
   fillSelectOptions();
@@ -3330,7 +3381,14 @@ function viewOrder(id){
       <thead><tr><th>Нэр</th><th>Размер</th><th class="num">Тоо</th><th class="num">Нэгж үнэ</th><th class="num">Дүн</th></tr></thead>
       <tbody>${itemsHtml || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:14px;">Бараа алга</td></tr>'}</tbody>
     </table>
+    ${o.status === 'cancelled' && o.cancelReason ? `<div class="ov-label">Цуцлалтын шалтгаан</div><div class="ov-val">${esc(o.cancelReason)}</div>` : ''}
     ${o.notes ? `<div class="ov-label">Тэмдэглэл</div><div class="ov-val">${esc(o.notes)}</div>` : ''}
+    ${Array.isArray(o.statusHistory) && o.statusHistory.length ? `<div class="ov-label" style="margin-top:10px;">Статусын түүх</div>
+    <div style="margin-bottom:6px;">${[...o.statusHistory].sort((a,b)=>(a.changedAt||0)-(b.changedAt||0)).map(h => `
+      <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px solid var(--line);">
+        <span class="badge ${STATUS_CLASS[h.status]||''}">${esc(STATUS_LABEL[h.status]||h.status)}</span>
+        <span style="color:var(--muted);">${h.changedAt ? new Date(h.changedAt).toLocaleString('mn-MN') : '—'}</span>
+      </div>`).join('')}</div>` : ''}
     ${o.archived ? `<div style="color:var(--brick);font-size:12.5px;">⚠ Энэ захиалга архивлагдсан байна</div>` : ''}
   `;
   openModal('orderViewModal');
@@ -3395,6 +3453,8 @@ function editOrder(id){
   document.getElementById('orderShop').value = o.shopId;
   document.getElementById('orderDate').value = o.orderDate||todayStr();
   document.getElementById('orderStatus').value = o.status;
+  document.getElementById('orderCancelReason').value = o.cancelReason||'';
+  document.getElementById('orderCancelReasonWrap').style.display = o.status === 'cancelled' ? '' : 'none';
   document.getElementById('orderNotes').value = o.notes||'';
   currentOrderItems = (o.items||[]).map(it => ({...it}));
   resetItemPicker();
@@ -3422,6 +3482,9 @@ document.getElementById('saveOrderBtn').addEventListener('click', () => {
   const shopId = document.getElementById('orderShop').value;
   if (!shopId) { toast('Дэлгүүр сонгоно уу', 'err'); return; }
   if (!currentOrderItems.length) { toast('Дор хаяж 1 бараа нэмнэ үү', 'err'); return; }
+  const newStatus = document.getElementById('orderStatus').value;
+  const cancelReason = document.getElementById('orderCancelReason').value.trim();
+  if (newStatus === 'cancelled' && !cancelReason) { toast('Цуцлалтын шалтгаан сонгоно уу', 'err'); return; }
   const id = document.getElementById('orderId').value;
   const total = currentOrderItems.reduce((s,it)=>s+Number(it.total||0),0);
   const shop = data.shops.find(s=>s.id===shopId);
@@ -3432,6 +3495,13 @@ document.getElementById('saveOrderBtn').addEventListener('click', () => {
   } else {
     orderNo = data.nextOrderNo || 1;
     data.nextOrderNo = orderNo + 1;
+  }
+  const now = Date.now();
+  const statusHistory = existingOrder && Array.isArray(existingOrder.statusHistory) ? [...existingOrder.statusHistory] : [];
+  if (!existingOrder || !statusHistory.length) {
+    statusHistory.push({ status: newStatus, changedAt: now });
+  } else if (existingOrder.status !== newStatus) {
+    statusHistory.push({ status: newStatus, changedAt: now });
   }
   const obj = {
     id: id || uid(),
@@ -3445,10 +3515,12 @@ document.getElementById('saveOrderBtn').addEventListener('click', () => {
     }),
     total,
     orderDate: document.getElementById('orderDate').value || todayStr(),
-    status: document.getElementById('orderStatus').value,
+    status: newStatus,
+    cancelReason: newStatus === 'cancelled' ? cancelReason : '',
+    statusHistory,
     notes: document.getElementById('orderNotes').value.trim(),
     createdAt: existingOrder ? (existingOrder.createdAt||Date.now()) : Date.now(),
-    updatedAt: Date.now()
+    updatedAt: now
   };
   if (id) { data.orders = data.orders.map(x => x.id===id ? obj : x); }
   else { data.orders.push(obj); }
