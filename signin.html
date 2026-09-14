@@ -857,6 +857,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
               <div id="aiInsightBody" style="padding:16px 20px;font-size:13.5px;line-height:1.6;"></div>
             </div>
             <button class="btn secondary" id="aiInsightBtn" style="margin-top:12px;">🤖 AI-аар дүн шинжилгээ хийх</button>
+            <button class="btn secondary" id="printReportBtn" style="margin-top:12px;">🖨 Хэвлэх / PDF татах</button>
             <div style="font-size:11.5px;color:var(--muted);margin-top:6px;">Тайлангийн одоогийн шүүлтүүрт үндэслэн Claude AI-аар дүгнэлт гаргана. Товч дарах бүрд 1 удаа дуудагдана.</div>
           </div>
         </div>
@@ -2598,6 +2599,7 @@ function renderReportCancelReasons(orders){
 
 /* ---------------- AI Insight (Cloudflare Worker -> Claude API) ---------------- */
 const AI_WORKER_URL = 'https://odd-breeze-d4e0.examples-code.workers.dev';
+let lastAIInsightText = null; // Хэвлэх/PDF-д ашиглах, filter солигдвол null болно
 function buildReportAIContext(){
   const orders = getReportFilteredOrders();
   const prevOrders = getPreviousPeriodOrders();
@@ -2735,6 +2737,7 @@ async function generateReportAIInsight(){
     const resultText = j.result || 'Хариу ирсэнгүй';
     // ЧУХАЛ: AI-ийн хариу гадаад эх сурвалж тул esc() ЗААВАЛ ашиглана (XSS хамгаалалт)
     body.innerHTML = esc(resultText).replace(/\n/g, '<br>');
+    lastAIInsightText = resultText;
     safeSetItem('nehiitrade_ai_report_cache_v1', JSON.stringify({ text: resultText, at: Date.now(), period: ctx.period }));
   } catch (err) {
     console.error(err);
@@ -2745,6 +2748,70 @@ async function generateReportAIInsight(){
   }
 }
 document.getElementById('aiInsightBtn').addEventListener('click', generateReportAIInsight);
+function printReportSummary(){
+  if (!lastAIInsightText) {
+    toast('Эхлээд "AI-аар дүн шинжилгээ хийх" товчийг дарна уу', 'err');
+    return;
+  }
+  const ctx = buildReportAIContext();
+  const periodLabel = document.getElementById('reportDateRange').selectedOptions[0].textContent;
+
+  const fmtDelta = (cur, prev) => {
+    if (prev == null || !prev) return '';
+    const diff = cur - prev;
+    if (diff === 0) return '';
+    const pct = (diff/prev*100);
+    const arrowUp = pct >= 0;
+    const color = arrowUp ? 'var(--moss)' : 'var(--brick)';
+    return ` <span style="color:${color};font-size:12px;">(${arrowUp?'↑':'↓'} ${Math.abs(pct).toFixed(1)}% өмнөх мөчлөгөөс)</span>`;
+  };
+  let cancelDeltaHtml = '';
+  if (ctx.previousCancelRatePct != null) {
+    const diff = ctx.cancelRatePct - ctx.previousCancelRatePct;
+    if (diff !== 0) {
+      const arrowUp = diff >= 0;
+      const isGood = !arrowUp; // цуцлалт буурвал сайн
+      const color = isGood ? 'var(--moss)' : 'var(--brick)';
+      cancelDeltaHtml = ` <span style="color:${color};font-size:12px;">(${arrowUp?'↑':'↓'} ${Math.abs(diff).toFixed(1)}pp өмнөх мөчлөгөөс)</span>`;
+    }
+  }
+
+  const topProductsHtml = ctx.topProducts.length
+    ? ctx.topProducts.map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.name)}</td><td style="text-align:right;">${p.qty} ш</td></tr>`).join('')
+    : '<tr><td colspan="3">Өгөгдөл алга</td></tr>';
+  const topShopsHtml = ctx.topShops.length
+    ? ctx.topShops.map((sh,i)=>`<tr><td>${i+1}</td><td>${esc(sh.name)}</td><td style="text-align:right;">${money(sh.total)}₮</td></tr>`).join('')
+    : '<tr><td colspan="3">Өгөгдөл алга</td></tr>';
+  const provinceHtml = ctx.provinceStats.length
+    ? ctx.provinceStats.map(p=>`<tr><td>${esc(p.aimag)}</td><td style="text-align:right;">${p.orders}</td><td style="text-align:right;">${money(p.total)}₮</td></tr>`).join('')
+    : '<tr><td colspan="3">Өгөгдөл алга</td></tr>';
+
+  document.getElementById('printArea').innerHTML = `
+    <h2 style="font-family:Georgia,serif;">Нэхий Трейд — Нэгтгэл тайлан</h2>
+    <p style="color:#666;font-size:13px;">Хугацаа: ${esc(periodLabel)} · Гаргасан: ${esc(new Date().toLocaleString('mn-MN'))}</p>
+
+    <table style="width:100%;margin:14px 0;">
+      <tr><td style="padding:4px 0;width:180px;"><b>Борлуулалт:</b></td><td style="padding:4px 0;">${money(ctx.revenue)}₮${fmtDelta(ctx.revenue, ctx.previousRevenue)}</td></tr>
+      <tr><td style="padding:4px 0;"><b>Захиалга:</b></td><td style="padding:4px 0;">${ctx.orders}${fmtDelta(ctx.orders, ctx.previousOrders)}</td></tr>
+      <tr><td style="padding:4px 0;"><b>Дундаж захиалга:</b></td><td style="padding:4px 0;">${money(ctx.avgOrder)}₮${fmtDelta(ctx.avgOrder, ctx.previousAvgOrder)}</td></tr>
+      <tr><td style="padding:4px 0;"><b>Цуцлалтын хувь:</b></td><td style="padding:4px 0;">${ctx.cancelRatePct}%${cancelDeltaHtml}</td></tr>
+    </table>
+
+    <h3 style="margin-top:16px;">Шилдэг 5 бараа</h3>
+    <table><thead><tr><th>№</th><th>Нэр</th><th style="text-align:right;">Тоо</th></tr></thead><tbody>${topProductsHtml}</tbody></table>
+
+    <h3 style="margin-top:16px;">Шилдэг 5 дэлгүүр</h3>
+    <table><thead><tr><th>№</th><th>Нэр</th><th style="text-align:right;">Дүн</th></tr></thead><tbody>${topShopsHtml}</tbody></table>
+
+    <h3 style="margin-top:16px;">Аймгаар нэгтгэсэн</h3>
+    <table><thead><tr><th>Аймаг</th><th style="text-align:right;">Захиалга</th><th style="text-align:right;">Дүн</th></tr></thead><tbody>${provinceHtml}</tbody></table>
+
+    <h3 style="margin-top:16px;">🤖 AI бизнесийн дүн шинжилгээ</h3>
+    <p style="line-height:1.6;">${esc(lastAIInsightText).replace(/\n/g,'<br>')}</p>
+  `;
+  window.print();
+}
+document.getElementById('printReportBtn').addEventListener('click', printReportSummary);
 
 function renderReports(){
   populateReportFilterOptions();
@@ -2812,7 +2879,12 @@ function renderReports(){
   renderReportCancelReasons(orders);
 }
 ['reportDateRange','reportShopFilter','reportAimagFilter','reportProductFilter','reportStatusFilter'].forEach(id => {
-  document.getElementById(id).addEventListener('change', renderReports);
+  document.getElementById(id).addEventListener('change', () => {
+    // Шүүлтүүр өөрчлөгдвөл хуучин AI дүгнэлт шинэ тоотой зөрчилдөх тул хүчингүй болгоно
+    lastAIInsightText = null;
+    document.getElementById('aiInsightCard').style.display = 'none';
+    renderReports();
+  });
 });
 
 function fillSelectOptions(extraShopId){
