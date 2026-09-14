@@ -1316,12 +1316,15 @@ function parsePriceValue(raw){
   // Excel/Google Sheets-с ирэх таслал, зай, ₮/$ тэмдэгттэй утгыг цэвэрлээд
   // тоо болгож parse хийнэ. Жинхэнэ буруу утга (жиш: "abc") бол
   // { value: 0, invalid: true } буцаана — NaN хэзээ ч цааш дамжихгүй.
+  // Хоосон нүд бол "invalid" биш, харин тусдаа "empty" тэмдэглэгээтэй буцаана —
+  // ингэснээр дуудагч тал хоосон үнийг чимээгүй 0 болгож импортлохгүй, харин
+  // preview дээр анхааруулж, шалгуулахаар default-аар un-checked үлдээж чадна.
   const rawStr = String(raw==null?'':raw).trim();
-  if (rawStr === '') return { value: 0, invalid: false };
+  if (rawStr === '') return { value: 0, invalid: false, empty: true };
   const cleaned = rawStr.replace(/[,\s₮$]/g, '');
   const n = Number(cleaned);
-  if (!Number.isFinite(n) || n < 0) return { value: 0, invalid: true };
-  return { value: n, invalid: false };
+  if (!Number.isFinite(n) || n < 0) return { value: 0, invalid: true, empty: false };
+  return { value: n, invalid: false, empty: false };
 }
 function localDateStr(d){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
 function todayStr(){ return localDateStr(new Date()); }
@@ -1556,7 +1559,12 @@ function renderSettings(){
 /* ---------------- Auth ---------------- */
 window.addEventListener('load', () => {
   applyTheme(getCurrentTheme());
-  const cachedRaw = localStorage.getItem(LOCAL_KEY);
+  // localStorage.getItem нь зарим орчинд (private mode, storage хаагдсан,
+  // browser тохиргоо) SecurityError шидэж болзошгүй тул try/catch-гүй бол
+  // апп эхлэлдээ л цохигдоно. Уншиж чадахгүй бол зүгээр л хоосноос эхэлнэ.
+  let cachedRaw = null;
+  try { cachedRaw = localStorage.getItem(LOCAL_KEY); }
+  catch(e){ console.error('localStorage уншихад алдаа гарлаа:', e); }
   if (cachedRaw) {
     try { data = JSON.parse(cachedRaw); } catch(e){}
   }
@@ -1749,7 +1757,14 @@ async function driveFetch(url, opts){
     try {
       let res = await fetch(url, opts);
       if (res.status === 401) {
-        await silentRefresh();
+        const refreshed = await silentRefresh();
+        // silentRefresh() амжилтгүй бол accessToken=null болсон байна (initGSI-ийн
+        // 'refresh' callback-т тодорхойлсон). Ийм үед "Bearer null"-ээр дахин
+        // оролдохгүй — шууд гарж, дуудагч талд (doSave/loadFromDrive) тодорхой
+        // алдаа өгч, тэд өөрсдийн catch-аараа зөв мессеж/sign-out урсгалаа удирдана.
+        if (!refreshed || !accessToken) {
+          throw new Error('AUTH_EXPIRED: Нэвтрэх эрх дууссан тул дахин нэвтрэх шаардлагатай');
+        }
         opts.headers.Authorization = 'Bearer ' + accessToken;
         res = await fetch(url, opts);
       }
@@ -1877,7 +1892,7 @@ async function loadFromDrive(){
       data.nextOrderNo = Math.max(Number(data.nextOrderNo)||1, Number(remote.nextOrderNo)||1);
       purgeTombstones();
     }
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+    safeSetItem(LOCAL_KEY, JSON.stringify(data));
     writeFileIdCache(); // ID зөв ажилласны дараа л кэшид бичнэ
     setSync('', 'Синк хийгдсэн');
     render();
@@ -2917,6 +2932,32 @@ async function generateReportAIInsight(){
   }
 }
 document.getElementById('aiInsightBtn').addEventListener('click', generateReportAIInsight);
+
+// AI дүгнэлтийн кэш өмнө нь зөвхөн бичигдээд хэзээ ч уншигддаггүй "үхсэн код"
+// байсан. Одоо тайлангийн дэлгэц дахин зурагдах бүрд (жиш: хуудас
+// дахин ачаалах, tab солих) кэш дэх дүгнэлт ОДООГИЙН шүүлтүүрийн хугацаатай
+// (ctx.period) таарч байвал автоматаар сэргээж харуулна — дахин AI дуудахгүй.
+function restoreAIInsightFromCache(){
+  if (lastAIInsightText) return; // энэ session дотор аль хэдийн харуулсан/сэргээсэн
+  const dateRangeEl = document.getElementById('reportDateRange');
+  if (!dateRangeEl) return;
+  let cached = null;
+  try {
+    const raw = localStorage.getItem('nehiitrade_ai_report_cache_v1');
+    if (raw) cached = JSON.parse(raw);
+  } catch(e){ return; }
+  if (!cached || !cached.text || !cached.period) return;
+  if (cached.period !== dateRangeEl.value) return; // өөр хугацааны кэш — тохирохгүй
+  const MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 цагаас хуучирсан кэшийг харуулахгүй
+  if (!cached.at || Date.now() - cached.at > MAX_AGE_MS) return;
+  lastAIInsightText = cached.text;
+  const card = document.getElementById('aiInsightCard');
+  const body = document.getElementById('aiInsightBody');
+  if (card && body) {
+    body.innerHTML = esc(cached.text).replace(/\n/g, '<br>');
+    card.style.display = '';
+  }
+}
 function printReportSummary(){
   if (!lastAIInsightText) {
     toast('Эхлээд "Дүгнэлт гаргах" товчийг дарна уу', 'err');
@@ -3046,12 +3087,17 @@ function renderReports(){
   renderReportRFM(orders);
   renderReportSizeDemand(orders);
   renderReportCancelReasons(orders);
+  restoreAIInsightFromCache();
 }
 ['reportDateRange','reportShopFilter','reportAimagFilter','reportProductFilter','reportStatusFilter'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => {
-    // Шүүлтүүр өөрчлөгдвөл хуучин AI дүгнэлт шинэ тоотой зөрчилдөх тул хүчингүй болгоно
+    // Шүүлтүүр өөрчлөгдвөл хуучин AI дүгнэлт шинэ тоотой зөрчилдөх тул хүчингүй болгоно.
+    // localStorage дэх кэшийг ч мөн устгана — эс бол зөвхөн reportDateRange
+    // (ctx.period) л кэшийн түлхүүрт орсон тул шинэ шүүлтүүрээр restoreAIInsightFromCache()
+    // өмнөх (өөр shop/aimag/product/status-той үеийн) хуучин дүгнэлтийг буруу сэргээж болзошгүй.
     lastAIInsightText = null;
     document.getElementById('aiInsightCard').style.display = 'none';
+    try { localStorage.removeItem('nehiitrade_ai_report_cache_v1'); } catch(e){}
     renderReports();
   });
 });
@@ -3425,6 +3471,7 @@ function parseProductImportRows(raw){
     const priceParsed = parsePriceValue(getFieldFromRow(r, PRODUCT_IMPORT_ALIASES.price));
     const price = priceParsed.value;
     const priceInvalid = priceParsed.invalid;
+    const priceEmpty = priceParsed.empty;
     const isEmpty = !itemCode && !code && !name && !itemName;
     const itemCodeMissing = !isEmpty && !itemCode;
     const codeKey = itemCode ? String(itemCode).trim().toLowerCase() : '';
@@ -3432,11 +3479,13 @@ function parseProductImportRows(raw){
     if (!isEmpty && codeKey) seenInBatch[codeKey] = (seenInBatch[codeKey]||0) + 1;
     const existing = codeKey ? byItemCode[codeKey] : null;
     return {
-      itemCode, code, size, company, name, itemName, price, priceInvalid,
+      itemCode, code, size, company, name, itemName, price, priceInvalid, priceEmpty,
       isEmpty, isDuplicateInFile, itemCodeMissing,
       existingId: existing ? existing.id : null,
       existingLabel: existing ? `${existing.itemName||existing.name||'—'} · ${money(existing.price)}₮` : '',
-      checked: !isEmpty && !isDuplicateInFile && !priceInvalid && !itemCodeMissing
+      // Үнэ хоосон мөрийг чимээгүй 0-ээр оруулахгүйн тулд эдгээрийг ч мөн
+      // default-аар un-checked үлдээж, хэрэглэгч өөрөө шалгаад зөвшөөрөхөөр үлдээнэ.
+      checked: !isEmpty && !isDuplicateInFile && !priceInvalid && !priceEmpty && !itemCodeMissing
     };
   });
   renderProductImportPreview();
@@ -3444,9 +3493,13 @@ function parseProductImportRows(raw){
 function renderProductImportPreview(){
   const body = document.getElementById('productImportBody');
   const rows = productImportRows;
-  const newCount = rows.filter(r=>!r.isEmpty && !r.existingId).length;
-  const dupCount = rows.filter(r=>!r.isEmpty && r.existingId).length;
-  const skipCount = rows.filter(r=>r.isEmpty).length;
+  // "Шинэ"/"Шинэчлэгдэнэ" тоо зөвхөн бодитоор (анхны тохиргоогоор) импортлогдох
+  // боломжтой мөрүүдийг тоолно — Код алга/Үнэ буруу/Үнэ хоосон/Файлд давхардсан
+  // мөрүүд "Алгасах"-д орно, эс бол тоолол буруу ангилал үзүүлдэг байсан.
+  const importable = rows.filter(r=>!r.isEmpty && !r.itemCodeMissing && !r.priceInvalid && !r.priceEmpty && !r.isDuplicateInFile);
+  const newCount = importable.filter(r=>!r.existingId).length;
+  const dupCount = importable.filter(r=>r.existingId).length;
+  const skipCount = rows.length - newCount - dupCount;
   document.getElementById('importCountNew').textContent = newCount;
   document.getElementById('importCountDup').textContent = dupCount;
   document.getElementById('importCountSkip').textContent = skipCount;
@@ -3454,12 +3507,14 @@ function renderProductImportPreview(){
     const badge = r.isEmpty ? '<span style="color:var(--muted);">хоосон</span>'
       : (r.itemCodeMissing ? '<span class="badge cancelled">Код алга</span>'
       : (r.priceInvalid ? '<span class="badge cancelled">Үнэ буруу</span>'
+      : (r.priceEmpty ? '<span class="badge cancelled">Үнэ хоосон</span>'
       : (r.isDuplicateInFile ? '<span class="badge cancelled">Файлд давхардсан</span>'
-      : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>'))));
+      : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>')))));
     const sub = r.itemCodeMissing ? `<div style="font-size:11px;color:var(--brick);">Барааны код хоосон — ирээдүйд давхацал/шинэчлэлт таньж чадахгүй</div>`
       : (r.priceInvalid ? `<div style="font-size:11px;color:var(--brick);">Үнийн баганад тоо бус утга байна — шалгаад дахин сонгоно уу</div>`
-      : (r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : (r.isDuplicateInFile ? `<div style="font-size:11px;color:var(--brick);">Энэ код файл дотроо дахин давтагдсан</div>` : '')));
-    const priceCell = r.priceInvalid ? `<span style="color:var(--brick);">буруу утга</span>` : `${money(r.price)} ₮`;
+      : (r.priceEmpty ? `<div style="font-size:11px;color:var(--brick);">Үнийн багана хоосон — 0-ээр орохгүйн тулд шалгаж, шаардлагатай бол гараар үнэ бичээд шалгана уу</div>`
+      : (r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : (r.isDuplicateInFile ? `<div style="font-size:11px;color:var(--brick);">Энэ код файл дотроо дахин давтагдсан</div>` : ''))));
+    const priceCell = r.priceInvalid ? `<span style="color:var(--brick);">буруу утга</span>` : (r.priceEmpty ? `<span style="color:var(--brick);">хоосон</span>` : `${money(r.price)} ₮`);
     const itemCodeCell = r.itemCodeMissing ? `<span style="color:var(--brick);">хоосон</span>` : esc(r.itemCode||'—');
     return `<tr>
       <td><input type="checkbox" data-idx="${idx}" class="importRowChk" ${r.checked?'checked':''} ${r.isEmpty?'disabled':''}></td>
@@ -3594,16 +3649,20 @@ function parseShopImportRows(raw){
     const address = getFieldFromRow(r, SHOP_IMPORT_ALIASES.address);
     const notes = getFieldFromRow(r, SHOP_IMPORT_ALIASES.notes);
     const isEmpty = !name && !aimag;
+    // Гар маягтаар дэлгүүр нэмэхэд "Аймаг *" заавал талбар (saveShopBtn-ийн
+    // шалгалт). Import энэ дүрмийг тойрч гарах ёсгүй тул нэртэй ч аймаггүй
+    // мөрийг "aimagMissing" гэж тэмдэглэж, default-аар un-checked үлдээнэ.
+    const aimagMissing = !isEmpty && !aimag;
     const nameKey = name.trim().toLowerCase();
     const isDuplicateInFile = !isEmpty && !!nameKey && !!seenInBatch[nameKey];
     if (!isEmpty && nameKey) seenInBatch[nameKey] = (seenInBatch[nameKey]||0) + 1;
     const existing = name ? byName[nameKey] : null;
     return {
       name, aimag, sum, category, contact, phone1, phone2, facebook, address, notes,
-      isEmpty, isDuplicateInFile,
+      isEmpty, isDuplicateInFile, aimagMissing,
       existingId: existing ? existing.id : null,
       existingLabel: existing ? `${existing.aimag||'—'} · ${existing.contact||'—'}` : '',
-      checked: !isEmpty && !isDuplicateInFile
+      checked: !isEmpty && !isDuplicateInFile && !aimagMissing
     };
   });
   renderShopImportPreview();
@@ -3611,23 +3670,29 @@ function parseShopImportRows(raw){
 function renderShopImportPreview(){
   const body = document.getElementById('shopImportBody');
   const rows = shopImportRows;
-  const newCount = rows.filter(r=>!r.isEmpty && !r.existingId).length;
-  const dupCount = rows.filter(r=>!r.isEmpty && r.existingId).length;
-  const skipCount = rows.filter(r=>r.isEmpty).length;
+  // "Шинэ"/"Шинэчлэгдэнэ" тоо зөвхөн бодитоор импортлогдох боломжтой мөрүүдийг
+  // тоолно — Аймаг алга/Файлд давхардсан мөрүүд "Алгасах"-д орно.
+  const importable = rows.filter(r=>!r.isEmpty && !r.aimagMissing && !r.isDuplicateInFile);
+  const newCount = importable.filter(r=>!r.existingId).length;
+  const dupCount = importable.filter(r=>r.existingId).length;
+  const skipCount = rows.length - newCount - dupCount;
   document.getElementById('shopImportCountNew').textContent = newCount;
   document.getElementById('shopImportCountDup').textContent = dupCount;
   document.getElementById('shopImportCountSkip').textContent = skipCount;
   body.innerHTML = rows.map((r, idx) => {
     const badge = r.isEmpty ? '<span style="color:var(--muted);">хоосон</span>'
+      : (r.aimagMissing ? '<span class="badge cancelled">Аймаг алга</span>'
       : (r.isDuplicateInFile ? '<span class="badge cancelled">Файлд давхардсан</span>'
-      : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>'));
-    const sub = r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : (r.isDuplicateInFile ? `<div style="font-size:11px;color:var(--brick);">Энэ нэр файл дотроо дахин давтагдсан</div>` : '');
+      : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>')));
+    const sub = r.aimagMissing ? `<div style="font-size:11px;color:var(--brick);">Аймаг хоосон — гар маягтаар нэмэхэд заавал талбар тул шалгана уу</div>`
+      : (r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : (r.isDuplicateInFile ? `<div style="font-size:11px;color:var(--brick);">Энэ нэр файл дотроо дахин давтагдсан</div>` : ''));
+    const aimagCell = r.aimagMissing ? `<span style="color:var(--brick);">хоосон</span>` : esc(r.aimag||'—');
     const phones = [r.phone1, r.phone2].filter(Boolean).join(' / ') || '—';
     return `<tr>
       <td><input type="checkbox" data-idx="${idx}" class="shopImportRowChk" ${r.checked?'checked':''} ${r.isEmpty?'disabled':''}></td>
       <td>${badge}</td>
       <td>${esc(r.name||'—')}${sub}</td>
-      <td>${esc(r.aimag||'—')}</td>
+      <td>${aimagCell}</td>
       <td>${SHOP_CATEGORY_LABEL[r.category]}</td>
       <td>${esc(phones)}</td>
     </tr>`;
