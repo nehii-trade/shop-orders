@@ -1541,7 +1541,7 @@ function renderSettings(){
   if (!grid) return;
   const current = getCurrentTheme();
   grid.innerHTML = THEMES.map(t => `
-    <button type="button" class="theme-card${t.id===current?' selected':''}" data-theme-id="${t.id}">
+    <button type="button" class="theme-card${t.id===current?' selected':''}" data-theme-id="${esc(t.id)}">
       <div class="theme-swatch">${t.swatch.map(c=>`<span style="background:${c};"></span>`).join('')}</div>
       <div class="tname">${esc(t.name)}</div>
       <div class="tdesc">${esc(t.desc)}</div>
@@ -1868,7 +1868,14 @@ async function writeDriveFile(fileId, obj){
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(obj)
   });
-  if (!res.ok) throw new Error('write failed');
+  if (!res.ok) {
+    // status-ыг алдаанд хавсаргана — doSave() үүгээр Drive дээрх файл
+    // устсан (404) эсэхийг ялгаж, хуучин (устсан) ID-гаар дахин дахин
+    // оролдохгүйгээр шинэ файл үүсгэх урсгал руу шилжинэ.
+    const err = new Error('write failed');
+    err.status = res.status;
+    throw err;
+  }
 }
 
 async function loadFromDrive(){
@@ -1955,8 +1962,17 @@ async function doSave(){
     cancelSaveRetry();
   } catch(e){
     console.error(e);
+    if (e && e.status === 404) {
+      // Drive дээрх файл устсан/зөөгдсөн (жиш: хэрэглэгч Drive-с шууд устгасан).
+      // Хуучин ID-гаар цаашид дахин дахин бичихийг оролдвол мөнхөд 404 өгсөөр
+      // байх тул ID-г чөлөөлж, дараагийн оролдлого дээр шинэ файл үүсгэнэ.
+      driveFileId = null;
+      clearFileIdCache();
+      toast('Google Drive дээрх файл олдсонгүй — шинэ файл үүсгэж дахин оролдоно.', 'err');
+    } else {
+      toast('Google Drive рүү хадгалахад алдаа гарлаа. Автоматаар дахин оролдоно.', 'err');
+    }
     setSync('err', 'Хадгалахад алдаа гарлаа');
-    toast('Google Drive рүү хадгалахад алдаа гарлаа. Автоматаар дахин оролдоно.', 'err');
     scheduleSaveRetry();
   }
 }
@@ -2374,7 +2390,7 @@ function renderShops(){
          <button class="rowbtn rowbtn-danger" onclick="deleteShop('${escJsArg(s.id)}')">Архивлах</button>`;
     return `
     <tr>
-      <td><input type="checkbox" class="shopRowChk" data-id="${s.id}" ${bulkSelection.shops.has(s.id)?'checked':''}></td>
+      <td><input type="checkbox" class="shopRowChk" data-id="${esc(s.id)}" ${bulkSelection.shops.has(s.id)?'checked':''}></td>
       <td>${esc(s.name)}</td>
       <td>${esc(s.aimag||'—')}</td>
       <td>${esc(s.sum||'—')}</td>
@@ -2418,7 +2434,7 @@ function renderProducts(){
          <button class="rowbtn rowbtn-danger" onclick="deleteProduct('${escJsArg(p.id)}')">Архивлах</button>`;
     return `
     <tr>
-      <td><input type="checkbox" class="productRowChk" data-id="${p.id}" ${bulkSelection.products.has(p.id)?'checked':''}></td>
+      <td><input type="checkbox" class="productRowChk" data-id="${esc(p.id)}" ${bulkSelection.products.has(p.id)?'checked':''}></td>
       <td data-label="Барааны код">${esc(p.itemCode||'—')}</td>
       <td data-label="Загварын код">${esc(p.code||'—')}</td>
       <td data-label="Размер">${esc(p.size||'—')}</td>
@@ -2454,7 +2470,7 @@ function renderProductsPagination(totalRows, totalPages){
 function populateOrderShopFilterOptions(){
   const sel = document.getElementById('orderShopFilterSelect');
   const cur = sel.value;
-  sel.innerHTML = '<option value="">Бүх дэлгүүр</option>' + data.shops.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  sel.innerHTML = '<option value="">Бүх дэлгүүр</option>' + data.shops.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');
   if (cur) sel.value = cur;
 }
 function renderOrders(){
@@ -2493,7 +2509,7 @@ function renderOrders(){
          <button class="rowbtn rowbtn-edit" onclick="editOrder('${escJsArg(o.id)}')">Засах</button>
          <button class="rowbtn rowbtn-danger" onclick="deleteOrder('${escJsArg(o.id)}')">Архивлах</button>`;
     return `<tr>
-      <td><input type="checkbox" class="orderRowChk" data-id="${o.id}" ${bulkSelection.orders.has(o.id)?'checked':''}></td>
+      <td><input type="checkbox" class="orderRowChk" data-id="${esc(o.id)}" ${bulkSelection.orders.has(o.id)?'checked':''}></td>
       <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
       <td>${esc(o.orderDate||'—')}</td>
       <td>${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
@@ -2519,6 +2535,10 @@ function getDateRangeBounds(preset){
 }
 function filterOrdersByRange(rangeStart, rangeEnd, shopSel, aimagSel, productSel, statusSel){
   return data.orders.filter(o => {
+    // Dashboard/Захиалгууд-тай тоо зөрөхгүйн тулд архивлагдсан захиалгыг эндээс ч
+    // хасна — өмнө нь энэ шалгалт байхгүй байсан тул тайлан архивлагдсан
+    // захиалгыг ч оруулж тоолдог байв (бусад дэлгэц бүгд !o.archived ашигладаг).
+    if (o.archived) return false;
     if (rangeStart && (o.orderDate||'') < rangeStart) return false;
     if (rangeEnd && (o.orderDate||'') > rangeEnd) return false;
     if (shopSel && o.shopId !== shopSel) return false;
@@ -2564,7 +2584,7 @@ function getPreviousPeriodOrders(){
 function populateReportFilterOptions(){
   const shopSel = document.getElementById('reportShopFilter');
   const curShop = shopSel.value;
-  shopSel.innerHTML = '<option value="">Бүх дэлгүүр</option>' + data.shops.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  shopSel.innerHTML = '<option value="">Бүх дэлгүүр</option>' + data.shops.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');
   if (curShop) shopSel.value = curShop;
 
   const aimagSel = document.getElementById('reportAimagFilter');
@@ -2576,7 +2596,7 @@ function populateReportFilterOptions(){
   const productSel = document.getElementById('reportProductFilter');
   const curProduct = productSel.value;
   const productsSorted = [...data.products].sort((a,b)=>a.name.localeCompare(b.name));
-  productSel.innerHTML = '<option value="">Бүх бараа</option>' + productsSorted.map(p=>`<option value="${p.id}">${esc(p.name)}${p.itemName?' · '+esc(p.itemName):''}</option>`).join('');
+  productSel.innerHTML = '<option value="">Бүх бараа</option>' + productsSorted.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}${p.itemName?' · '+esc(p.itemName):''}</option>`).join('');
   if (curProduct) productSel.value = curProduct;
 }
 function renderReportChart(orders){
@@ -3121,7 +3141,7 @@ function fillSelectOptions(extraShopId){
     const archivedShop = data.shops.find(s=>s.id===extraShopId);
     if (archivedShop) shopsToShow = [...shopsToShow, archivedShop];
   }
-  shopSel.innerHTML = shopsToShow.map(s => `<option value="${s.id}">${esc(s.name)}${s.aimag?' — '+esc(s.aimag):''}${s.archived?' (архивлагдсан)':''}</option>`).join('') || '<option value="">Дэлгүүр байхгүй</option>';
+  shopSel.innerHTML = shopsToShow.map(s => `<option value="${esc(s.id)}">${esc(s.name)}${s.aimag?' — '+esc(s.aimag):''}${s.archived?' (архивлагдсан)':''}</option>`).join('') || '<option value="">Дэлгүүр байхгүй</option>';
   if (curShop) shopSel.value = curShop;
 }
 
@@ -3359,7 +3379,9 @@ function hardDeleteProduct(id){
 document.getElementById('saveProductBtn').addEventListener('click', () => {
   const name = document.getElementById('productName').value.trim();
   const price = Number(document.getElementById('productPrice').value || 0);
-  if (!name || !price) { toast('Нэр болон үнийг бөглөнө үү', 'err'); return; }
+  // HTML input-ийн min="0" зөвхөн ↑↓ сум/шалгалт дээр нөлөөлдөг, гараар "-5000"
+  // гэж бичихийг хориглодоггүй тул JS талд заавал шалгана.
+  if (!name || !Number.isFinite(price) || price <= 0) { toast('Нэр болон эерэг үнийг бөглөнө үү', 'err'); return; }
   const id = document.getElementById('productId').value;
   const obj = {
     id: id || uid(),
@@ -3923,12 +3945,19 @@ function renderOrderItemsTable(){
 }
 function updateItemQty(idx, val){
   const it = currentOrderItems[idx]; if (!it) return;
-  it.qty = Number(val||0); it.total = it.qty * it.unitPrice;
+  // HTML min="1" ердөө л ↑↓ товч дээр нөлөөлдөг, гараар сөрөг тоо бичихийг
+  // хориглодоггүй тул энд JS талд заавал шалгана. Хүчингүй утга оруулбал
+  // хуучин утгаараа буцаана — чимээгүйгээр сөрөг/0 болгохгүй.
+  const n = Number(val);
+  if (!Number.isFinite(n) || n < 1) { toast('Тоо ширхэг 1-ээс дээш байх ёстой', 'err'); renderOrderItemsTable(); return; }
+  it.qty = n; it.total = it.qty * it.unitPrice;
   renderOrderItemsTable();
 }
 function updateItemPrice(idx, val){
   const it = currentOrderItems[idx]; if (!it) return;
-  it.unitPrice = Number(val||0); it.total = it.qty * it.unitPrice;
+  const n = Number(val);
+  if (!Number.isFinite(n) || n < 0) { toast('Үнэ сөрөг байж болохгүй', 'err'); renderOrderItemsTable(); return; }
+  it.unitPrice = n; it.total = it.qty * it.unitPrice;
   renderOrderItemsTable();
 }
 function removeOrderItem(idx){
