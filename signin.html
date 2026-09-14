@@ -323,6 +323,29 @@ nav.navlist button.active{background:var(--saddle);color:var(--white);}
 .stat-card .lbl{font-size:12px;color:var(--muted);margin-bottom:8px;}
 .stat-card .val{font-family:'Newsreader',serif;font-size:30px;font-weight:600;}
 .stat-card .val small{font-size:15px;font-weight:500;color:var(--muted);}
+.kpi-delta{font-size:12px;margin-top:6px;font-weight:600;}
+.kpi-delta.up{color:var(--moss);}
+.kpi-delta.down{color:var(--brick);}
+
+.insight-row{display:flex;align-items:flex-start;gap:10px;padding:10px 20px;border-bottom:1px solid var(--line);font-size:13.5px;}
+.insight-row:last-child{border-bottom:none;}
+.insight-icon{flex-shrink:0;}
+.insight-warn{background:var(--brick-dim);}
+.insight-good{background:var(--moss-dim);}
+.insight-info{background:var(--stone-dim);}
+
+.inactive-shop-row td{vertical-align:middle;}
+
+.pipe-row{display:flex;align-items:center;gap:12px;padding:8px 20px;}
+.pipe-label{width:112px;flex-shrink:0;}
+.pipe-bar-wrap{flex:1;background:var(--stone-dim);height:14px;border-radius:var(--radius);overflow:hidden;}
+.pipe-bar{height:100%;}
+.pipe-bar.new{background:var(--amber);}
+.pipe-bar.confirmed{background:var(--confirmed-text);}
+.pipe-bar.shipping{background:var(--shipping-text);}
+.pipe-bar.done{background:var(--moss);}
+.pipe-bar.cancelled{background:var(--brick);}
+.pipe-count{width:34px;text-align:right;font-weight:600;font-size:13px;flex-shrink:0;}
 
 .panel{background:var(--paper);border:1px solid var(--line);}
 .panel-head{
@@ -568,11 +591,28 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
       <!-- DASHBOARD -->
       <section class="view active" id="view-dashboard">
         <div class="stat-grid">
-          <div class="stat-card"><div class="lbl">Нийт дэлгүүр</div><div class="val" id="statShops">0</div></div>
-          <div class="stat-card"><div class="lbl">Нийт бүтээгдэхүүн</div><div class="val" id="statProducts">0</div></div>
-          <div class="stat-card"><div class="lbl">Нийт захиалга</div><div class="val" id="statOrders">0</div></div>
+          <div class="stat-card"><div class="lbl">Идэвхтэй дэлгүүр</div><div class="val" id="statShops">0</div></div>
+          <div class="stat-card"><div class="lbl">Идэвхтэй бараа</div><div class="val" id="statProducts">0</div></div>
+          <div class="stat-card"><div class="lbl">Энэ сарын захиалга</div><div class="val" id="statOrders">0</div><div class="kpi-delta" id="statOrdersDelta"></div></div>
           <div class="stat-card"><div class="lbl">Хүлээгдэж буй</div><div class="val" id="statPending">0</div></div>
-          <div class="stat-card"><div class="lbl">Нийт дүн</div><div class="val" id="statRevenue">0<small> ₮</small></div></div>
+          <div class="stat-card"><div class="lbl">Энэ сарын борлуулалт</div><div class="val" id="statRevenue">0<small> ₮</small></div><div class="kpi-delta" id="statRevenueDelta"></div></div>
+        </div>
+        <div class="panel" id="smartInsightsPanel" style="margin-bottom:20px;display:none;">
+          <div class="panel-head"><h2>🔔 Анхаарах зүйлс</h2></div>
+          <div id="smartInsightsBody"></div>
+        </div>
+        <div class="panel" id="pipelineSnapshotPanel" style="margin-bottom:20px;">
+          <div class="panel-head"><h2>📊 Захиалгын одоогийн байдал</h2></div>
+          <div id="pipelineSnapshotBody" style="padding:14px 0;"></div>
+        </div>
+        <div class="panel" id="inactiveShopsPanel" style="margin-bottom:20px;display:none;">
+          <div class="panel-head"><h2>🕑 Идэвхгүй болсон дэлгүүрүүд</h2></div>
+          <div style="overflow-x:auto;">
+          <table>
+            <thead><tr><th>Дэлгүүр</th><th>Аймаг</th><th>Сүүлд захиалсан</th><th>Хоног</th><th>Түүхэн дүн</th><th></th></tr></thead>
+            <tbody id="inactiveShopsBody"></tbody>
+          </table>
+          </div>
         </div>
         <div class="panel" id="pendingConfirmPanel" style="margin-bottom:20px;display:none;">
           <div class="panel-head"><h2>⚠ Баталгаажуулах шаардлагатай</h2></div>
@@ -1811,17 +1851,177 @@ function orderItemsSummary(o, limit){
 }
 function orderItemsQtySum(o){ return (o.items||[]).reduce((s,it)=>s+Number(it.qty||0),0); }
 
+function getMonthKey(dateObj){
+  return `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}`;
+}
+function renderKpiDelta(elId, cur, prev){
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!prev) { el.textContent = ''; el.className = 'kpi-delta'; return; }
+  const pct = ((cur - prev) / prev) * 100;
+  const isUp = pct >= 0;
+  el.textContent = `${isUp?'↑':'↓'} ${Math.abs(pct).toFixed(1)}% өмнөх сараас`;
+  el.className = 'kpi-delta ' + (isUp ? 'up' : 'down');
+}
+function computeSmartInsights(activeOrders){
+  const insights = [];
+  const newCount = activeOrders.filter(o=>o.status==='new').length;
+  if (newCount > 0) {
+    insights.push({ icon:'⚠', kind:'warn', text: `${newCount} шинэ захиалга баталгаажаагүй байна.` });
+  }
+
+  const now = new Date();
+  const curKey = getMonthKey(now);
+  const prevKey = getMonthKey(new Date(now.getFullYear(), now.getMonth()-1, 1));
+  const curOrders = activeOrders.filter(o=>(o.orderDate||'').slice(0,7)===curKey);
+  const prevOrders = activeOrders.filter(o=>(o.orderDate||'').slice(0,7)===prevKey);
+  const curRev = curOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
+  const prevRev = prevOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
+  if (prevRev > 0) {
+    const pct = ((curRev-prevRev)/prevRev)*100;
+    if (Math.abs(pct) >= 5) {
+      insights.push({
+        icon: pct>=0 ? '📈' : '📉',
+        kind: pct>=0 ? 'good' : 'warn',
+        text: `Энэ сарын борлуулалт өмнөх сараас ${Math.abs(pct).toFixed(1)}% ${pct>=0?'өссөн':'буурсан'} байна.`
+      });
+    }
+  }
+
+  const cutoff90 = localDateStr(new Date(Date.now() - 90*86400000));
+  const aimagRevenue = {};
+  let totalRev90 = 0;
+  activeOrders.forEach(o => {
+    if (o.status==='cancelled' || (o.orderDate||'') < cutoff90) return;
+    const shop = data.shops.find(x=>x.id===o.shopId);
+    const aimag = shop ? (shop.aimag||'Тодорхойгүй') : (o.shopAimag||'Тодорхойгүй');
+    aimagRevenue[aimag] = (aimagRevenue[aimag]||0) + Number(o.total||0);
+    totalRev90 += Number(o.total||0);
+  });
+  const aimagEntries = Object.entries(aimagRevenue).sort((a,b)=>b[1]-a[1]);
+  if (totalRev90 > 0 && aimagEntries.length) {
+    const [topAimag, topAmt] = aimagEntries[0];
+    const share = (topAmt/totalRev90)*100;
+    if (share >= 40) {
+      insights.push({ icon:'🏆', kind:'info', text: `"${topAimag}" аймаг сүүлийн 90 хоногийн борлуулалтын ${share.toFixed(0)}%-ийг бүрдүүлж байна.` });
+    }
+  }
+
+  const cutoff30 = localDateStr(new Date(Date.now() - 30*86400000));
+  const cutoff60 = localDateStr(new Date(Date.now() - 60*86400000));
+  const sizeCur = {};
+  const prodCur = {}, prodPrev = {};
+  activeOrders.forEach(o => {
+    if (o.status==='cancelled') return;
+    const d = o.orderDate||'';
+    (o.items||[]).forEach(it => {
+      const sz = (it.size||'').trim();
+      const p = data.products.find(x=>x.id===it.productId);
+      const name = p ? p.name : (it.productName || 'Устсан бараа');
+      if (d >= cutoff30) {
+        if (sz) sizeCur[sz] = (sizeCur[sz]||0) + Number(it.qty||0);
+        prodCur[name] = (prodCur[name]||0) + Number(it.qty||0);
+      } else if (d >= cutoff60) {
+        prodPrev[name] = (prodPrev[name]||0) + Number(it.qty||0);
+      }
+    });
+  });
+  const topSize = Object.entries(sizeCur).sort((a,b)=>b[1]-a[1])[0];
+  if (topSize) {
+    insights.push({ icon:'📦', kind:'info', text: `"${topSize[0]}" размерын эрэлт сүүлийн 30 хоногт хамгийн өндөр байна (${topSize[1]} ширхэг).` });
+  }
+
+  let worstDrop = null;
+  Object.keys(prodPrev).forEach(name => {
+    const prevQ = prodPrev[name];
+    const curQ = prodCur[name] || 0;
+    if (prevQ >= 3) {
+      const pct = ((curQ - prevQ)/prevQ)*100;
+      if (pct <= -25 && (!worstDrop || pct < worstDrop.pct)) worstDrop = { name, pct };
+    }
+  });
+  if (worstDrop) {
+    insights.push({ icon:'⚠', kind:'warn', text: `"${worstDrop.name}" бүтээгдэхүүний захиалга сүүлийн 30 хоногт ${Math.abs(worstDrop.pct).toFixed(0)}% буурсан байна.` });
+  }
+
+  return insights;
+}
+function renderSmartInsights(activeOrders){
+  const insights = computeSmartInsights(activeOrders);
+  const panel = document.getElementById('smartInsightsPanel');
+  const body = document.getElementById('smartInsightsBody');
+  if (!insights.length) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  body.innerHTML = insights.map(i => `<div class="insight-row insight-${i.kind}"><span class="insight-icon">${i.icon}</span><span>${esc(i.text)}</span></div>`).join('');
+}
+function renderPipelineSnapshot(activeOrders){
+  const order = ['new','confirmed','shipping','done','cancelled'];
+  const counts = { new:0, confirmed:0, shipping:0, done:0, cancelled:0 };
+  activeOrders.forEach(o => { if (counts[o.status] != null) counts[o.status]++; });
+  const max = Math.max(...order.map(k=>counts[k]), 1);
+  const host = document.getElementById('pipelineSnapshotBody');
+  host.innerHTML = order.map(k => {
+    const pct = Math.max(counts[k] ? Math.round(counts[k]/max*100) : 0, counts[k] ? 3 : 0);
+    return `<div class="pipe-row">
+      <div class="pipe-label"><span class="badge ${STATUS_CLASS[k]}">${STATUS_LABEL[k]}</span></div>
+      <div class="pipe-bar-wrap"><div class="pipe-bar ${k}" style="width:${pct}%;"></div></div>
+      <div class="pipe-count">${counts[k]}</div>
+    </div>`;
+  }).join('');
+}
+function computeInactiveShops(thresholdDays){
+  const activeShops = data.shops.filter(s=>!s.archived);
+  return activeShops.map(shop => {
+    const shopOrders = data.orders.filter(o=>!o.archived && o.shopId===shop.id && o.status!=='cancelled');
+    let lastOrder = null;
+    shopOrders.forEach(o => { if (!lastOrder || (o.orderDate||'') > (lastOrder.orderDate||'')) lastOrder = o; });
+    const totalSpent = shopOrders.reduce((s,o)=>s+Number(o.total||0),0);
+    const daysSince = lastOrder && lastOrder.orderDate ? Math.floor((Date.now() - new Date(lastOrder.orderDate).getTime())/86400000) : null;
+    return { shop, lastOrderDate: lastOrder ? lastOrder.orderDate : null, daysSince, totalSpent };
+  }).filter(x => x.daysSince === null || x.daysSince >= thresholdDays)
+    .sort((a,b)=> b.totalSpent - a.totalSpent);
+}
+function renderInactiveShops(){
+  const list = computeInactiveShops(30).slice(0, 8);
+  const panel = document.getElementById('inactiveShopsPanel');
+  const body = document.getElementById('inactiveShopsBody');
+  if (!list.length) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  body.innerHTML = list.map(x => `<tr class="inactive-shop-row">
+    <td>${esc(x.shop.name)}</td>
+    <td>${esc(x.shop.aimag||'—')}</td>
+    <td>${x.lastOrderDate ? esc(x.lastOrderDate) : 'Захиалга өгөөгүй'}</td>
+    <td>${x.daysSince != null ? x.daysSince : '—'}</td>
+    <td>${money(x.totalSpent)} ₮</td>
+    <td style="text-align:right;white-space:nowrap;"><button class="rowbtn rowbtn-view" onclick="viewShop('${escJsArg(x.shop.id)}')">Харах</button></td>
+  </tr>`).join('');
+}
 function renderDashboard(){
   const activeShops = data.shops.filter(s=>!s.archived);
   const activeProducts = data.products.filter(p=>!p.archived);
   const activeOrders = data.orders.filter(o=>!o.archived);
   document.getElementById('statShops').textContent = activeShops.length;
   document.getElementById('statProducts').textContent = activeProducts.length;
-  document.getElementById('statOrders').textContent = activeOrders.length;
+
+  const now = new Date();
+  const curKey = getMonthKey(now);
+  const prevKey = getMonthKey(new Date(now.getFullYear(), now.getMonth()-1, 1));
+  const curMonthOrders = activeOrders.filter(o=>(o.orderDate||'').slice(0,7)===curKey);
+  const prevMonthOrders = activeOrders.filter(o=>(o.orderDate||'').slice(0,7)===prevKey);
+  document.getElementById('statOrders').textContent = curMonthOrders.length;
+  renderKpiDelta('statOrdersDelta', curMonthOrders.length, prevMonthOrders.length);
+
   const pending = activeOrders.filter(o => o.status === 'new' || o.status === 'confirmed').length;
   document.getElementById('statPending').textContent = pending;
-  const revenue = activeOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
-  document.getElementById('statRevenue').innerHTML = money(revenue) + ' <small>₮</small>';
+
+  const curRevenue = curMonthOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
+  const prevRevenue = prevMonthOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
+  document.getElementById('statRevenue').innerHTML = money(curRevenue) + ' <small>₮</small>';
+  renderKpiDelta('statRevenueDelta', curRevenue, prevRevenue);
+
+  renderSmartInsights(activeOrders);
+  renderPipelineSnapshot(activeOrders);
+  renderInactiveShops();
 
   const body = document.getElementById('recentOrdersBody');
   const rows = [...activeOrders].sort((a,b)=> (b.orderDate||'').localeCompare(a.orderDate||'')).slice(0,8);
