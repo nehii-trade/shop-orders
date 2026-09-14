@@ -568,12 +568,14 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 
   /* --- Нийт дүнгийн хайрцаг (баруун талд) --- */
   #printArea .pa-summary-wrap{ display:flex; justify-content:flex-end; margin-bottom:16px; }
-  #printArea .pa-summary{ width:280px; border:1px solid #b7c8db; border-radius:4px; overflow:hidden; }
+  #printArea .pa-summary{ width:290px; border:1px solid #b7c8db; border-radius:4px; overflow:hidden; }
   #printArea .pa-summary .row{ display:flex; justify-content:space-between; padding:7px 14px; font-size:12.5px;
     border-bottom:1px solid #b7c8db; background:#eef3f8 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-  #printArea .pa-summary .row:last-child{ border-bottom:none; background:#16305c !important;
-    -webkit-print-color-adjust:exact; print-color-adjust:exact; color:#fff !important; }
-  #printArea .pa-summary .row:last-child .k, #printArea .pa-summary .row:last-child .v{ font-weight:700; font-size:13.5px; }
+  #printArea .pa-summary .row.discount .v{ color:#b3261e !important; }
+  #printArea .pa-summary .row.total{ border-bottom:none; background:#fbe3cf !important;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea .pa-summary .row.total .k{ color:#8a4116 !important; font-weight:700; font-size:13.5px; }
+  #printArea .pa-summary .row.total .v{ color:#c2530f !important; font-weight:700; font-size:14.5px; }
   #printArea .pa-summary .k{ color:#3a4a5e; }
   #printArea .pa-summary .v{ font-weight:600; }
 
@@ -3979,6 +3981,10 @@ document.getElementById('orderViewPrintBtn').addEventListener('click', () => {
   const shopAimag = shop ? (shop.aimag||'') : (o.shopAimag||'');
   const shopContact = shop ? (shop.contact||'') : '';
   const shopPhones = shop ? [shop.phone1, shop.phone2].filter(Boolean).join(' / ') : '';
+  const DISCOUNT_RATE = 0.10; // Зөвхөн хэвлэх/PDF дээр тооцоолно, өгөгдөлд хадгалахгүй
+  const subtotal = Number(o.total)||0;
+  const discountAmt = Math.round(subtotal * DISCOUNT_RATE);
+  const payable = subtotal - discountAmt;
   let totalQty = 0;
   const groupSet = new Set();
   const itemsHtml = (o.items||[]).map((it, i) => {
@@ -4016,7 +4022,9 @@ document.getElementById('orderViewPrintBtn').addEventListener('click', () => {
       <div class="pa-summary">
         <div class="row"><span class="k">Нийт нэр төрөл:</span><span class="v">${groupSet.size}</span></div>
         <div class="row"><span class="k">Нийт тоо ширхэг:</span><span class="v">${totalQty}</span></div>
-        <div class="row"><span class="k">НИЙТ ТӨЛБӨР:</span><span class="v">${money(o.total)} ₮</span></div>
+        <div class="row"><span class="k">Барааны нийт дүн:</span><span class="v">${money(subtotal)} ₮</span></div>
+        <div class="row discount"><span class="k">Хөнгөлөлт (10%):</span><span class="v">−${money(discountAmt)} ₮</span></div>
+        <div class="row total"><span class="k">ТӨЛӨХ НИЙТ ДҮН:</span><span class="v">${money(payable)} ₮</span></div>
       </div>
     </div>
     <div class="pa-notes"><span class="lbl">Нэмэлт тайлбар:</span> ${
