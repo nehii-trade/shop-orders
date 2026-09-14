@@ -850,6 +850,15 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
               <tbody id="reportsBody"></tbody>
             </table>
           </div>
+
+          <div style="padding:0 20px 20px;">
+            <div class="panel" id="aiInsightCard" style="display:none;">
+              <div class="panel-head"><h2>🤖 AI бизнесийн дүн шинжилгээ</h2></div>
+              <div id="aiInsightBody" style="padding:16px 20px;font-size:13.5px;line-height:1.6;"></div>
+            </div>
+            <button class="btn secondary" id="aiInsightBtn" style="margin-top:12px;">🤖 AI-аар дүн шинжилгээ хийх</button>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:6px;">Тайлангийн одоогийн шүүлтүүрт үндэслэн Claude AI-аар дүгнэлт гаргана. Товч дарах бүрд 1 удаа дуудагдана.</div>
+          </div>
         </div>
       </section>
 
@@ -2561,6 +2570,157 @@ function renderReportCancelReasons(orders){
   host.innerHTML = entries.map(([reason,count]) => `
     <div class="rlist-row"><span class="rlist-name">${esc(reason)}</span><span class="rlist-val">${count} захиалга</span></div>`).join('');
 }
+
+/* ---------------- AI Insight (Cloudflare Worker -> Claude API) ---------------- */
+const AI_WORKER_URL = 'https://odd-breeze-d4e0.examples-code.workers.dev';
+function buildReportAIContext(){
+  const orders = getReportFilteredOrders();
+  const prevOrders = getPreviousPeriodOrders();
+  const active = orders.filter(o=>o.status!=='cancelled');
+  const revenue = active.reduce((s,o)=>s+Number(o.total||0),0);
+  const totalOrders = orders.length;
+  const avgOrder = active.length ? revenue/active.length : 0;
+  const cancelledCount = orders.filter(o=>o.status==='cancelled').length;
+  const cancelRatePct = totalOrders ? (cancelledCount/totalOrders*100) : 0;
+
+  let previousRevenue = null, previousOrders = null, previousAvgOrder = null, previousCancelRatePct = null;
+  if (prevOrders) {
+    const prevActive = prevOrders.filter(o=>o.status!=='cancelled');
+    previousRevenue = Math.round(prevActive.reduce((s,o)=>s+Number(o.total||0),0));
+    previousOrders = prevOrders.length;
+    previousAvgOrder = prevActive.length ? Math.round(previousRevenue/prevActive.length) : 0;
+    const prevCancelled = prevOrders.filter(o=>o.status==='cancelled').length;
+    previousCancelRatePct = previousOrders ? Number((prevCancelled/previousOrders*100).toFixed(1)) : 0;
+  }
+
+  const prodMap = {};
+  active.forEach(o => (o.items||[]).forEach(it => {
+    const p = data.products.find(x=>x.id===it.productId);
+    const name = p ? p.name : (it.productName || 'Устсан бараа');
+    prodMap[name] = (prodMap[name]||0) + Number(it.qty||0);
+  }));
+  const topProducts = Object.entries(prodMap).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([name,qty])=>({name,qty}));
+
+  const shopMap = {};
+  active.forEach(o => {
+    const shop = data.shops.find(s=>s.id===o.shopId);
+    const name = shop ? shop.name : (o.shopName || 'Тодорхойгүй');
+    shopMap[name] = (shopMap[name]||0) + Number(o.total||0);
+  });
+  const topShops = Object.entries(shopMap).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([name,total])=>({name, total: Math.round(total)}));
+
+  const aimagMap = {};
+  orders.forEach(o => {
+    const shop = data.shops.find(s=>s.id===o.shopId);
+    const key = shop ? (shop.aimag||'Тодорхойгүй') : (o.shopAimag||'Тодорхойгүй');
+    if (!aimagMap[key]) aimagMap[key] = { total:0, orders:0 };
+    aimagMap[key].orders += 1;
+    if (o.status!=='cancelled') aimagMap[key].total += Number(o.total||0);
+  });
+  const provinceStats = Object.entries(aimagMap).map(([aimag,v])=>({aimag, total: Math.round(v.total), orders: v.orders})).sort((a,b)=>b.total-a.total).slice(0,8);
+
+  const sizeMap = {};
+  active.forEach(o => (o.items||[]).forEach(it => {
+    const sz = (it.size||'').trim();
+    if (sz) sizeMap[sz] = (sizeMap[sz]||0) + Number(it.qty||0);
+  }));
+  const sizeDemand = Object.entries(sizeMap).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([size,qty])=>({size,qty}));
+
+  const reasonMap = {};
+  orders.filter(o=>o.status==='cancelled').forEach(o => {
+    const r = (o.cancelReason||'').trim() || 'Тодорхойгүй';
+    reasonMap[r] = (reasonMap[r]||0)+1;
+  });
+  const cancelReasons = Object.entries(reasonMap).map(([reason,count])=>({reason,count}));
+
+  return {
+    period: document.getElementById('reportDateRange').value,
+    revenue: Math.round(revenue),
+    previousRevenue,
+    orders: totalOrders,
+    previousOrders,
+    avgOrder: Math.round(avgOrder),
+    previousAvgOrder,
+    cancelRatePct: Number(cancelRatePct.toFixed(1)),
+    previousCancelRatePct,
+    topProducts,
+    topShops,
+    provinceStats,
+    sizeDemand,
+    cancelReasons
+  };
+}
+function buildReportAIPrompt(ctx){
+  const lines = [];
+  lines.push(`Нэхий Трейдийн захиалгын тайлан (хугацаа: ${ctx.period}):`);
+  lines.push(`Борлуулалт: ${money(ctx.revenue)}₮${ctx.previousRevenue!=null ? ' (өмнөх мөчлөг: '+money(ctx.previousRevenue)+'₮)' : ''}`);
+  lines.push(`Захиалга: ${ctx.orders}${ctx.previousOrders!=null ? ' (өмнөх: '+ctx.previousOrders+')' : ''}`);
+  lines.push(`Дундаж захиалга: ${money(ctx.avgOrder)}₮${ctx.previousAvgOrder!=null ? ' (өмнөх: '+money(ctx.previousAvgOrder)+'₮)' : ''}`);
+  lines.push(`Цуцлалтын хувь: ${ctx.cancelRatePct}%${ctx.previousCancelRatePct!=null ? ' (өмнөх: '+ctx.previousCancelRatePct+'%)' : ''}`);
+  lines.push('');
+  lines.push('Шилдэг бараа:');
+  lines.push(ctx.topProducts.length ? ctx.topProducts.map(p=>`- ${p.name}: ${p.qty} ш`).join('\n') : '(өгөгдөл алга)');
+  lines.push('');
+  lines.push('Шилдэг дэлгүүр:');
+  lines.push(ctx.topShops.length ? ctx.topShops.map(s=>`- ${s.name}: ${money(s.total)}₮`).join('\n') : '(өгөгдөл алга)');
+  lines.push('');
+  lines.push('Аймгаар:');
+  lines.push(ctx.provinceStats.length ? ctx.provinceStats.map(p=>`- ${p.aimag}: ${money(p.total)}₮, ${p.orders} захиалга`).join('\n') : '(өгөгдөл алга)');
+  lines.push('');
+  lines.push('Размерын эрэлт:');
+  lines.push(ctx.sizeDemand.length ? ctx.sizeDemand.map(s=>`- ${s.size}: ${s.qty} ш`).join('\n') : '(өгөгдөл алга)');
+  if (ctx.cancelReasons.length) {
+    lines.push('');
+    lines.push('Цуцлалтын шалтгаан:');
+    lines.push(ctx.cancelReasons.map(c=>`- ${c.reason}: ${c.count}`).join('\n'));
+  }
+  lines.push('');
+  lines.push('Дүн шинжилгээ хий: гол хандлага, боломж, анхаарах эрсдэл, 1 практик зөвлөгөө.');
+  return lines.join('\n');
+}
+async function generateReportAIInsight(){
+  const btn = document.getElementById('aiInsightBtn');
+  const card = document.getElementById('aiInsightCard');
+  const body = document.getElementById('aiInsightBody');
+  const ctx = buildReportAIContext();
+  const prompt = buildReportAIPrompt(ctx);
+
+  btn.disabled = true;
+  const origLabel = btn.textContent;
+  btn.textContent = 'Шинжилж байна...';
+  card.style.display = '';
+  body.innerHTML = '<span style="color:var(--muted);">⏳ AI шинжилж байна...</span>';
+
+  try {
+    const res = await fetch(AI_WORKER_URL + '/api/ai', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        prompt,
+        system: `Чи бол Монголын бөөний худалдааны (арьс шир) бизнес шинжээч. Монгол хэлээр товч дүн шинжилгээ хий.
+Дүрэм:
+- 4-6 өгүүлбэрт багтаа
+- Зөвхөн өгөгдсөн тоог ашигла, шинээр тоо зохиож болохгүй
+- Гол хандлага, эрсдэл, 1 практик зөвлөгөө өг
+- Энгийн, ойлгомжтой байх`
+      })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const j = await res.json();
+    const resultText = j.result || 'Хариу ирсэнгүй';
+    // ЧУХАЛ: AI-ийн хариу гадаад эх сурвалж тул esc() ЗААВАЛ ашиглана (XSS хамгаалалт)
+    body.innerHTML = esc(resultText).replace(/\n/g, '<br>');
+    safeSetItem('nehiitrade_ai_report_cache_v1', JSON.stringify({ text: resultText, at: Date.now(), period: ctx.period }));
+  } catch (err) {
+    console.error(err);
+    body.innerHTML = '<span style="color:var(--brick);">Алдаа гарлаа. Дахин оролдоно уу.</span>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origLabel;
+  }
+}
+document.getElementById('aiInsightBtn').addEventListener('click', generateReportAIInsight);
+
 function renderReports(){
   populateReportFilterOptions();
   const orders = getReportFilteredOrders();
