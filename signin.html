@@ -3688,11 +3688,13 @@ function renderItemSearchResults(){
   const matchingProducts = data.products.filter(p => !p.archived && ((p.name||'')+(p.itemName||'')+(p.company||'')+(p.code||'')+(p.itemCode||'')).toLowerCase().includes(q));
   if (!matchingProducts.length) { host.innerHTML = '<div class="isr-empty">Тохирох бараа алга</div>'; lastSearchGroups = {}; return; }
 
-  // Загварын кодоор бүлэглэх — итемКодгүй бараа өөрийн id-гаараа ганцаараа бүлэг болно
+  // Загварын кодоор (p.code) бүлэглэх — размер бүрд ялгаатай "Барааны код" (p.itemCode)-оор БИШ.
+  // Загварын код нэг загварын бүх размерт нийтлэг тул үүгээр бүлэглэвэл нэг загвар нэг л удаа гарна.
+  // Загварын кодгүй бараа өөрийн id-гаараа ганцаараа бүлэг болно.
   const groups = {};
   const groupOrder = [];
   matchingProducts.forEach(p => {
-    const key = p.itemCode ? 'ic:' + String(p.itemCode).trim().toLowerCase() : 'id:' + p.id;
+    const key = p.code ? 'c:' + String(p.code).trim().toLowerCase() : 'id:' + p.id;
     if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
     groups[key].push(p);
   });
@@ -3706,7 +3708,7 @@ function renderItemSearchResults(){
     const priceLabel = prices.length === 1 ? `${money(prices[0])} ₮` : `${money(Math.min(...prices))}–${money(Math.max(...prices))} ₮`;
     return `<div class="isr-item" data-key="${esc(key)}" tabindex="0" role="button" aria-label="${esc(first.name)} сонгох">
       <div>${esc(first.name)}${first.itemName?' · '+esc(first.itemName):''}</div>
-      <div class="isr-sub">${esc(first.company||'—')}${first.itemCode?' · Загвар: '+esc(first.itemCode):''} · ${priceLabel}${rows.length>1?' · '+rows.length+' размер':''}</div>
+      <div class="isr-sub">${esc(first.company||'—')}${first.code?' · Загвар: '+esc(first.code):''} · ${priceLabel}${rows.length>1?' · '+rows.length+' размер':''}</div>
     </div>`;
   }).join('');
   host.querySelectorAll('.isr-item').forEach(el => {
@@ -3732,7 +3734,7 @@ function pickItemGroup(key){
   const priceLabel = prices.length === 1 ? `${money(prices[0])} ₮` : `${money(Math.min(...prices))}–${money(Math.max(...prices))} ₮`;
   document.getElementById('itemPickedName').textContent =
     first.name + (first.company ? ' — '+first.company : '') + (first.itemName ? ' · '+first.itemName : '') +
-    (first.itemCode ? ' (Загвар: '+first.itemCode+')' : '') + ' · ' + priceLabel;
+    (first.code ? ' (Загвар: '+first.code+')' : '') + ' · ' + priceLabel;
   renderSizePickerForGroup(rows);
 }
 
@@ -3810,14 +3812,14 @@ function renderOrderItemsTable(){
   if (!currentOrderItems.length) {
     body.innerHTML = `<tr class="empty-row"><td colspan="6">Дээрх маягтаас бараа нэмнэ үү</td></tr>`;
   } else {
-    // Харагдах зорилгоор л Загварын кодоор бүлэглэнэ — currentOrderItems-ийн
+    // Харагдах зорилгоор л Загварын кодоор (p.code) бүлэглэнэ — currentOrderItems-ийн
     // индекс (idx) өөрчлөгдөхгүй тул засах/устгах функцууд хэвээрээ ажиллана.
     const groups = {};
     const groupOrder = [];
     currentOrderItems.forEach((it, idx) => {
       const p = data.products.find(x=>x.id===it.productId);
-      const key = p && p.itemCode ? 'ic:' + String(p.itemCode).trim().toLowerCase() : 'row:' + idx;
-      const label = p ? (p.name + (p.itemCode ? ' — Загвар: '+p.itemCode : '')) : (it.productName || 'Устсан бараа');
+      const key = p && p.code ? 'c:' + String(p.code).trim().toLowerCase() : 'row:' + idx;
+      const label = p ? (p.name + (p.code ? ' — Загвар: '+p.code : '')) : (it.productName || 'Устсан бараа');
       if (!groups[key]) { groups[key] = { label, indices: [] }; groupOrder.push(key); }
       groups[key].indices.push(idx);
     });
