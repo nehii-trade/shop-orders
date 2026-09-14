@@ -1119,6 +1119,7 @@ const ALLOWED_EMAILS = ['munhtsetsegdn@gmail.com'];
 const FOLDER_NAME = 'Нэхий Трейд Захиалга';
 const DATA_FILENAME = 'nehii_trade_orders_data.json';
 const LOCAL_KEY = 'nehiitrade_orders_cache_v1';
+const FILE_ID_CACHE_KEY = 'nehiitrade_file_ids_v1';
 const TOKEN_KEY = 'nehiitrade_token_v1';
 function saveTokenToStorage(){
   try { localStorage.setItem(TOKEN_KEY, JSON.stringify({ accessToken, tokenExpiresAt })); } catch(e){}
@@ -1583,6 +1584,7 @@ function signOutLocal(){
   tokenExpiresAt = 0;
   driveFileId = null;
   driveFolderId = null;
+  clearFileIdCache();
   document.getElementById('app').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
 }
@@ -1623,6 +1625,16 @@ async function driveFetch(url, opts){
   throw lastErr || new Error('Сүлжээний холболт тасарсан тул хүсэлт амжилтгүй боллоо');
 }
 
+function readFileIdCache(){
+  try { const r = localStorage.getItem(FILE_ID_CACHE_KEY); return r ? JSON.parse(r) : null; }
+  catch(_) { return null; }
+}
+function writeFileIdCache(){
+  safeSetItem(FILE_ID_CACHE_KEY, JSON.stringify({ folder: driveFolderId||null, data: driveFileId||null }));
+}
+function clearFileIdCache(){
+  try { localStorage.removeItem(FILE_ID_CACHE_KEY); } catch(_){}
+}
 async function findDriveFolder(){
   const url = 'https://www.googleapis.com/drive/v3/files?q=' +
     encodeURIComponent(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`) +
@@ -1696,9 +1708,16 @@ async function writeDriveFile(fileId, obj){
 
 async function loadFromDrive(){
   setSync('busy', 'Ачааллаж байна...');
+  // Кэшнээс өмнөх folder/file ID-г эхлээд авч үзнэ — амжилттай бол Drive
+  // дээрх нэр хайлтын 2 round-trip-ийг алгасаж хурдасгана.
+  const _cached = readFileIdCache();
+  if (_cached) {
+    if (_cached.folder && !driveFolderId) driveFolderId = _cached.folder;
+    if (_cached.data && !driveFileId) driveFileId = _cached.data;
+  }
   try {
     const folderId = await ensureDriveFolder();
-    driveFileId = await findDriveFile(folderId);
+    if (!driveFileId) driveFileId = await findDriveFile(folderId);
     if (!driveFileId) {
       driveFileId = await createDriveFile(folderId, data);
     } else {
@@ -1713,10 +1732,16 @@ async function loadFromDrive(){
       purgeTombstones();
     }
     localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+    writeFileIdCache(); // ID зөв ажилласны дараа л кэшид бичнэ
     setSync('', 'Синк хийгдсэн');
     render();
   } catch(e){
     console.error(e);
+    // Кэшнээс авсан ID хуучирсан (файл устсан/зөөгдсөн) байж болзошгүй тул
+    // дараагийн оролдлого шинээр хайхаар цэвэрлэнэ — байнга давтагдах алдаанаас сэргийлнэ
+    clearFileIdCache();
+    driveFolderId = null;
+    driveFileId = null;
     setSync('err', 'Ачааллахад алдаа гарлаа');
     toast('Drive-с ачаалахад алдаа гарлаа. Кэш өгөгдлөөр ажиллаж байна.', 'err');
   }
@@ -3066,6 +3091,22 @@ function ensureXlsxAvailable(){
   }
   return true;
 }
+function autoSizeColumns(ws, rows){
+  // Багана бүрийн хамгийн урт утгыг олж, wch (тэмдэгтийн өргөн) тооцоолно.
+  // 10-40 хооронд хязгаарлаж хэт нарийн/хэт өргөн болохоос сэргийлнэ.
+  const colCount = rows[0] ? rows[0].length : 0;
+  const widths = [];
+  for (let c = 0; c < colCount; c++) {
+    let w = 0;
+    rows.forEach(r => {
+      const v = String(r[c] == null ? '' : r[c]);
+      if (v.length > w) w = v.length;
+    });
+    widths.push({ wch: Math.min(Math.max(w + 2, 10), 40) });
+  }
+  ws['!cols'] = widths;
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 }; // толгой мөр хөлдөх
+}
 
 /* ---------------- Products Excel import ---------------- */
 let productImportRows = [];
@@ -3091,7 +3132,9 @@ document.getElementById('downloadImportTemplateBtn').addEventListener('click', (
   if (!ensureXlsxAvailable()) return;
   const headers = Object.values(PRODUCT_IMPORT_HEADERS);
   const sampleRow = ['319514090338', '31951409', '38', 'Як ланд ХХК', '05. Ажлын өвлийн гутал', '319-51-409-03 38', 170000];
-  const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
+  const rows = [headers, sampleRow];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  autoSizeColumns(ws, rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Бараа');
   XLSX.writeFile(wb, 'buteegdehuun_zagvar.xlsx');
@@ -3255,7 +3298,9 @@ document.getElementById('downloadShopImportTemplateBtn').addEventListener('click
   if (!ensureXlsxAvailable()) return;
   const headers = Object.values(SHOP_IMPORT_HEADERS);
   const sampleRow = ['Ашид гутлын дэлгүүр', 'Дархан-Уул', 'Дархан', 'Дотоодын дэлгүүр', 'Бат-Эрдэнэ', '99001122', '', '', 'Төв зах, 3-р байр', ''];
-  const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
+  const rows = [headers, sampleRow];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  autoSizeColumns(ws, rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Дэлгүүр');
   XLSX.writeFile(wb, 'delguur_zagvar.xlsx');
