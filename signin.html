@@ -522,9 +522,11 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
   .products-table td:last-child::before{content:none;}
 }
 @media print {
-  body *{visibility:hidden;}
-  #printArea, #printArea *{visibility:visible;}
-  #printArea{position:absolute;top:0;left:0;width:100%;padding:20px;display:block !important;}
+  /* Хуучин "visibility:hidden" арга нь бусад бүх элементийг layout-д зай
+     эзлүүлсэн хэвээр орхидог тул хоосон нэмэлт хуудас гардаг байсан.
+     #app-ийг шууд display:none хийснээр зай ч эзлэхгүй болно. */
+  #app{display:none !important;}
+  #printArea{display:block !important;padding:20px;}
   #printArea table{width:100%;border-collapse:collapse;margin-top:12px;}
   #printArea th, #printArea td{border:1px solid #999;padding:6px 8px;text-align:left;font-size:13px;}
 }
@@ -602,12 +604,6 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           <div class="sub" id="viewSub">Ерөнхий тойм</div>
           <div id="unsavedBanner" class="unsaved-banner" style="display:none;">Хадгалагдаагүй өөрчлөлт — дахин оролдож байна…</div>
         </div>
-      </div>
-      <div style="display:flex;gap:10px;">
-        <button class="btn secondary" id="backupExportBtn">Нөөцлөх</button>
-        <button class="btn secondary" id="backupRestoreBtn">Сэргээх</button>
-        <input type="file" id="backupRestoreFile" accept=".json" style="display:none;">
-        <button class="btn secondary" id="syncNowBtn">Дахин ачаалах</button>
       </div>
     </div>
 
@@ -717,6 +713,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             <tbody id="productsBody"></tbody>
           </table>
           </div>
+          <div id="productsPagination" style="display:flex;align-items:center;gap:10px;padding:12px 20px;justify-content:flex-end;"></div>
         </div>
       </section>
 
@@ -772,6 +769,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             <h2>Нэгтгэл тайлан</h2>
             <div class="export-row">
               <button class="btn secondary" id="exportCsvBtn">CSV татах</button>
+              <button class="btn secondary" id="printReportBtn">🖨 Хэвлэх / PDF татах</button>
             </div>
           </div>
 
@@ -860,12 +858,11 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 
           <div style="padding:0 20px 20px;">
             <div class="panel" id="aiInsightCard" style="display:none;">
-              <div class="panel-head"><h2>🤖 AI бизнесийн дүн шинжилгээ</h2></div>
+              <div class="panel-head"><h2>Нэгтгэл тайлангийн дүгнэлт</h2></div>
               <div id="aiInsightBody" style="padding:16px 20px;font-size:13.5px;line-height:1.6;"></div>
             </div>
-            <button class="btn secondary" id="aiInsightBtn" style="margin-top:12px;">🤖 AI-аар дүн шинжилгээ хийх</button>
-            <button class="btn secondary" id="printReportBtn" style="margin-top:12px;">🖨 Хэвлэх / PDF татах</button>
-            <div style="font-size:11.5px;color:var(--muted);margin-top:6px;">Тайлангийн одоогийн шүүлтүүрт үндэслэн Claude AI-аар дүгнэлт гаргана. Товч дарах бүрд 1 удаа дуудагдана.</div>
+            <button class="btn secondary" id="aiInsightBtn" style="margin-top:12px;">Дүгнэлт гаргах</button>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:6px;">Тайлангийн одоогийн шүүлтүүрт үндэслэн автомат дүгнэлт гаргана. Товч дарах бүрд 1 удаа дуудагдана.</div>
           </div>
         </div>
       </section>
@@ -879,6 +876,43 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           <div style="padding:20px;">
             <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">Системийн өнгө, харагдах загварыг сонгоно уу. Сонголт таны browser дээр хадгалагдана.</p>
             <div class="theme-grid" id="themeGrid"></div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:20px;">
+          <div class="panel-head">
+            <h2>Өгөгдөл, синк</h2>
+          </div>
+          <div style="padding:20px;">
+            <div style="margin-bottom:18px;">
+              <div style="font-weight:600;margin-bottom:4px;">Нөөцлөх</div>
+              <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px;">Бүх өгөгдлийг (дэлгүүр, бараа, захиалга) нэг JSON файл болгон компьютерт татаж авна. Тогтмол нөөцлөх нь Google Drive-той холбоотой асуудал гарвал сэргээх боломж өгнө.</p>
+              <button class="btn secondary" id="backupExportBtn">Нөөцлөх</button>
+            </div>
+            <div style="margin-bottom:18px;">
+              <div style="font-weight:600;margin-bottom:4px;">Сэргээх</div>
+              <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px;">Өмнө нөөцөлсөн JSON файлаас өгөгдлийг сэргээж, ОДООГИЙН бүх өгөгдлийг БҮРЭН СОЛИНО. Энэ үйлдлийг буцаах боломжгүй тул зөвхөн итгэлтэй нөөцлөлтийн файлаар ашиглана уу.</p>
+              <button class="btn secondary" id="backupRestoreBtn">Сэргээх</button>
+              <input type="file" id="backupRestoreFile" accept=".json" style="display:none;">
+            </div>
+            <div>
+              <div style="font-weight:600;margin-bottom:4px;">Дахин ачаалах</div>
+              <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px;">Google Drive-с өгөгдлийг шууд дахин уншиж, синк хийнэ. Ихэнх тохиолдолд апп автоматаар синк хийдэг тул энэ товчийг ердийн үед дарах шаардлагагүй — зөвхөн синк удааширсан эсвэл өгөгдөл зөв харагдахгүй байгаа мэт санагдвал ашиглана.</p>
+              <button class="btn secondary" id="syncNowBtn">Дахин ачаалах</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:20px;">
+          <div class="panel-head">
+            <h2>Захиалгын дугаарлалт</h2>
+          </div>
+          <div style="padding:20px;">
+            <p style="font-size:12.5px;color:var(--muted);margin-bottom:10px;">Захиалгын дугаар (№) устгасан ч дахин ашиглагдахгүй, зөвхөн өсдөг — ижил дугаартай 2 захиалга үүсэхээс сэргийлнэ. Хэрэв тест захиалга устгасны дараа дугаарыг гараар доош тохируулах шаардлагатай бол энд өөрчилж болно (болгоомжтой ашиглана уу — одоо байгаа захиалгын дугаартай давхцахгүй байхыг өөрөө нягтална уу).</p>
+            <div class="field-row" style="align-items:flex-end;">
+              <div class="field"><label for="nextOrderNoInput">Дараагийн захиалгын дугаар</label><input type="number" id="nextOrderNoInput" min="1"></div>
+              <button class="btn secondary" id="saveNextOrderNoBtn">Хадгалах</button>
+            </div>
           </div>
         </div>
       </section>
@@ -1255,6 +1289,8 @@ function hardDeleteRecord(arrName, id){
 
 /* ---------------- Bulk selection (Дэлгүүр/Бүтээгдэхүүн/Захиалга ерөнхий) ---------------- */
 const bulkSelection = { shops: new Set(), products: new Set(), orders: new Set() };
+const PRODUCTS_PAGE_SIZE = 20;
+let productsPage = 1;
 const bulkLastRows = { shops: [], products: [], orders: [] };
 const BULK_LABELS = { shops: 'дэлгүүр', products: 'бараа', orders: 'захиалга' };
 const BULK_ARR_NAME = { shops: 'shops', products: 'products', orders: 'orders' };
@@ -1413,6 +1449,20 @@ function applyTheme(id){
   else document.documentElement.setAttribute('data-theme', id);
   try { localStorage.setItem(THEME_KEY, id); } catch(e){}
 }
+document.getElementById('saveNextOrderNoBtn').addEventListener('click', () => {
+  const input = document.getElementById('nextOrderNoInput');
+  const val = Number(input.value);
+  if (!Number.isFinite(val) || val < 1 || !Number.isInteger(val)) {
+    toast('1-ээс дээш бүхэл тоо оруулна уу', 'err'); return;
+  }
+  const maxExisting = data.orders.reduce((m,o)=>Math.max(m, Number(o.orderNo)||0), 0);
+  if (val <= maxExisting) {
+    if (!confirm(`Анхаар: одоо байгаа захиалгад №${maxExisting} хүртэл дугаар байна. Үүнээс бага/тэнцүү дугаар сонговол ирээдүйд давхцал үүсэж болзошгүй. Үргэлжлүүлэх үү?`)) return;
+  }
+  data.nextOrderNo = val;
+  queueSave();
+  toast('Дараагийн захиалгын дугаар хадгалагдлаа', 'ok');
+});
 function renderSettings(){
   const grid = document.getElementById('themeGrid');
   if (!grid) return;
@@ -1431,6 +1481,10 @@ function renderSettings(){
       toast('Загвар солигдлоо', 'ok');
     });
   });
+  const nextNoInput = document.getElementById('nextOrderNoInput');
+  if (nextNoInput && document.activeElement !== nextNoInput) {
+    nextNoInput.value = data.nextOrderNo || 1;
+  }
 }
 
 /* ---------------- Auth ---------------- */
@@ -2267,7 +2321,11 @@ function renderProducts(){
     && (!q || ((p.itemCode||'')+(p.code||'')+(p.company||'')+(p.name||'')+(p.itemName||'')).toLowerCase().includes(q))
     && (!companyFilter || p.company === companyFilter));
   bulkLastRows.products = rows.map(p=>p.id);
-  body.innerHTML = rows.length ? rows.map(p => {
+  const totalPages = Math.max(1, Math.ceil(rows.length / PRODUCTS_PAGE_SIZE));
+  if (productsPage > totalPages) productsPage = totalPages;
+  if (productsPage < 1) productsPage = 1;
+  const pageRows = rows.slice((productsPage-1)*PRODUCTS_PAGE_SIZE, productsPage*PRODUCTS_PAGE_SIZE);
+  body.innerHTML = pageRows.length ? pageRows.map(p => {
     const actions = showArchived
       ? `<button class="rowbtn rowbtn-restore" onclick="restoreProduct('${escJsArg(p.id)}')">Сэргээх</button>
          <button class="rowbtn rowbtn-danger" onclick="hardDeleteProduct('${escJsArg(p.id)}')">Бүрмөсөн устгах</button>`
@@ -2288,6 +2346,24 @@ function renderProducts(){
   }).join('') : `<tr class="empty-row"><td colspan="9">${showArchived ? 'Архивласан бүтээгдэхүүн алга' : (q||companyFilter ? 'Хайлтад тохирох бүтээгдэхүүн алга' : 'Бүтээгдэхүүн бүртгэгдээгүй байна')}</td></tr>`;
   wireBulkCheckboxes('products', 'productRowChk', 'productsSelectAll');
   updateBulkBar('products');
+  renderProductsPagination(rows.length, totalPages);
+}
+function renderProductsPagination(totalRows, totalPages){
+  const host = document.getElementById('productsPagination');
+  if (!host) return;
+  if (totalRows <= PRODUCTS_PAGE_SIZE) { host.innerHTML = ''; return; }
+  const startN = (productsPage-1)*PRODUCTS_PAGE_SIZE + 1;
+  const endN = Math.min(productsPage*PRODUCTS_PAGE_SIZE, totalRows);
+  host.innerHTML = `
+    <span style="color:var(--muted);font-size:12.5px;">${startN}–${endN} / ${totalRows}</span>
+    <button type="button" class="rowbtn" id="productsPrevPageBtn" ${productsPage<=1?'disabled':''}>← Өмнөх</button>
+    <span style="font-size:12.5px;">${productsPage} / ${totalPages}</span>
+    <button type="button" class="rowbtn" id="productsNextPageBtn" ${productsPage>=totalPages?'disabled':''}>Дараах →</button>
+  `;
+  const prevBtn = document.getElementById('productsPrevPageBtn');
+  const nextBtn = document.getElementById('productsNextPageBtn');
+  if (prevBtn) prevBtn.addEventListener('click', () => { if (productsPage>1) { productsPage--; renderProducts(); } });
+  if (nextBtn) nextBtn.addEventListener('click', () => { if (productsPage<totalPages) { productsPage++; renderProducts(); } });
 }
 
 function populateOrderShopFilterOptions(){
@@ -2743,7 +2819,7 @@ async function generateReportAIInsight(){
   const origLabel = btn.textContent;
   btn.textContent = 'Шинжилж байна...';
   card.style.display = '';
-  body.innerHTML = '<span style="color:var(--muted);">⏳ AI шинжилж байна...</span>';
+  body.innerHTML = '<span style="color:var(--muted);">⏳ Дүгнэлт бэлтгэж байна...</span>';
 
   try {
     const res = await fetch(AI_WORKER_URL + '/api/ai', {
@@ -2777,7 +2853,7 @@ async function generateReportAIInsight(){
 document.getElementById('aiInsightBtn').addEventListener('click', generateReportAIInsight);
 function printReportSummary(){
   if (!lastAIInsightText) {
-    toast('Эхлээд "AI-аар дүн шинжилгээ хийх" товчийг дарна уу', 'err');
+    toast('Эхлээд "Дүгнэлт гаргах" товчийг дарна уу', 'err');
     return;
   }
   const ctx = buildReportAIContext();
@@ -2833,7 +2909,7 @@ function printReportSummary(){
     <h3 style="margin-top:16px;">Аймгаар нэгтгэсэн</h3>
     <table><thead><tr><th>Аймаг</th><th style="text-align:right;">Захиалга</th><th style="text-align:right;">Дүн</th></tr></thead><tbody>${provinceHtml}</tbody></table>
 
-    <h3 style="margin-top:16px;">🤖 AI бизнесийн дүн шинжилгээ</h3>
+    <h3 style="margin-top:16px;">Нэгтгэл тайлангийн дүгнэлт</h3>
     <p style="line-height:1.6;">${esc(lastAIInsightText).replace(/\n/g,'<br>')}</p>
   `;
   window.print();
@@ -2978,9 +3054,9 @@ document.getElementById('shopsBulkRestoreBtn').addEventListener('click', () => b
 document.getElementById('shopsBulkHardDeleteBtn').addEventListener('click', () => bulkHardDelete('shops'));
 document.getElementById('shopsBulkClearBtn').addEventListener('click', () => { clearBulkSelection('shops'); renderShops(); });
 document.getElementById('shopShowArchived').addEventListener('change', () => { clearBulkSelection('shops'); renderShops(); });
-document.getElementById('productSearch').addEventListener('input', renderProducts);
-document.getElementById('productShowArchived').addEventListener('change', () => { clearBulkSelection('products'); renderProducts(); });
-document.getElementById('productCompanyFilter').addEventListener('change', renderProducts);
+document.getElementById('productSearch').addEventListener('input', () => { productsPage = 1; renderProducts(); });
+document.getElementById('productShowArchived').addEventListener('change', () => { clearBulkSelection('products'); productsPage = 1; renderProducts(); });
+document.getElementById('productCompanyFilter').addEventListener('change', () => { productsPage = 1; renderProducts(); });
 document.getElementById('productsBulkArchiveBtn').addEventListener('click', () => bulkArchive('products'));
 document.getElementById('productsBulkRestoreBtn').addEventListener('click', () => bulkRestore('products'));
 document.getElementById('productsBulkHardDeleteBtn').addEventListener('click', () => bulkHardDelete('products'));
