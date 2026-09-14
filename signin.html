@@ -432,6 +432,24 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 .rc-bar{width:100%;background:var(--saddle);border-radius:2px 2px 0 0;min-height:2px;}
 .rc-label{font-size:10px;color:var(--muted);margin-top:4px;white-space:nowrap;}
 .rlist-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);background:var(--white);color:var(--white-text);margin-bottom:6px;font-size:13.5px;}
+.badge.abc-a{background:var(--moss-dim);color:var(--moss);}
+.badge.abc-b{background:var(--amber-dim);color:var(--amber);}
+.badge.abc-c{background:var(--brick-dim);color:var(--brick);}
+.badge.seg-vip{background:var(--moss-dim);color:var(--moss);}
+.badge.seg-risk{background:var(--brick-dim);color:var(--brick);}
+.badge.seg-new{background:var(--amber-dim);color:var(--amber);}
+.badge.seg-lost{background:var(--stone-dim);color:var(--muted);}
+.badge.seg-regular{background:var(--confirmed-bg);color:var(--confirmed-text);}
+
+.spark-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.spark-label{width:160px;flex-shrink:0;font-size:12.5px;display:flex;align-items:center;gap:6px;}
+.spark-swatch{width:10px;height:10px;border-radius:2px;display:inline-block;flex-shrink:0;}
+.spark-chart{flex:1;display:flex;align-items:flex-end;gap:2px;height:38px;}
+.spark-bar-wrap{flex:1;height:100%;display:flex;align-items:flex-end;}
+.spark-bar{width:100%;border-radius:1px 1px 0 0;min-height:2px;}
+.spark-c0, .spark-swatch.spark-c0{background:var(--saddle);}
+.spark-c1, .spark-swatch.spark-c1{background:var(--amber);}
+.spark-c2, .spark-swatch.spark-c2{background:var(--moss);}
 .rlist-rank{width:18px;color:var(--muted);font-weight:600;flex:none;}
 .rlist-name{flex:1;}
 .rlist-val{font-weight:600;white-space:nowrap;}
@@ -772,15 +790,20 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           </div>
 
           <div class="report-kpis">
-            <div class="report-kpi"><div class="rk-label">Нийт борлуулалт</div><div class="rk-val" id="repKpiRevenue">—</div></div>
-            <div class="report-kpi"><div class="rk-label">Захиалга</div><div class="rk-val" id="repKpiOrders">—</div></div>
-            <div class="report-kpi"><div class="rk-label">Дундаж захиалга</div><div class="rk-val" id="repKpiAvg">—</div></div>
-            <div class="report-kpi"><div class="rk-label">Цуцлалтын хувь</div><div class="rk-val" id="repKpiCancelRate">—</div></div>
+            <div class="report-kpi"><div class="rk-label">Нийт борлуулалт</div><div class="rk-val" id="repKpiRevenue">—</div><div class="kpi-delta" id="repKpiRevenueDelta"></div></div>
+            <div class="report-kpi"><div class="rk-label">Захиалга</div><div class="rk-val" id="repKpiOrders">—</div><div class="kpi-delta" id="repKpiOrdersDelta"></div></div>
+            <div class="report-kpi"><div class="rk-label">Дундаж захиалга</div><div class="rk-val" id="repKpiAvg">—</div><div class="kpi-delta" id="repKpiAvgDelta"></div></div>
+            <div class="report-kpi"><div class="rk-label">Цуцлалтын хувь</div><div class="rk-val" id="repKpiCancelRate">—</div><div class="kpi-delta" id="repKpiCancelRateDelta"></div></div>
           </div>
 
           <div style="padding:0 20px;">
             <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Борлуулалтын тренд</h3>
             <div id="reportChart"></div>
+          </div>
+
+          <div style="padding:0 20px 20px;">
+            <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Шилдэг 3 барааны эрэлтийн чиг хандлага</h3>
+            <div id="repProductTrend"></div>
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:20px;">
@@ -791,6 +814,22 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             <div>
               <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Шилдэг дэлгүүр</h3>
               <div id="repTopShops"></div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 20px 20px;">
+            <div>
+              <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Бүтээгдэхүүний ABC ангилал</h3>
+              <div id="repAbcBody"></div>
+            </div>
+            <div>
+              <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Дэлгүүрийн сегмент (одоогийн шүүлтүүрийн хугацаанд)</h3>
+              <div style="overflow-x:auto;max-height:280px;overflow-y:auto;">
+              <table class="aimag-table">
+                <thead><tr><th>Дэлгүүр</th><th>Сегмент</th><th class="num">Сүүлд (хоног)</th><th class="num">Захиалга</th><th class="num">Дүн (₮)</th></tr></thead>
+                <tbody id="repRfmBody"></tbody>
+              </table>
+              </div>
             </div>
           </div>
 
@@ -1854,14 +1893,31 @@ function orderItemsQtySum(o){ return (o.items||[]).reduce((s,it)=>s+Number(it.qt
 function getMonthKey(dateObj){
   return `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}`;
 }
-function renderKpiDelta(elId, cur, prev){
+function renderKpiDelta(elId, cur, prev, opts){
   const el = document.getElementById(elId);
   if (!el) return;
   if (!prev) { el.textContent = ''; el.className = 'kpi-delta'; return; }
   const pct = ((cur - prev) / prev) * 100;
-  const isUp = pct >= 0;
-  el.textContent = `${isUp?'↑':'↓'} ${Math.abs(pct).toFixed(1)}% өмнөх сараас`;
-  el.className = 'kpi-delta ' + (isUp ? 'up' : 'down');
+  const arrowUp = pct >= 0;
+  const invert = !!(opts && opts.invert);
+  const isGood = invert ? !arrowUp : arrowUp;
+  const label = (opts && opts.label) || 'өмнөх сараас';
+  el.textContent = `${arrowUp?'↑':'↓'} ${Math.abs(pct).toFixed(1)}% ${label}`;
+  el.className = 'kpi-delta ' + (isGood ? 'up' : 'down');
+}
+function renderKpiDeltaPP(elId, curPct, prevPct, opts){
+  // Хувийн (%) үзүүлэлтийн ялгааг pp (percentage point)-ээр харуулна.
+  // Жиш: цуцлалт 6.8% -> 4.2% бол "-2.6pp", харьцангуй хувиар БИШ.
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (prevPct == null || !isFinite(prevPct)) { el.textContent = ''; el.className = 'kpi-delta'; return; }
+  const diff = curPct - prevPct;
+  const arrowUp = diff >= 0;
+  const invert = !!(opts && opts.invert);
+  const isGood = invert ? !arrowUp : arrowUp;
+  const label = (opts && opts.label) || 'өмнөх мөчлөгөөс';
+  el.textContent = `${arrowUp?'↑':'↓'} ${Math.abs(diff).toFixed(1)}pp ${label}`;
+  el.className = 'kpi-delta ' + (isGood ? 'up' : 'down');
 }
 function computeSmartInsights(activeOrders){
   const insights = [];
@@ -2206,16 +2262,10 @@ function getDateRangeBounds(preset){
   else if (preset === 'month') { start = todayStr().slice(0,7)+'-01'; }
   return { start, end: todayStr() };
 }
-function getReportFilteredOrders(){
-  const rangeSel = document.getElementById('reportDateRange').value;
-  const shopSel = document.getElementById('reportShopFilter').value;
-  const aimagSel = document.getElementById('reportAimagFilter').value;
-  const productSel = document.getElementById('reportProductFilter').value;
-  const statusSel = document.getElementById('reportStatusFilter').value;
-  const { start, end } = getDateRangeBounds(rangeSel);
+function filterOrdersByRange(rangeStart, rangeEnd, shopSel, aimagSel, productSel, statusSel){
   return data.orders.filter(o => {
-    if (start && (o.orderDate||'') < start) return false;
-    if (end && (o.orderDate||'') > end) return false;
+    if (rangeStart && (o.orderDate||'') < rangeStart) return false;
+    if (rangeEnd && (o.orderDate||'') > rangeEnd) return false;
     if (shopSel && o.shopId !== shopSel) return false;
     if (statusSel && o.status !== statusSel) return false;
     if (productSel && !(o.items||[]).some(it => it.productId === productSel)) return false;
@@ -2226,6 +2276,35 @@ function getReportFilteredOrders(){
     }
     return true;
   });
+}
+function getCurrentReportFilters(){
+  return {
+    shopSel: document.getElementById('reportShopFilter').value,
+    aimagSel: document.getElementById('reportAimagFilter').value,
+    productSel: document.getElementById('reportProductFilter').value,
+    statusSel: document.getElementById('reportStatusFilter').value
+  };
+}
+function getReportFilteredOrders(){
+  const rangeSel = document.getElementById('reportDateRange').value;
+  const { start, end } = getDateRangeBounds(rangeSel);
+  const f = getCurrentReportFilters();
+  return filterOrdersByRange(start, end, f.shopSel, f.aimagSel, f.productSel, f.statusSel);
+}
+function getPreviousPeriodOrders(){
+  // Одоо сонгосон хугацааны шууд өмнөх, ижил уртын мөчлөгийг тооцоолж, ижил
+  // (дэлгүүр/аймаг/бараа/төлөв) шүүлтүүрээр шүүнэ. "Бүх хугацаа" сонговол
+  // өмнөх мөчлөг тодорхойгүй тул харьцуулалт хийхгүй (null буцаана).
+  const rangeSel = document.getElementById('reportDateRange').value;
+  const { start, end } = getDateRangeBounds(rangeSel);
+  if (!start) return null;
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const spanDays = Math.round((endDate - startDate) / 86400000) + 1;
+  const prevEnd = new Date(startDate.getTime() - 86400000);
+  const prevStart = new Date(prevEnd.getTime() - (spanDays-1)*86400000);
+  const f = getCurrentReportFilters();
+  return filterOrdersByRange(localDateStr(prevStart), localDateStr(prevEnd), f.shopSel, f.aimagSel, f.productSel, f.statusSel);
 }
 function populateReportFilterOptions(){
   const shopSel = document.getElementById('reportShopFilter');
@@ -2292,6 +2371,134 @@ function renderReportTopLists(orders){
     <div class="rlist-row"><span class="rlist-rank">${i+1}</span><span class="rlist-name">${esc(name)}</span><span class="rlist-val">${money(total)} ₮</span></div>`).join('')
     : '<div class="empty-row" style="padding:16px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>';
 }
+function renderReportTopProductTrend(orders){
+  const host = document.getElementById('repProductTrend');
+  const active = orders.filter(o=>o.status!=='cancelled' && o.orderDate);
+  if (!active.length) { host.innerHTML = '<div class="empty-row" style="padding:16px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>'; return; }
+  const dates = active.map(o=>o.orderDate).sort();
+  const spanDays = (new Date(dates[dates.length-1]) - new Date(dates[0])) / 86400000;
+  const byMonth = spanDays > 62;
+  const keyOf = (d) => byMonth ? d.slice(0,7) : d;
+
+  const prodTotalQty = {};
+  active.forEach(o => (o.items||[]).forEach(it => {
+    const p = data.products.find(x=>x.id===it.productId);
+    const name = p ? p.name : (it.productName || 'Устсан бараа');
+    prodTotalQty[name] = (prodTotalQty[name]||0) + Number(it.qty||0);
+  }));
+  const topNames = Object.entries(prodTotalQty).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n])=>n);
+  if (!topNames.length) { host.innerHTML = '<div class="empty-row" style="padding:16px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>'; return; }
+
+  const allKeys = [...new Set(active.map(o=>keyOf(o.orderDate)))].sort();
+  const perProduct = {};
+  topNames.forEach(name => { perProduct[name] = {}; allKeys.forEach(k=>perProduct[name][k]=0); });
+  active.forEach(o => {
+    const k = keyOf(o.orderDate);
+    (o.items||[]).forEach(it => {
+      const p = data.products.find(x=>x.id===it.productId);
+      const name = p ? p.name : (it.productName || 'Устсан бараа');
+      if (perProduct[name] && perProduct[name][k] != null) perProduct[name][k] += Number(it.qty||0);
+    });
+  });
+
+  host.innerHTML = topNames.map((name, i) => {
+    const vals = allKeys.map(k=>perProduct[name][k]);
+    const max = Math.max(...vals, 1);
+    const bars = allKeys.map((k,idx) => {
+      const pct = Math.max(2, Math.round(vals[idx]/max*100));
+      const label = byMonth ? k : k.slice(5);
+      return `<div class="spark-bar-wrap" title="${esc(label)}: ${vals[idx]} ш"><div class="spark-bar spark-c${i}" style="height:${pct}%;"></div></div>`;
+    }).join('');
+    return `<div class="spark-row">
+      <div class="spark-label"><span class="spark-swatch spark-c${i}"></span>${esc(name)}</div>
+      <div class="spark-chart">${bars}</div>
+    </div>`;
+  }).join('');
+}
+function renderReportABC(orders){
+  const host = document.getElementById('repAbcBody');
+  const active = orders.filter(o=>o.status!=='cancelled');
+  const prodRevenue = {};
+  active.forEach(o => (o.items||[]).forEach(it => {
+    const p = data.products.find(x=>x.id===it.productId);
+    const name = p ? p.name : (it.productName || 'Устсан бараа');
+    const lineTotal = Number(it.total != null ? it.total : Number(it.qty||0)*Number(it.unitPrice||0));
+    prodRevenue[name] = (prodRevenue[name]||0) + lineTotal;
+  }));
+  const entries = Object.entries(prodRevenue).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const totalRevenue = entries.reduce((sum,[,v])=>sum+v,0);
+  if (!entries.length || totalRevenue <= 0) {
+    host.innerHTML = '<div class="empty-row" style="padding:16px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>';
+    return;
+  }
+  let cum = 0;
+  const summary = { A:{count:0,total:0}, B:{count:0,total:0}, C:{count:0,total:0} };
+  entries.forEach(([,rev]) => {
+    cum += rev;
+    const cumPct = cum/totalRevenue*100;
+    const cls = cumPct <= 80 ? 'A' : (cumPct <= 95 ? 'B' : 'C');
+    summary[cls].count++;
+    summary[cls].total += rev;
+  });
+  host.innerHTML = ['A','B','C'].map(cls => {
+    const pct = totalRevenue ? (summary[cls].total/totalRevenue*100) : 0;
+    return `<div class="rlist-row"><span class="badge abc-${cls.toLowerCase()}">${cls}</span><span class="rlist-name">${summary[cls].count} бараа</span><span class="rlist-val">${money(summary[cls].total)} ₮ (${pct.toFixed(0)}%)</span></div>`;
+  }).join('');
+}
+function renderReportRFM(orders){
+  const host = document.getElementById('repRfmBody');
+  const active = orders.filter(o=>o.status!=='cancelled');
+  const now = Date.now();
+  const shopStats = {};
+  active.forEach(o => {
+    if (!o.shopId) return;
+    if (!shopStats[o.shopId]) shopStats[o.shopId] = { orders:0, total:0, lastDate:null };
+    const st = shopStats[o.shopId];
+    st.orders += 1;
+    st.total += Number(o.total||0);
+    if (!st.lastDate || (o.orderDate||'') > st.lastDate) st.lastDate = o.orderDate||'';
+  });
+  const shopIds = Object.keys(shopStats);
+  if (!shopIds.length) {
+    host.innerHTML = '<tr class="empty-row"><td colspan="5">Өгөгдөл алга</td></tr>';
+    return;
+  }
+  const rows = shopIds.map(id => {
+    const shop = data.shops.find(x=>x.id===id);
+    const st = shopStats[id];
+    const recencyDays = st.lastDate ? Math.floor((now - new Date(st.lastDate).getTime())/86400000) : 999999;
+    return { name: shop ? shop.name : 'Тодорхойгүй', recencyDays, frequency: st.orders, monetary: st.total };
+  });
+  function quintileRank(values, value, higherIsBetter){
+    const sorted = [...values].sort((a,b)=>a-b);
+    const pos = sorted.filter(v=>v<=value).length;
+    const pct = pos / sorted.length;
+    const rank = Math.min(5, Math.max(1, Math.ceil(pct*5)));
+    return higherIsBetter ? rank : (6-rank);
+  }
+  const recencyVals = rows.map(r=>r.recencyDays);
+  const freqVals = rows.map(r=>r.frequency);
+  const monVals = rows.map(r=>r.monetary);
+  rows.forEach(r => {
+    r.rScore = quintileRank(recencyVals, r.recencyDays, false);
+    r.fScore = quintileRank(freqVals, r.frequency, true);
+    r.mScore = quintileRank(monVals, r.monetary, true);
+    const avg = (r.rScore + r.fScore + r.mScore) / 3;
+    if (r.rScore >= 4 && r.fScore >= 4 && r.mScore >= 4) { r.segment = 'VIP'; r.segClass = 'seg-vip'; }
+    else if (r.rScore <= 2 && (r.fScore >= 3 || r.mScore >= 3)) { r.segment = 'Эрсдэлтэй'; r.segClass = 'seg-risk'; }
+    else if (r.fScore <= 2 && r.rScore >= 4) { r.segment = 'Шинэ'; r.segClass = 'seg-new'; }
+    else if (r.rScore <= 2 && r.fScore <= 2 && r.mScore <= 2) { r.segment = 'Алдагдсан'; r.segClass = 'seg-lost'; }
+    else { r.segment = 'Тогтмол'; r.segClass = 'seg-regular'; }
+  });
+  rows.sort((a,b) => b.monetary - a.monetary);
+  host.innerHTML = rows.map(r => `<tr>
+    <td>${esc(r.name)}</td>
+    <td><span class="badge ${r.segClass}">${r.segment}</span></td>
+    <td class="num">${r.recencyDays >= 999999 ? '—' : r.recencyDays}</td>
+    <td class="num">${r.frequency}</td>
+    <td class="num">${money(r.monetary)}</td>
+  </tr>`).join('');
+}
 function renderReportSizeDemand(orders){
   const active = orders.filter(o=>o.status!=='cancelled');
   const sizeMap = {};
@@ -2324,6 +2531,25 @@ function renderReports(){
   document.getElementById('repKpiAvg').textContent = money(Math.round(avgOrder)) + ' ₮';
   document.getElementById('repKpiCancelRate').textContent = cancelRate.toFixed(1) + '%';
 
+  const prevOrders = getPreviousPeriodOrders();
+  if (prevOrders) {
+    const prevActive = prevOrders.filter(o=>o.status!=='cancelled');
+    const prevRevenue = prevActive.reduce((s,o)=>s+Number(o.total||0),0);
+    const prevTotalOrders = prevOrders.length;
+    const prevAvgOrder = prevActive.length ? prevRevenue/prevActive.length : 0;
+    const prevCancelled = prevOrders.filter(o=>o.status==='cancelled').length;
+    const prevCancelRate = prevTotalOrders ? (prevCancelled/prevTotalOrders*100) : 0;
+    renderKpiDelta('repKpiRevenueDelta', totalRevenue, prevRevenue, {label:'өмнөх мөчлөгөөс'});
+    renderKpiDelta('repKpiOrdersDelta', totalOrders, prevTotalOrders, {label:'өмнөх мөчлөгөөс'});
+    renderKpiDelta('repKpiAvgDelta', avgOrder, prevAvgOrder, {label:'өмнөх мөчлөгөөс'});
+    renderKpiDeltaPP('repKpiCancelRateDelta', cancelRate, prevCancelRate, {invert:true});
+  } else {
+    ['repKpiRevenueDelta','repKpiOrdersDelta','repKpiAvgDelta','repKpiCancelRateDelta'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.textContent = ''; el.className = 'kpi-delta'; }
+    });
+  }
+
   const map = {};
   data.shops.forEach(s => {
     const key = s.aimag || 'Тодорхойгүй';
@@ -2348,7 +2574,10 @@ function renderReports(){
     </tr>`).join('') : `<tr class="empty-row"><td colspan="4">Өгөгдөл алга</td></tr>`;
 
   renderReportChart(orders);
+  renderReportTopProductTrend(orders);
   renderReportTopLists(orders);
+  renderReportABC(orders);
+  renderReportRFM(orders);
   renderReportSizeDemand(orders);
 }
 ['reportDateRange','reportShopFilter','reportAimagFilter','reportProductFilter','reportStatusFilter'].forEach(id => {
