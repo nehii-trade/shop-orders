@@ -619,7 +619,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           <div class="stat-card"><div class="lbl">Идэвхтэй дэлгүүр</div><div class="val" id="statShops">0</div></div>
           <div class="stat-card"><div class="lbl">Идэвхтэй бараа</div><div class="val" id="statProducts">0</div></div>
           <div class="stat-card"><div class="lbl">Энэ сарын захиалга</div><div class="val" id="statOrders">0</div><div class="kpi-delta" id="statOrdersDelta"></div></div>
-          <div class="stat-card"><div class="lbl">Хүлээгдэж буй</div><div class="val" id="statPending">0</div></div>
+          <div class="stat-card"><div class="lbl">Хүргэлтэд гараагүй</div><div class="val" id="statPending">0</div></div>
           <div class="stat-card"><div class="lbl">Энэ сарын борлуулалт</div><div class="val" id="statRevenue">0<small> ₮</small></div><div class="kpi-delta" id="statRevenueDelta"></div></div>
         </div>
         <div class="panel" id="smartInsightsPanel" style="margin-bottom:20px;display:none;">
@@ -1225,6 +1225,16 @@ function parsePriceValue(raw){
 }
 function localDateStr(d){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
 function todayStr(){ return localDateStr(new Date()); }
+function parseLocalDate(dateStr){
+  // "YYYY-MM-DD" стрингийг ЛОКАЛ 00:00 цагаар Date болгоно. new Date("YYYY-MM-DD")
+  // ашиглавал JS үүнийг UTC 00:00 гэж тайлдаг тул UTC+8 бүсэд өдрийн тооцоолол
+  // (жиш: "30 хоногоос дээш идэвхгүй") босго орчимд бага зэрэг зөрүүтэй гарч болзошгүй.
+  if (!dateStr) return null;
+  const parts = String(dateStr).split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return null;
+  const [y, m, d] = parts;
+  return new Date(y, m - 1, d);
+}
 
 /* ---------------- Tombstones (устгалт зэрэгцүүлэх) ---------------- */
 const TOMB_KEEP_DAYS = 90;
@@ -1438,8 +1448,17 @@ window.addEventListener('load', () => {
   initGSI();
 });
 
+let gsiAttempts = 0;
 function initGSI(){
-  if (!window.google || !google.accounts) { setTimeout(initGSI, 200); return; }
+  if (!window.google || !google.accounts) {
+    gsiAttempts++;
+    if (gsiAttempts >= 25) { // ~5 секунд (25 x 200ms) оролдоод зогсоно
+      showLoginError('Google нэвтрэх модуль ачаалагдсангүй. Интернэт холболтоо шалгаад хуудсыг дахин ачаална уу.');
+      return;
+    }
+    setTimeout(initGSI, 200);
+    return;
+  }
 
   google.accounts.id.initialize({
     client_id: CLIENT_ID,
@@ -2103,7 +2122,7 @@ function computeInactiveShops(thresholdDays){
     let lastOrder = null;
     shopOrders.forEach(o => { if (!lastOrder || (o.orderDate||'') > (lastOrder.orderDate||'')) lastOrder = o; });
     const totalSpent = shopOrders.reduce((s,o)=>s+Number(o.total||0),0);
-    const daysSince = lastOrder && lastOrder.orderDate ? Math.floor((Date.now() - new Date(lastOrder.orderDate).getTime())/86400000) : null;
+    const daysSince = lastOrder && lastOrder.orderDate ? Math.floor((Date.now() - parseLocalDate(lastOrder.orderDate).getTime())/86400000) : null;
     return { shop, lastOrderDate: lastOrder ? lastOrder.orderDate : null, daysSince, totalSpent };
   }).filter(x => x.daysSince === null || x.daysSince >= thresholdDays)
     .sort((a,b)=> b.totalSpent - a.totalSpent);
@@ -2138,6 +2157,8 @@ function renderDashboard(){
   document.getElementById('statOrders').textContent = curMonthOrders.length;
   renderKpiDelta('statOrdersDelta', curMonthOrders.length, prevMonthOrders.length);
 
+  // "Хүргэлтэд гараагүй" = шинэ (баталгаажаагүй) + батлагдсан (хараахан хүргэлтэд гараагүй)
+  // Энд 'shipping'/'done'/'cancelled' орохгүй — тэдгээр аль хэдийн хөдөлсөн/дууссан.
   const pending = activeOrders.filter(o => o.status === 'new' || o.status === 'confirmed').length;
   document.getElementById('statPending').textContent = pending;
 
@@ -2371,8 +2392,8 @@ function getPreviousPeriodOrders(){
   const rangeSel = document.getElementById('reportDateRange').value;
   const { start, end } = getDateRangeBounds(rangeSel);
   if (!start) return null;
-  const startDate = new Date(start);
-  const endDate = new Date(end);
+  const startDate = parseLocalDate(start);
+  const endDate = parseLocalDate(end);
   const spanDays = Math.round((endDate - startDate) / 86400000) + 1;
   const prevEnd = new Date(startDate.getTime() - 86400000);
   const prevStart = new Date(prevEnd.getTime() - (spanDays-1)*86400000);
@@ -2402,7 +2423,7 @@ function renderReportChart(orders){
   const active = orders.filter(o=>o.status!=='cancelled' && o.orderDate);
   if (!active.length) { host.innerHTML = '<div class="empty-row" style="padding:30px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>'; return; }
   const dates = active.map(o=>o.orderDate).sort();
-  const spanDays = (new Date(dates[dates.length-1]) - new Date(dates[0])) / 86400000;
+  const spanDays = (parseLocalDate(dates[dates.length-1]) - parseLocalDate(dates[0])) / 86400000;
   const byMonth = spanDays > 62;
   const groups = {};
   active.forEach(o => {
@@ -2449,7 +2470,7 @@ function renderReportTopProductTrend(orders){
   const active = orders.filter(o=>o.status!=='cancelled' && o.orderDate);
   if (!active.length) { host.innerHTML = '<div class="empty-row" style="padding:16px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>'; return; }
   const dates = active.map(o=>o.orderDate).sort();
-  const spanDays = (new Date(dates[dates.length-1]) - new Date(dates[0])) / 86400000;
+  const spanDays = (parseLocalDate(dates[dates.length-1]) - parseLocalDate(dates[0])) / 86400000;
   const byMonth = spanDays > 62;
   const keyOf = (d) => byMonth ? d.slice(0,7) : d;
 
