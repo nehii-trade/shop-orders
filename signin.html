@@ -1228,6 +1228,10 @@ const DATA_FILENAME = 'nehii_trade_orders_data.json';
 const LOCAL_KEY = 'nehiitrade_orders_cache_v1';
 const FILE_ID_CACHE_KEY = 'nehiitrade_file_ids_v1';
 const TOKEN_KEY = 'nehiitrade_token_v1';
+// Бүх захиалгад мөрддөг 10%-ийн бөөний хөнгөлөлт. Зөвхөн ХАРУУЛАХ (хэвлэх/PDF,
+// тайлангийн "Нийт борлуулалт" KPI) тооцоонд ашиглана — өгөгдлийн санд (order.total
+// гэх мэт) хадгалагддаггүй тул захиалга/бараа тус бүрийн дүн өөрчлөгдөхгүй.
+const DISCOUNT_RATE = 0.10;
 function saveTokenToStorage(){
   try { localStorage.setItem(TOKEN_KEY, JSON.stringify({ accessToken, tokenExpiresAt })); } catch(e){}
 }
@@ -3029,11 +3033,15 @@ function renderReports(){
 
   const activeOrders = orders.filter(o=>o.status!=='cancelled');
   const totalRevenue = activeOrders.reduce((s,o)=>s+Number(o.total||0),0);
+  // "Нийт борлуулалт" KPI-г 10%-ийн хөнгөлөлтийг хассан (бодит хүлээж авах) дүнгээр
+  // харуулна. avgOrder (дундаж захиалга) болон бусад тайлангийн тооцоо (ABC, RFM,
+  // шилдэг бараа/дэлгүүр гэх мэт) хөндөгдөхгүй, зөвхөн энэ нэг KPI-д тусгана.
+  const totalRevenueAfterDiscount = totalRevenue * (1 - DISCOUNT_RATE);
   const totalOrders = orders.length;
   const avgOrder = activeOrders.length ? totalRevenue/activeOrders.length : 0;
   const cancelledCount = orders.filter(o=>o.status==='cancelled').length;
   const cancelRate = totalOrders ? (cancelledCount/totalOrders*100) : 0;
-  document.getElementById('repKpiRevenue').textContent = money(totalRevenue) + ' ₮';
+  document.getElementById('repKpiRevenue').textContent = money(Math.round(totalRevenueAfterDiscount)) + ' ₮';
   document.getElementById('repKpiOrders').textContent = totalOrders;
   document.getElementById('repKpiAvg').textContent = money(Math.round(avgOrder)) + ' ₮';
   document.getElementById('repKpiCancelRate').textContent = cancelRate.toFixed(1) + '%';
@@ -3042,11 +3050,14 @@ function renderReports(){
   if (prevOrders) {
     const prevActive = prevOrders.filter(o=>o.status!=='cancelled');
     const prevRevenue = prevActive.reduce((s,o)=>s+Number(o.total||0),0);
+    const prevRevenueAfterDiscount = prevRevenue * (1 - DISCOUNT_RATE);
     const prevTotalOrders = prevOrders.length;
     const prevAvgOrder = prevActive.length ? prevRevenue/prevActive.length : 0;
     const prevCancelled = prevOrders.filter(o=>o.status==='cancelled').length;
     const prevCancelRate = prevTotalOrders ? (prevCancelled/prevTotalOrders*100) : 0;
-    renderKpiDelta('repKpiRevenueDelta', totalRevenue, prevRevenue, {label:'өмнөх мөчлөгөөс'});
+    // Хоёр тал (одоогийн ба өмнөх мөчлөг) ижил 10%-иар хөнгөлөгдсөн тул хувийн
+    // өөрчлөлт (%) яг тэнцүү хэвээр байна — зөвхөн харагдах мөнгөн дүн бага болно.
+    renderKpiDelta('repKpiRevenueDelta', totalRevenueAfterDiscount, prevRevenueAfterDiscount, {label:'өмнөх мөчлөгөөс'});
     renderKpiDelta('repKpiOrdersDelta', totalOrders, prevTotalOrders, {label:'өмнөх мөчлөгөөс'});
     renderKpiDelta('repKpiAvgDelta', avgOrder, prevAvgOrder, {label:'өмнөх мөчлөгөөс'});
     renderKpiDeltaPP('repKpiCancelRateDelta', cancelRate, prevCancelRate, {invert:true});
@@ -4048,7 +4059,6 @@ document.getElementById('orderViewPrintBtn').addEventListener('click', () => {
   const shopAimag = shop ? (shop.aimag||'') : (o.shopAimag||'');
   const shopContact = shop ? (shop.contact||'') : '';
   const shopPhones = shop ? [shop.phone1, shop.phone2].filter(Boolean).join(' / ') : '';
-  const DISCOUNT_RATE = 0.10; // Зөвхөн хэвлэх/PDF дээр тооцоолно, өгөгдөлд хадгалахгүй
   const subtotal = Number(o.total)||0;
   const discountAmt = Math.round(subtotal * DISCOUNT_RATE);
   const payable = subtotal - discountAmt;
