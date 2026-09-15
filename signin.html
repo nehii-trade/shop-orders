@@ -593,6 +593,23 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
     min-height:44px; margin-bottom:22px; }
   #printArea .pa-notes .lbl{ font-weight:700; color:#16305c; }
 
+  /* --- Тайлангийн хэсгийн гарчиг (Шилдэг бараа, дэлгүүр гэх мэт) --- */
+  #printArea .pa-sec-title{ font-family:'Newsreader',Georgia,serif; font-weight:700; font-size:14.5px;
+    color:#16305c; margin:18px 0 8px; border-bottom:1px solid #b7c8db; padding-bottom:5px; }
+
+  /* --- Гол үзүүлэлтийн карт (KPI) --- */
+  #printArea .pa-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:14px 0 6px; }
+  #printArea .pa-kpis .kpi{ border:1px solid #b7c8db; border-radius:4px; padding:10px 12px;
+    background:#eef3f8 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #printArea .pa-kpis .kpi .k{ font-size:9.5px; letter-spacing:.4px; text-transform:uppercase;
+    color:#3a4a5e; margin-bottom:4px; }
+  #printArea .pa-kpis .kpi .v{ font-size:14.5px; font-weight:700; color:#16233b; }
+  #printArea .pa-kpis .kpi .d{ font-size:9.5px; margin-top:2px; }
+
+  /* --- AI дүгнэлтийн хайрцаг --- */
+  #printArea .pa-conclusion{ font-size:12.5px; line-height:1.75; border:1px solid #b7c8db; border-radius:4px;
+    padding:14px 18px; margin-bottom:22px; text-align:justify; }
+
   /* --- Гарын үсэг + тамга (баталгаажуулалт) --- */
   #printArea .pa-sign-title{ font-size:10.5px; font-weight:700; letter-spacing:1.2px; color:#16305c;
     text-transform:uppercase; border-bottom:1px solid #b7c8db; padding-bottom:5px; margin-bottom:12px; }
@@ -2976,7 +2993,7 @@ async function generateReportAIInsight(){
     const j = await res.json();
     const resultText = j.result || 'Хариу ирсэнгүй';
     // ЧУХАЛ: AI-ийн хариу гадаад эх сурвалж тул esc() ЗААВАЛ ашиглана (XSS хамгаалалт)
-    body.innerHTML = esc(resultText).replace(/\n/g, '<br>');
+    body.innerHTML = mdLiteToHtml(resultText);
     lastAIInsightText = resultText;
     safeSetItem('nehiitrade_ai_report_cache_v1', JSON.stringify({ text: resultText, at: Date.now(), period: ctx.period }));
   } catch (err) {
@@ -3010,7 +3027,7 @@ function restoreAIInsightFromCache(){
   const card = document.getElementById('aiInsightCard');
   const body = document.getElementById('aiInsightBody');
   if (card && body) {
-    body.innerHTML = esc(cached.text).replace(/\n/g, '<br>');
+    body.innerHTML = mdLiteToHtml(cached.text);
     card.style.display = '';
   }
 }
@@ -3052,28 +3069,64 @@ function printReportSummary(){
     ? ctx.provinceStats.map(p=>`<tr><td>${esc(p.aimag)}</td><td style="text-align:right;">${p.orders}</td><td style="text-align:right;">${money(p.total)}₮</td></tr>`).join('')
     : '<tr><td colspan="3">Өгөгдөл алга</td></tr>';
 
+  const issuedBy = (currentUser && (currentUser.name || currentUser.email)) || '—';
+
   document.getElementById('printArea').innerHTML = `
-    <h2 style="font-family:Georgia,serif;">Нэхий Трейд — Нэгтгэл тайлан</h2>
-    <p style="color:#666;font-size:13px;">Хугацаа: ${esc(periodLabel)} · Гаргасан: ${esc(new Date().toLocaleString('mn-MN'))}</p>
+    <div class="pa-head">
+      <div class="pa-logo"><span class="d">D</span><span class="n">N</span></div>
+      <div class="pa-brandtext">
+        <div class="b1"><span class="q">"НЭХИЙ ТРЕЙД"</span> <span class="co">ХХК</span></div>
+        <div class="b2">МОНГОЛ АРЬС ШИР</div>
+      </div>
+    </div>
+    <div class="pa-title">НЭГТГЭЛ ТАЙЛАН</div>
+    <div class="pa-meta">
+      <div class="half">
+        Хугацаа: <b>${esc(periodLabel)}</b><br>
+        Гаргасан огноо: <b>${esc(new Date().toLocaleString('mn-MN'))}</b>
+      </div>
+      <div class="half">
+        Гаргасан ажилтан: <b>${esc(issuedBy)}</b><br>
+        Албан тушаал: <b>Борлуулалтын ажилтан</b>
+      </div>
+    </div>
 
-    <table style="width:100%;margin:14px 0;">
-      <tr><td style="padding:4px 0;width:180px;"><b>Борлуулалт:</b></td><td style="padding:4px 0;">${money(ctx.revenue)}₮${fmtDelta(ctx.revenue, ctx.previousRevenue)}</td></tr>
-      <tr><td style="padding:4px 0;"><b>Захиалга:</b></td><td style="padding:4px 0;">${ctx.orders}${fmtDelta(ctx.orders, ctx.previousOrders)}</td></tr>
-      <tr><td style="padding:4px 0;"><b>Дундаж захиалга:</b></td><td style="padding:4px 0;">${money(ctx.avgOrder)}₮${fmtDelta(ctx.avgOrder, ctx.previousAvgOrder)}</td></tr>
-      <tr><td style="padding:4px 0;"><b>Цуцлалтын хувь:</b></td><td style="padding:4px 0;">${ctx.cancelRatePct}%${cancelDeltaHtml}</td></tr>
-    </table>
+    <div class="pa-kpis">
+      <div class="kpi"><div class="k">Борлуулалт</div><div class="v">${money(ctx.revenue)} ₮</div><div class="d">${fmtDelta(ctx.revenue, ctx.previousRevenue)}</div></div>
+      <div class="kpi"><div class="k">Захиалга</div><div class="v">${ctx.orders}</div><div class="d">${fmtDelta(ctx.orders, ctx.previousOrders)}</div></div>
+      <div class="kpi"><div class="k">Дундаж захиалга</div><div class="v">${money(ctx.avgOrder)} ₮</div><div class="d">${fmtDelta(ctx.avgOrder, ctx.previousAvgOrder)}</div></div>
+      <div class="kpi"><div class="k">Цуцлалтын хувь</div><div class="v">${ctx.cancelRatePct}%</div><div class="d">${cancelDeltaHtml}</div></div>
+    </div>
 
-    <h3 style="margin-top:16px;">Шилдэг 5 бараа</h3>
-    <table><thead><tr><th>№</th><th>Нэр</th><th style="text-align:right;">Тоо</th></tr></thead><tbody>${topProductsHtml}</tbody></table>
+    <div class="pa-sec-title">Шилдэг 5 бараа</div>
+    <table><thead><tr><th>№</th><th>Нэр</th><th class="num">Тоо</th></tr></thead><tbody>${topProductsHtml}</tbody></table>
 
-    <h3 style="margin-top:16px;">Шилдэг 5 дэлгүүр</h3>
-    <table><thead><tr><th>№</th><th>Нэр</th><th style="text-align:right;">Дүн</th></tr></thead><tbody>${topShopsHtml}</tbody></table>
+    <div class="pa-sec-title">Шилдэг 5 дэлгүүр</div>
+    <table><thead><tr><th>№</th><th>Нэр</th><th class="num">Дүн</th></tr></thead><tbody>${topShopsHtml}</tbody></table>
 
-    <h3 style="margin-top:16px;">Аймгаар нэгтгэсэн</h3>
-    <table><thead><tr><th>Аймаг</th><th style="text-align:right;">Захиалга</th><th style="text-align:right;">Дүн</th></tr></thead><tbody>${provinceHtml}</tbody></table>
+    <div class="pa-sec-title">Аймгаар нэгтгэсэн</div>
+    <table><thead><tr><th>Аймаг</th><th class="num">Захиалга</th><th class="num">Дүн</th></tr></thead><tbody>${provinceHtml}</tbody></table>
 
-    <h3 style="margin-top:16px;">Нэгтгэл тайлангийн дүгнэлт</h3>
-    <p style="line-height:1.6;">${esc(lastAIInsightText).replace(/\n/g,'<br>')}</p>
+    <div class="pa-sec-title">Нэгтгэл тайлангийн дүгнэлт</div>
+    <div class="pa-conclusion">${mdLiteToHtml(lastAIInsightText)}</div>
+
+    <div class="pa-sign-title">Баталгаажуулалт</div>
+    <div class="pa-sign">
+      <div class="half">
+        <span class="role">Гаргасан</span>
+        Нэр: <b>${esc(issuedBy)}</b><br>
+        Гарын үсэг: <span class="fill">&nbsp;</span><br>
+        Огноо: <span class="fill">&nbsp;</span>
+      </div>
+      <div class="half">
+        <span class="role">Баталгаажуулсан</span>
+        Нэр: <span class="fill">&nbsp;</span><br>
+        Гарын үсэг: <span class="fill">&nbsp;</span><br>
+        Огноо: <span class="fill">&nbsp;</span>
+      </div>
+      <div class="pa-seal"><div><div class="t1">ТАМГА</div><div class="t2">байрлуулах</div></div></div>
+    </div>
+    <div class="pa-foot">Нэхий Трейд ХХК · Хэвлэсэн: ${esc(new Date().toLocaleString('mn-MN'))}</div>
   `;
   window.print();
 }
@@ -3190,6 +3243,11 @@ function refreshProductDatalists(){
 
 function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+// AI-ийн хариу дотор ирдэг энгийн markdown (**bold**) -г HTML болгон харуулна.
+// ЧУХАЛ: эхлээд esc() хийсний ДАРАА ** тэмдгийг илрүүлдэг тул XSS аюулгүй хэвээр.
+function mdLiteToHtml(s){
+  return esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
 }
 function escJsArg(s){
   // onclick="fn('${...}')" маягийн inline handler-д зориулсан 2 үетэй escape:
