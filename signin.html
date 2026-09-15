@@ -2820,7 +2820,7 @@ function renderReportCancelReasons(orders){
 // хяналтад байгаагүй, баталгаажаагүй эх сурвалж байсан тул уруу захиалгын өгөгдөл
 // (prompt) илгээхийг зогсоов. Өөрийн Cloudflare Worker deploy хийсний дараа доорх
 // хоосон утгыг зөвхөн ТА эзэмшдэг Worker-ийн URL-аар солино.
-const AI_WORKER_URL = '';
+const AI_WORKER_URL = 'https://nehii-ai-worker.munhtsetsegdn.workers.dev';
 let lastAIInsightText = null; // Хэвлэх/PDF-д ашиглах, filter солигдвол null болно
 function buildReportAIContext(){
   const orders = getReportFilteredOrders();
