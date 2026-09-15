@@ -39,10 +39,18 @@ body{background:#d9d5cc;margin:0;padding:30px;font-family:'IBM Plex Sans',Arial,
 .pa .pa-summary .v{ font-weight:600; }
 .pa .pa-notes{ font-size:12px; border:1px solid #b7c8db; border-radius:4px; padding:10px 14px; min-height:44px; margin-bottom:22px; }
 .pa .pa-notes .lbl{ font-weight:700; color:#16305c; }
-.pa .pa-sign{ display:flex; font-size:12.5px; }
-.pa .pa-sign .half{ flex:1 1 50%; line-height:2.4; }
+.pa .pa-sign-title{ font-size:10.5px; font-weight:700; letter-spacing:1.2px; color:#16305c;
+  text-transform:uppercase; border-bottom:1px solid #b7c8db; padding-bottom:5px; margin-bottom:12px; }
+.pa .pa-sign{ display:flex; font-size:12.5px; position:relative; padding-bottom:8px; }
+.pa .pa-sign .half{ flex:1 1 50%; line-height:2.3; }
 .pa .pa-sign .half:first-child{ border-right:1px solid #b7c8db; padding-right:18px; margin-right:18px; }
+.pa .pa-sign .role{ display:block; font-weight:700; color:#16305c; margin-bottom:5px; font-size:12px; }
 .pa .pa-sign .fill{ display:inline-block; border-bottom:1px solid #90a3b8; min-width:150px; }
+.pa .pa-seal{ position:absolute; right:6px; bottom:2px; width:80px; height:80px;
+  border:1.6px dashed #c2530f; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  transform:rotate(-14deg); opacity:.6; pointer-events:none; }
+.pa .pa-seal .t1{ font-size:9px; font-weight:700; letter-spacing:1.5px; color:#c2530f; text-align:center; }
+.pa .pa-seal .t2{ font-size:7px; font-weight:600; color:#c2530f; text-align:center; margin-top:2px; letter-spacing:.5px; }
 .pa .pa-foot{ margin-top:22px; padding-top:8px; border-top:1px dashed #b7c8db; font-size:10px; color:#8a97a8; text-align:center; letter-spacing:.5px; }
 </style>
 </head>
@@ -81,9 +89,11 @@ body{background:#d9d5cc;margin:0;padding:30px;font-family:'IBM Plex Sans',Arial,
       </div>
     </div>
     <div class="pa-notes"><span class="lbl">Нэмэлт тайлбар:</span> Даваа гарагт хүргэнэ.</div>
+    <div class="pa-sign-title">Баталгаажуулалт</div>
     <div class="pa-sign">
-      <div class="half">Захиалга өгсөн: <span class="fill">&nbsp;</span><br>Гарын үсэг: <span class="fill">&nbsp;</span></div>
-      <div class="half">Хүлээн авсан: <span class="fill">&nbsp;</span><br>Гарын үсэг: <span class="fill">&nbsp;</span></div>
+      <div class="half"><span class="role">Захиалга өгсөн</span>Нэр: <span class="fill">&nbsp;</span><br>Албан тушаал: <span class="fill">&nbsp;</span><br>Гарын үсэг: <span class="fill">&nbsp;</span><br>Огноо: <span class="fill">&nbsp;</span></div>
+      <div class="half"><span class="role">Хүлээн авсан</span>Нэр: <span class="fill">&nbsp;</span><br>Албан тушаал: <span class="fill">&nbsp;</span><br>Гарын үсэг: <span class="fill">&nbsp;</span><br>Огноо: <span class="fill">&nbsp;</span></div>
+      <div class="pa-seal"><div><div class="t1">ТАМГА</div><div class="t2">байрлуулах</div></div></div>
     </div>
     <div class="pa-foot">Нэхий Трейд ХХК · Хэвлэсэн: 2026.09.14, 19:26</div>
   </div>

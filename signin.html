@@ -593,11 +593,19 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
     min-height:44px; margin-bottom:22px; }
   #printArea .pa-notes .lbl{ font-weight:700; color:#16305c; }
 
-  /* --- Гарын үсэг --- */
-  #printArea .pa-sign{ display:flex; font-size:12.5px; }
-  #printArea .pa-sign .half{ flex:1 1 50%; line-height:2.4; }
+  /* --- Гарын үсэг + тамга (баталгаажуулалт) --- */
+  #printArea .pa-sign-title{ font-size:10.5px; font-weight:700; letter-spacing:1.2px; color:#16305c;
+    text-transform:uppercase; border-bottom:1px solid #b7c8db; padding-bottom:5px; margin-bottom:12px; }
+  #printArea .pa-sign{ display:flex; font-size:12.5px; position:relative; padding-bottom:8px; }
+  #printArea .pa-sign .half{ flex:1 1 50%; line-height:2.3; }
   #printArea .pa-sign .half:first-child{ border-right:1px solid #b7c8db; padding-right:18px; margin-right:18px; }
+  #printArea .pa-sign .role{ display:block; font-weight:700; color:#16305c; margin-bottom:5px; font-size:12px; }
   #printArea .pa-sign .fill{ display:inline-block; border-bottom:1px solid #90a3b8; min-width:150px; }
+  #printArea .pa-seal{ position:absolute; right:6px; bottom:2px; width:80px; height:80px;
+    border:1.6px dashed #c2530f; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    transform:rotate(-14deg); opacity:.6; pointer-events:none; }
+  #printArea .pa-seal .t1{ font-size:9px; font-weight:700; letter-spacing:1.5px; color:#c2530f; text-align:center; }
+  #printArea .pa-seal .t2{ font-size:7px; font-weight:600; color:#c2530f; text-align:center; margin-top:2px; letter-spacing:.5px; }
 
   /* --- Хөл --- */
   #printArea .pa-foot{ margin-top:22px; padding-top:8px; border-top:1px dashed #b7c8db;
@@ -4161,15 +4169,23 @@ document.getElementById('orderViewPrintBtn').addEventListener('click', () => {
     <div class="pa-notes"><span class="lbl">Нэмэлт тайлбар:</span> ${
       (o.status==='cancelled' && o.cancelReason) ? esc('Цуцлалтын шалтгаан — ' + o.cancelReason) : (o.notes ? esc(o.notes) : '')
     }</div>
+    <div class="pa-sign-title">Баталгаажуулалт</div>
     <div class="pa-sign">
       <div class="half">
-        Захиалга өгсөн: <span class="fill">&nbsp;</span><br>
-        Гарын үсэг: <span class="fill">&nbsp;</span>
+        <span class="role">Захиалга өгсөн</span>
+        Нэр: <span class="fill">&nbsp;</span><br>
+        Албан тушаал: <span class="fill">&nbsp;</span><br>
+        Гарын үсэг: <span class="fill">&nbsp;</span><br>
+        Огноо: <span class="fill">&nbsp;</span>
       </div>
       <div class="half">
-        Хүлээн авсан: <span class="fill">&nbsp;</span><br>
-        Гарын үсэг: <span class="fill">&nbsp;</span>
+        <span class="role">Хүлээн авсан</span>
+        Нэр: <span class="fill">&nbsp;</span><br>
+        Албан тушаал: <span class="fill">&nbsp;</span><br>
+        Гарын үсэг: <span class="fill">&nbsp;</span><br>
+        Огноо: <span class="fill">&nbsp;</span>
       </div>
+      <div class="pa-seal"><div><div class="t1">ТАМГА</div><div class="t2">байрлуулах</div></div></div>
     </div>
     <div class="pa-foot">Нэхий Трейд ХХК · Хэвлэсэн: ${esc(new Date().toLocaleString('mn-MN'))}</div>
   `;
