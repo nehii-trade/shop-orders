@@ -2815,7 +2815,12 @@ function renderReportCancelReasons(orders){
 }
 
 /* ---------------- AI Insight (Cloudflare Worker -> Claude API) ---------------- */
-const AI_WORKER_URL = 'https://odd-breeze-d4e0.examples-code.workers.dev';
+// АНХААР: Өмнө нь энд байсан гуравдагч талын жишээ Worker хаяг
+// (odd-breeze-d4e0.examples-code.workers.dev) ЗОРИУДААР арилгасан — энэ нь бидний
+// хяналтад байгаагүй, баталгаажаагүй эх сурвалж байсан тул уруу захиалгын өгөгдөл
+// (prompt) илгээхийг зогсоов. Өөрийн Cloudflare Worker deploy хийсний дараа доорх
+// хоосон утгыг зөвхөн ТА эзэмшдэг Worker-ийн URL-аар солино.
+const AI_WORKER_URL = '';
 let lastAIInsightText = null; // Хэвлэх/PDF-д ашиглах, filter солигдвол null болно
 function buildReportAIContext(){
   const orders = getReportFilteredOrders();
@@ -2926,6 +2931,16 @@ async function generateReportAIInsight(){
   const btn = document.getElementById('aiInsightBtn');
   const card = document.getElementById('aiInsightCard');
   const body = document.getElementById('aiInsightBody');
+
+  // AI_WORKER_URL хоосон бол (өөрийн Worker-ээ хараахан тохируулаагүй байна гэсэн
+  // үг) огт fetch дуудахгүй, ямар ч сүлжээний хүсэлт (тэр дундаа захиалгын
+  // өгөгдөл агуулсан prompt) хаашаа ч явахгүй — зөвхөн энэ мэдэгдлийг харуулна.
+  if (!AI_WORKER_URL) {
+    card.style.display = '';
+    body.innerHTML = '<span style="color:var(--muted);">AI дүгнэлт: тохируулаагүй байна. Cloudflare Worker deploy хийгээд AI_WORKER_URL-г тохируулна уу.</span>';
+    return;
+  }
+
   const ctx = buildReportAIContext();
   const prompt = buildReportAIPrompt(ctx);
 
