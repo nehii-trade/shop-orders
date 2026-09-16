@@ -1531,7 +1531,9 @@ function parsePriceValue(raw){
   if (rawStr === '') return { value: 0, invalid: false, empty: true };
   const cleaned = rawStr.replace(/[,\s₮$]/g, '');
   const n = Number(cleaned);
-  if (!Number.isFinite(n) || n < 0) return { value: 0, invalid: true, empty: false };
+  // n <= 0: гар маягтын шаардлагатай ("эерэг үнийг бөглөнө үү") нийцүүлэв —
+  // өмнө нь зөвхөн сөрөг тоог буруу гэж үзэж, 0-ийг чимээгүй зөвшөөрдөг байсан.
+  if (!Number.isFinite(n) || n <= 0) return { value: 0, invalid: true, empty: false };
   return { value: n, invalid: false, empty: false };
 }
 function localDateStr(d){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
@@ -4082,18 +4084,21 @@ function parseProductImportRows(raw){
     const priceEmpty = priceParsed.empty;
     const isEmpty = !itemCode && !code && !name && !itemName;
     const itemCodeMissing = !isEmpty && !itemCode;
+    // Гар маягтад "Бүтээгдэхүүний нэр *" заавал талбар — import энэ дүрмийг
+    // тойрч гарч, нэргүй (олон газар хоосон харагдах) бараа үүсгэхгүй байх ёстой.
+    const nameMissing = !isEmpty && !name;
     const codeKey = itemCode ? String(itemCode).trim().toLowerCase() : '';
     const isDuplicateInFile = !isEmpty && !!codeKey && !!seenInBatch[codeKey];
     if (!isEmpty && codeKey) seenInBatch[codeKey] = (seenInBatch[codeKey]||0) + 1;
     const existing = codeKey ? byItemCode[codeKey] : null;
     return {
       itemCode, code, size, company, name, itemName, price, priceInvalid, priceEmpty,
-      isEmpty, isDuplicateInFile, itemCodeMissing,
+      isEmpty, isDuplicateInFile, itemCodeMissing, nameMissing,
       existingId: existing ? existing.id : null,
       existingLabel: existing ? `${existing.itemName||existing.name||'—'} · ${money(existing.price)}₮` : '',
       // Үнэ хоосон мөрийг чимээгүй 0-ээр оруулахгүйн тулд эдгээрийг ч мөн
       // default-аар un-checked үлдээж, хэрэглэгч өөрөө шалгаад зөвшөөрөхөөр үлдээнэ.
-      checked: !isEmpty && !isDuplicateInFile && !priceInvalid && !priceEmpty && !itemCodeMissing
+      checked: !isEmpty && !isDuplicateInFile && !priceInvalid && !priceEmpty && !itemCodeMissing && !nameMissing
     };
   });
   renderProductImportPreview();
@@ -4104,7 +4109,7 @@ function renderProductImportPreview(){
   // "Шинэ"/"Шинэчлэгдэнэ" тоо зөвхөн бодитоор (анхны тохиргоогоор) импортлогдох
   // боломжтой мөрүүдийг тоолно — Код алга/Үнэ буруу/Үнэ хоосон/Файлд давхардсан
   // мөрүүд "Алгасах"-д орно, эс бол тоолол буруу ангилал үзүүлдэг байсан.
-  const importable = rows.filter(r=>!r.isEmpty && !r.itemCodeMissing && !r.priceInvalid && !r.priceEmpty && !r.isDuplicateInFile);
+  const importable = rows.filter(r=>!r.isEmpty && !r.itemCodeMissing && !r.nameMissing && !r.priceInvalid && !r.priceEmpty && !r.isDuplicateInFile);
   const newCount = importable.filter(r=>!r.existingId).length;
   const dupCount = importable.filter(r=>r.existingId).length;
   const skipCount = rows.length - newCount - dupCount;
@@ -4113,12 +4118,14 @@ function renderProductImportPreview(){
   document.getElementById('importCountSkip').textContent = skipCount;
   body.innerHTML = rows.map((r, idx) => {
     const badge = r.isEmpty ? '<span style="color:var(--muted);">хоосон</span>'
-      : (r.itemCodeMissing ? '<span class="badge cancelled">Код алга</span>'
+      : (r.nameMissing ? '<span class="badge cancelled">Нэр алга</span>'
+      : r.itemCodeMissing ? '<span class="badge cancelled">Код алга</span>'
       : (r.priceInvalid ? '<span class="badge cancelled">Үнэ буруу</span>'
       : (r.priceEmpty ? '<span class="badge cancelled">Үнэ хоосон</span>'
       : (r.isDuplicateInFile ? '<span class="badge cancelled">Файлд давхардсан</span>'
       : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>')))));
-    const sub = r.itemCodeMissing ? `<div style="font-size:11px;color:var(--brick);">Барааны код хоосон — ирээдүйд давхацал/шинэчлэлт таньж чадахгүй</div>`
+    const sub = r.nameMissing ? `<div style="font-size:11px;color:var(--brick);">Бүтээгдэхүүний нэр хоосон — гар маягтаар нэмэхэд заавал талбар тул шалгана уу</div>`
+      : r.itemCodeMissing ? `<div style="font-size:11px;color:var(--brick);">Барааны код хоосон — ирээдүйд давхацал/шинэчлэлт таньж чадахгүй</div>`
       : (r.priceInvalid ? `<div style="font-size:11px;color:var(--brick);">Үнийн баганад тоо бус утга байна — шалгаад дахин сонгоно уу</div>`
       : (r.priceEmpty ? `<div style="font-size:11px;color:var(--brick);">Үнийн багана хоосон — 0-ээр орохгүйн тулд шалгаж, шаардлагатай бол гараар үнэ бичээд шалгана уу</div>`
       : (r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : (r.isDuplicateInFile ? `<div style="font-size:11px;color:var(--brick);">Энэ код файл дотроо дахин давтагдсан</div>` : ''))));
@@ -4144,7 +4151,7 @@ document.getElementById('confirmProductImportBtn').addEventListener('click', () 
   // r.checked-ээс гадна Барааны код заавал талбар, Үнэ хүчинтэй байх, файл
   // дотор давхардаагүй байх зэрэг шалгалтыг энд ч дахин хийж, хэрэглэгч
   // чекбоксыг гараар идэвхжүүлсэн ч дутуу/буруу бичлэг үүсэхээс сэргийлнэ.
-  const toApply = productImportRows.filter(r => r.checked && !r.isEmpty && !r.itemCodeMissing && !r.priceInvalid && !r.priceEmpty && !r.isDuplicateInFile);
+  const toApply = productImportRows.filter(r => r.checked && !r.isEmpty && !r.itemCodeMissing && !r.nameMissing && !r.priceInvalid && !r.priceEmpty && !r.isDuplicateInFile);
   if (!toApply.length) return;
   let added = 0, updated = 0;
   toApply.forEach(r => {
