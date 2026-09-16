@@ -596,6 +596,14 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
   .topbar{padding:16px;}
   .modal{max-height:94vh;}
 
+  /* iOS Safari: input/select/textarea-ийн font-size 16px-с бага бол
+     хэрэглэгч талбар дээр дарахад дэлгэц автоматаар zoom хийдэг (Apple-ийн
+     өөрийнх нь тодорхойлсон quirk) — "Захиалга нэмэх" дэх Огноо (type="date")
+     талбар үүнээс болж "хэмжээ буруу" мэт харагдаж байсан шалтгаан нь энэ.
+     16px-с доошгүй болгож zoom-ыг бүрэн зайлуулна (desktop-д нөлөөлөхгүй,
+     зөвхөн энэ mobile breakpoint дотор).  */
+  .field input, .field select, .field textarea{font-size:16px;}
+
   /* Хүснэгт → карт хэлбэр. Өмнө нь зөвхөн .products-table-д хамаарч байсныг
      .mobile-card-table классаар Дэлгүүр/Захиалга/Тайлан/RFM/Dashboard-ийн
      бүх хүснэгтэд ерөнхийд нь ашиглах боломжтой болгов. */
