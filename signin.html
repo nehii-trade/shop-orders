@@ -2065,9 +2065,15 @@ function writeFileIdCache(){
 function clearFileIdCache(){
   try { localStorage.removeItem(FILE_ID_CACHE_KEY); } catch(_){}
 }
+function driveEsc(s){
+  // Drive API-ийн q= параметрт ашиглагдах нэрийг апостроф (')-оос аюулгүй
+  // болгоно — encodeURIComponent энэ тохиолдолд тохирохгүй (URL escape биш,
+  // query-ийн ДОТООД синтакс (нэг хашилттай string literal) escape хэрэгтэй).
+  return String(s==null?'':s).replace(/'/g, "\\'");
+}
 async function findDriveFolder(){
   const url = 'https://www.googleapis.com/drive/v3/files?q=' +
-    encodeURIComponent(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`) +
+    encodeURIComponent(`name='${driveEsc(FOLDER_NAME)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`) +
     '&fields=files(id,name)';
   const res = await driveFetch(url);
   if (!res.ok) throw new Error(`Drive folder хайлт амжилтгүй (HTTP ${res.status})`);
@@ -2096,7 +2102,7 @@ async function ensureDriveFolder(){
 
 async function findDriveFile(folderId){
   const url = 'https://www.googleapis.com/drive/v3/files?q=' +
-    encodeURIComponent(`name='${DATA_FILENAME}' and '${folderId}' in parents and trashed=false`) +
+    encodeURIComponent(`name='${driveEsc(DATA_FILENAME)}' and '${driveEsc(folderId)}' in parents and trashed=false`) +
     '&fields=files(id,name)';
   const res = await driveFetch(url);
   if (!res.ok) throw new Error(`Drive файл хайлт амжилтгүй (HTTP ${res.status})`);
@@ -2217,7 +2223,32 @@ async function doSave(){
   if (!driveFileId) {
     try {
       const folderId = await ensureDriveFolder();
-      driveFileId = await findDriveFile(folderId) || await createDriveFile(folderId, data);
+      const existingFileId = await findDriveFile(folderId);
+      if (existingFileId) {
+        // ---- Data-loss guard (PROJECT_KNOWLEDGE_TEMPLATE.md, Хэсэг 6) ----
+        // Drive дээр аль хэдийн файл байгааг ОЛСОН атлаа локал өгөгдөл
+        // (энэ сесс дотор анх удаа driveFileId тохируулж байгаа тул) огт
+        // хоосон бол — жиш нь localStorage цэвэрлэгдсэн, эсвэл анхны Drive
+        // ачаалал (loadFromDrive) сүлжээний алдаагаар амжилтгүй болсон
+        // тохиолдолд — тэр хоосон/дутуу локал өгөгдлөөр Drive дээрх БОДИТ
+        // өгөгдлийг санамсаргүй дарж бичихээс өмнө эхлээд Drive файлыг
+        // уншиж, бодит бичлэгийн тоог шалгана.
+        const localCount = data.shops.length + data.products.length + data.orders.length;
+        if (localCount === 0) {
+          let remote;
+          try { remote = await readDriveFile(existingFileId); }
+          catch(e){ setSync('err','Холбогдоогүй'); scheduleSaveRetry(); return; }
+          const remoteCount = (remote.shops||[]).length + (remote.products||[]).length + (remote.orders||[]).length;
+          if (remoteCount > 0) {
+            setSync('err', 'Хадгалалт зогсоов');
+            toast('Локал өгөгдөл хоосон байгаа боловч Google Drive дээр өгөгдөл байгааг илрүүллээ. Санамсаргүй устгахаас сэргийлж автомат хадгалалтыг түр зогсоолоо — Тохиргоо хэсгээс "Дахин ачаалах" дараад дахин оролдоно уу.', 'err');
+            return;
+          }
+        }
+        driveFileId = existingFileId;
+      } else {
+        driveFileId = await createDriveFile(folderId, data);
+      }
     }
     catch(e){ setSync('err','Холбогдоогүй'); scheduleSaveRetry(); return; }
   }
