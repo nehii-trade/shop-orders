@@ -39,12 +39,14 @@
   try {
     var t = localStorage.getItem('nehiitrade_theme_v1');
     if (t && t !== 'leather') document.documentElement.setAttribute('data-theme', t);
+    var f = localStorage.getItem('nehiitrade_font_v1');
+    if (f && f !== 'default') document.documentElement.setAttribute('data-font', f);
   } catch(e){}
 })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
@@ -164,17 +166,25 @@ html[data-theme="night"]{
   --shipping-bg:#2a2038;
   --shipping-text:#b794f4;
 }
+:root{
+  --font-heading:'Newsreader',serif;
+  --font-body:'IBM Plex Sans',sans-serif;
+}
+:root[data-font="reading"]{
+  --font-heading:'Merriweather',serif;
+  --font-body:'Noto Sans',sans-serif;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
 body{
-  font-family:'IBM Plex Sans',sans-serif;
+  font-family:var(--font-body);
   background:var(--stone);
   color:var(--text);
   font-size:14.5px;
   line-height:1.5;
   -webkit-font-smoothing:antialiased;
 }
-h1,h2,h3,.serif{font-family:'Newsreader',serif;}
+h1,h2,h3{font-family:var(--font-heading);}
 button{font-family:inherit;cursor:pointer;}
 input,select,textarea{font-family:inherit;font-size:inherit;}
 a{color:inherit;}
@@ -206,7 +216,7 @@ a{color:inherit;}
   border:1.5px solid var(--ink);
   border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  font-family:'Newsreader',serif;
+  font-family:var(--font-heading);
   font-size:26px;
   font-style:italic;
 }
@@ -259,7 +269,7 @@ a{color:inherit;}
   margin-bottom:14px;
 }
 .brand .name{
-  font-family:'Newsreader',serif;
+  font-family:var(--font-heading);
   font-style:italic;
   font-size:21px;
   color:var(--white);
@@ -352,7 +362,7 @@ nav.navlist button.active{background:var(--saddle);color:var(--white);}
 .stat-card .lbl{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:8px;}
 .stat-icon{font-size:13px;}
 .stat-icon-svg{width:14px;height:14px;flex-shrink:0;color:var(--muted);}
-.stat-card .val{font-family:'Newsreader',serif;font-size:30px;font-weight:600;}
+.stat-card .val{font-family:var(--font-heading);font-size:30px;font-weight:600;}
 .stat-card .val small{font-size:15px;font-weight:500;color:var(--muted);}
 .stat-sub{font-size:11px;color:var(--muted);margin-top:4px;min-height:14px;}
 .kpi-delta{font-size:12px;margin-top:6px;font-weight:600;}
@@ -504,7 +514,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 .report-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .report-kpi{border:1px solid var(--line);background:var(--white);color:var(--white-text);padding:14px 16px;border-radius:var(--radius);}
 .report-kpi .rk-label{font-size:12px;color:var(--muted);margin-bottom:5px;}
-.report-kpi .rk-val{font-family:'Newsreader',serif;font-size:22px;font-weight:600;overflow-wrap:anywhere;}
+.report-kpi .rk-val{font-family:var(--font-heading);font-size:22px;font-weight:600;overflow-wrap:anywhere;}
 .rc-chart{display:flex;align-items:flex-end;gap:5px;height:160px;padding:10px 4px 0;overflow-x:auto;}
 .rc-bar-wrap{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:26px;flex:1;}
 .rc-bar{width:100%;background:var(--saddle);border-radius:2px 2px 0 0;min-height:2px;}
@@ -1151,6 +1161,16 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 
         <div class="panel" style="margin-top:20px;">
           <div class="panel-head">
+            <h2>Фонт</h2>
+          </div>
+          <div style="padding:20px;">
+            <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">Дэлгэц дээр харагдах фонтыг сонгоно уу (хэвлэлт/PDF-д нөлөөлөхгүй, тогтмол хэвээр үлдэнэ).</p>
+            <div class="theme-grid" id="fontGrid"></div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:20px;">
+          <div class="panel-head">
             <h2>Өгөгдөл, синк</h2>
           </div>
           <div style="padding:20px;">
@@ -1781,6 +1801,33 @@ function applyTheme(id){
   else document.documentElement.setAttribute('data-theme', id);
   try { localStorage.setItem(THEME_KEY, id); } catch(e){}
 }
+
+/* ---------------- Фонт ---------------- */
+const FONT_KEY = 'nehiitrade_font_v1';
+const FONTS = [
+  {
+    id: 'default',
+    name: 'Уран зохиолын',
+    desc: 'Newsreader (гарчиг) + IBM Plex Sans (эх бичвэр) — одоогийн фонт.',
+    heading: "'Newsreader',serif",
+    body: "'IBM Plex Sans',sans-serif"
+  },
+  {
+    id: 'reading',
+    name: 'Дэлгэцэд ээлтэй',
+    desc: 'Merriweather (гарчиг) + Noto Sans (эх бичвэр) — монгол кирилл (Ү/ү) дэмжлэг сайтай.',
+    heading: "'Merriweather',serif",
+    body: "'Noto Sans',sans-serif"
+  }
+];
+function getCurrentFont(){
+  try { return localStorage.getItem(FONT_KEY) || 'default'; } catch(e){ return 'default'; }
+}
+function applyFont(id){
+  if (id === 'default') document.documentElement.removeAttribute('data-font');
+  else document.documentElement.setAttribute('data-font', id);
+  try { localStorage.setItem(FONT_KEY, id); } catch(e){}
+}
 document.getElementById('saveNextOrderNoBtn').addEventListener('click', () => {
   const input = document.getElementById('nextOrderNoInput');
   const val = Number(input.value);
@@ -1813,6 +1860,25 @@ function renderSettings(){
       toast('Загвар солигдлоо', 'ok');
     });
   });
+
+  const fontGrid = document.getElementById('fontGrid');
+  if (fontGrid) {
+    const currentFont = getCurrentFont();
+    fontGrid.innerHTML = FONTS.map(f => `
+      <button type="button" class="theme-card${f.id===currentFont?' selected':''}" data-font-id="${esc(f.id)}">
+        <div class="tname" style="font-family:${f.heading};font-size:17px;margin-bottom:4px;">Аа Бб Вв — ${esc(f.name)}</div>
+        <div class="tdesc" style="font-family:${f.body};">${esc(f.desc)}</div>
+        <div class="tcheck">${f.id===currentFont?'✓ Идэвхтэй':''}</div>
+      </button>`).join('');
+    fontGrid.querySelectorAll('.theme-card').forEach(card => {
+      card.addEventListener('click', () => {
+        applyFont(card.dataset.fontId);
+        renderSettings();
+        toast('Фонт солигдлоо', 'ok');
+      });
+    });
+  }
+
   const nextNoInput = document.getElementById('nextOrderNoInput');
   if (nextNoInput && document.activeElement !== nextNoInput) {
     nextNoInput.value = data.nextOrderNo || 1;
@@ -1822,6 +1888,7 @@ function renderSettings(){
 /* ---------------- Auth ---------------- */
 window.addEventListener('load', () => {
   applyTheme(getCurrentTheme());
+  applyFont(getCurrentFont());
   // localStorage.getItem нь зарим орчинд (private mode, storage хаагдсан,
   // browser тохиргоо) SecurityError шидэж болзошгүй тул try/catch-гүй бол
   // апп эхлэлдээ л цохигдоно. Уншиж чадахгүй бол зүгээр л хоосноос эхэлнэ.
