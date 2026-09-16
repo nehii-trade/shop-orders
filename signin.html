@@ -345,26 +345,38 @@ nav.navlist button.active{background:var(--saddle);color:var(--white);}
 /* cards / stats */
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:28px;}
 .stat-card{
-  background:var(--paper);border:1px solid var(--line);
+  background:var(--paper);border:1px solid var(--line);border-top:3px solid var(--line);
   padding:18px 20px;
 }
-.stat-card .lbl{font-size:12px;color:var(--muted);margin-bottom:8px;}
+.stat-card .lbl{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:8px;}
+.stat-icon{font-size:13px;}
 .stat-card .val{font-family:'Newsreader',serif;font-size:30px;font-weight:600;}
 .stat-card .val small{font-size:15px;font-weight:500;color:var(--muted);}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px;min-height:14px;}
 .kpi-delta{font-size:12px;margin-top:6px;font-weight:600;}
 .kpi-delta.up{color:var(--moss);}
 .kpi-delta.down{color:var(--brick);}
+.stat-card-click{cursor:pointer;transition:box-shadow .15s;}
+.stat-card-click:hover{box-shadow:0 2px 10px rgba(0,0,0,.1);}
 
 .insight-row{display:flex;align-items:flex-start;gap:10px;padding:10px 20px;border-bottom:1px solid var(--line);font-size:13.5px;}
 .insight-row:last-child{border-bottom:none;}
 .insight-icon{flex-shrink:0;}
+.insight-body{flex:1;min-width:0;}
+.insight-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;opacity:.7;margin-bottom:2px;}
+.insight-text{line-height:1.45;}
+.insight-action{flex-shrink:0;align-self:center;background:none;border:1px solid var(--line);border-radius:var(--radius);padding:5px 11px;font-size:12px;font-family:inherit;cursor:pointer;color:var(--ink);white-space:nowrap;}
+.insight-action:hover{background:var(--white);}
 .insight-warn{background:var(--brick-dim);}
+.insight-attention{background:var(--amber-dim);}
 .insight-good{background:var(--moss-dim);}
 .insight-info{background:var(--stone-dim);}
 
 .inactive-shop-row td{vertical-align:middle;}
 
 .pipe-row{display:flex;align-items:center;gap:12px;padding:8px 20px;}
+.pipe-row-click{cursor:pointer;border-radius:var(--radius);transition:background .12s;}
+.pipe-row-click:hover{background:var(--stone-dim);}
 .pipe-label{width:112px;flex-shrink:0;}
 .pipe-bar-wrap{flex:1;background:var(--stone-dim);height:14px;border-radius:var(--radius);overflow:hidden;}
 .pipe-bar{height:100%;}
@@ -601,6 +613,8 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
   .spark-chart{width:100%;flex-basis:100%;}
   .rlist-row{flex-wrap:wrap;}
   .aimag-name{width:82px;font-size:12px;}
+  .insight-row{flex-wrap:wrap;}
+  .insight-action{margin-left:30px;}
 }
 @page{ margin:14mm 14mm; }
 @media print {
@@ -783,12 +797,49 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 
       <!-- DASHBOARD -->
       <section class="view active" id="view-dashboard">
+        <div class="panel" id="todaySummaryPanel" style="margin-bottom:20px;background:var(--stone-dim);border:none;">
+          <div style="padding:16px 20px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px;">Өнөөдрийн тойм</div>
+            <div id="todaySummaryText" style="font-size:14.5px;line-height:1.6;"></div>
+            <div id="todaySummaryActions" style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;"></div>
+          </div>
+        </div>
+        <div class="toolbar-row" style="margin-bottom:20px;justify-content:flex-end;">
+          <button type="button" class="btn secondary" id="qaAddOrder">+ Захиалга</button>
+          <button type="button" class="btn secondary" id="qaAddShop">+ Дэлгүүр</button>
+          <button type="button" class="btn secondary" id="qaAddProduct">+ Бүтээгдэхүүн</button>
+          <button type="button" class="btn secondary" data-goto-view="reports">📊 Тайлан</button>
+        </div>
         <div class="stat-grid">
-          <div class="stat-card"><div class="lbl">Идэвхтэй дэлгүүр</div><div class="val" id="statShops">0</div></div>
-          <div class="stat-card"><div class="lbl">Идэвхтэй бараа</div><div class="val" id="statProducts">0</div></div>
-          <div class="stat-card"><div class="lbl">Энэ сарын захиалга</div><div class="val" id="statOrders">0</div><div class="kpi-delta" id="statOrdersDelta"></div></div>
-          <div class="stat-card"><div class="lbl">Хүргэлтэд гараагүй</div><div class="val" id="statPending">0</div></div>
-          <div class="stat-card"><div class="lbl">Энэ сарын борлуулалт</div><div class="val" id="statRevenue">0<small> ₮</small></div><div class="kpi-delta" id="statRevenueDelta"></div></div>
+          <div class="stat-card" style="border-top-color:var(--saddle);">
+            <div class="lbl"><span class="stat-icon">🏪</span>Идэвхтэй дэлгүүр</div>
+            <div class="val" id="statShops">0</div>
+            <div class="stat-sub" id="statShopsNew"></div>
+          </div>
+          <div class="stat-card" style="border-top-color:var(--amber);">
+            <div class="lbl"><span class="stat-icon">📦</span>Идэвхтэй бараа</div>
+            <div class="val" id="statProducts">0</div>
+            <div class="stat-sub" id="statProductsNew"></div>
+          </div>
+          <div class="stat-card" style="border-top-color:var(--moss);">
+            <div class="lbl"><span class="stat-icon">🛒</span>Энэ сарын захиалга</div>
+            <div class="val" id="statOrders">0</div>
+            <div class="kpi-delta" id="statOrdersDelta"></div>
+          </div>
+          <div class="stat-card" style="border-top-color:var(--line);">
+            <div class="lbl"><span class="stat-icon">🔄</span>Боловсруулагдаж буй</div>
+            <div class="val" id="statPending">0</div>
+            <div class="stat-sub">Шинэ + батлагдсан</div>
+          </div>
+          <div class="stat-card stat-card-click" style="border-top-color:var(--brick);" data-goto-view="orders" data-goto-filter-id="orderStatusFilter" data-goto-filter-val="new" title="Дарж шүүх">
+            <div class="lbl"><span class="stat-icon">⚠</span>Шинэ / баталгаажаагүй</div>
+            <div class="val" id="statNew">0</div>
+          </div>
+          <div class="stat-card" style="border-top-color:var(--saddle-dim);">
+            <div class="lbl"><span class="stat-icon">💰</span>Энэ сарын борлуулалт</div>
+            <div class="val" id="statRevenue">0<small> ₮</small></div>
+            <div class="kpi-delta" id="statRevenueDelta"></div>
+          </div>
         </div>
         <div class="panel" style="margin-bottom:20px;">
           <div class="panel-head"><h2>📈 Борлуулалтын хандлага</h2><span style="font-size:12px;color:var(--muted);">Сүүлийн 30 хоног</span></div>
@@ -2244,18 +2295,45 @@ function closeSidebar(){
 document.getElementById('menuToggleBtn').addEventListener('click', openSidebar);
 document.getElementById('sidebarBackdrop').addEventListener('click', closeSidebar);
 
+// v: очих view-ийн нэр. opts.filters: {elementId: утга} — тухайн view руу шилжихийн
+// өмнө тохирох filter select/input-д утга тохируулна (жиш нь Захиалгын статусаар шүүх).
+function goToView(v, opts){
+  document.querySelectorAll('nav.navlist button').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  document.querySelectorAll('.view').forEach(sec => sec.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.getElementById('viewTitle').textContent = VIEW_META[v].title;
+  document.getElementById('viewSub').textContent = VIEW_META[v].sub;
+  if (opts && opts.filters) {
+    Object.entries(opts.filters).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    });
+  }
+  render();
+  closeSidebar();
+}
 document.querySelectorAll('nav.navlist button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('nav.navlist button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const v = btn.dataset.view;
-    document.querySelectorAll('.view').forEach(sec => sec.classList.remove('active'));
-    document.getElementById('view-'+v).classList.add('active');
-    document.getElementById('viewTitle').textContent = VIEW_META[v].title;
-    document.getElementById('viewSub').textContent = VIEW_META[v].sub;
-    render();
-    closeSidebar();
-  });
+  btn.addEventListener('click', () => goToView(btn.dataset.view));
+});
+
+// Dashboard-ийн "Анхаарах зүйлс", KPI карт, Pipeline мөр, Quick Actions зэрэгт
+// ашиглагдах [data-goto-view]/[data-scroll-to] товчнуудыг event delegation-ээр
+// нэг л удаа холбоно (project-ийн дүрмийн дагуу onclick-д шууд утга оруулахгүй,
+// data-attribute ашиглав).
+document.querySelector('.content').addEventListener('click', (e) => {
+  const gotoBtn = e.target.closest('[data-goto-view]');
+  if (gotoBtn) {
+    const view = gotoBtn.dataset.gotoView;
+    const filterId = gotoBtn.dataset.gotoFilterId;
+    const filterVal = gotoBtn.dataset.gotoFilterVal;
+    goToView(view, filterId ? { filters: { [filterId]: filterVal } } : undefined);
+    return;
+  }
+  const scrollBtn = e.target.closest('[data-scroll-to]');
+  if (scrollBtn) {
+    const el = document.getElementById(scrollBtn.dataset.scrollTo);
+    if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  }
 });
 
 /* ---------------- Render ---------------- */
@@ -2317,7 +2395,8 @@ function computeSmartInsights(activeOrders){
   const insights = [];
   const newCount = activeOrders.filter(o=>o.status==='new').length;
   if (newCount > 0) {
-    insights.push({ icon:'⚠', kind:'warn', text: `${newCount} шинэ захиалга баталгаажаагүй байна.` });
+    insights.push({ icon:'⚠', kind:'warn', tag:'Яаралтай', text: `${newCount} шинэ захиалга баталгаажаагүй байна.`,
+      action: { view:'orders', filterId:'orderStatusFilter', filterVal:'new' } });
   }
 
   const now = new Date();
@@ -2332,7 +2411,8 @@ function computeSmartInsights(activeOrders){
     if (Math.abs(pct) >= 5) {
       insights.push({
         icon: pct>=0 ? '📈' : '📉',
-        kind: pct>=0 ? 'good' : 'warn',
+        kind: pct>=0 ? 'good' : 'attention',
+        tag: pct>=0 ? 'Сайн мэдээ' : 'Анхаарах',
         text: `Энэ сарын борлуулалт өмнөх сараас ${Math.abs(pct).toFixed(1)}% ${pct>=0?'өссөн':'буурсан'} байна.`
       });
     }
@@ -2353,7 +2433,8 @@ function computeSmartInsights(activeOrders){
     const [topAimag, topAmt] = aimagEntries[0];
     const share = (topAmt/totalRev90)*100;
     if (share >= 40) {
-      insights.push({ icon:'🏆', kind:'info', text: `"${topAimag}" аймаг сүүлийн 90 хоногийн борлуулалтын ${share.toFixed(0)}%-ийг бүрдүүлж байна.` });
+      insights.push({ icon:'🏆', kind:'info', tag:'Мэдээлэл', text: `"${topAimag}" аймаг сүүлийн 90 хоногийн борлуулалтын ${share.toFixed(0)}%-ийг бүрдүүлж байна.`,
+        action: { view:'reports', filterId:'reportAimagFilter', filterVal:topAimag } });
     }
   }
 
@@ -2378,7 +2459,7 @@ function computeSmartInsights(activeOrders){
   });
   const topSize = Object.entries(sizeCur).sort((a,b)=>b[1]-a[1])[0];
   if (topSize) {
-    insights.push({ icon:'📦', kind:'info', text: `"${topSize[0]}" размерын эрэлт сүүлийн 30 хоногт хамгийн өндөр байна (${topSize[1]} ширхэг).` });
+    insights.push({ icon:'📦', kind:'info', tag:'Мэдээлэл', text: `"${topSize[0]}" размерын эрэлт сүүлийн 30 хоногт хамгийн өндөр байна (${topSize[1]} ширхэг).` });
   }
 
   let worstDrop = null;
@@ -2391,7 +2472,8 @@ function computeSmartInsights(activeOrders){
     }
   });
   if (worstDrop) {
-    insights.push({ icon:'⚠', kind:'warn', text: `"${worstDrop.name}" бүтээгдэхүүний захиалга сүүлийн 30 хоногт ${Math.abs(worstDrop.pct).toFixed(0)}% буурсан байна.` });
+    insights.push({ icon:'⚠', kind:'attention', tag:'Анхаарах', text: `"${worstDrop.name}" бүтээгдэхүүний захиалга сүүлийн 30 хоногт ${Math.abs(worstDrop.pct).toFixed(0)}% буурсан байна.`,
+      action: { view:'products', filterId:'productSearch', filterVal: worstDrop.name } });
   }
 
   return insights;
@@ -2402,7 +2484,14 @@ function renderSmartInsights(activeOrders){
   const body = document.getElementById('smartInsightsBody');
   if (!insights.length) { panel.style.display = 'none'; return; }
   panel.style.display = '';
-  body.innerHTML = insights.map(i => `<div class="insight-row insight-${i.kind}"><span class="insight-icon">${i.icon}</span><span>${esc(i.text)}</span></div>`).join('');
+  body.innerHTML = insights.map(i => `<div class="insight-row insight-${i.kind}">
+    <span class="insight-icon">${i.icon}</span>
+    <div class="insight-body">
+      <div class="insight-tag">${esc(i.tag||'')}</div>
+      <div class="insight-text">${esc(i.text)}</div>
+    </div>
+    ${i.action ? `<button type="button" class="insight-action" data-goto-view="${esc(i.action.view)}" data-goto-filter-id="${esc(i.action.filterId)}" data-goto-filter-val="${esc(i.action.filterVal)}">Харах →</button>` : ''}
+  </div>`).join('');
 }
 function renderPipelineSnapshot(activeOrders){
   const order = ['new','confirmed','shipping','done','cancelled'];
@@ -2412,7 +2501,7 @@ function renderPipelineSnapshot(activeOrders){
   const host = document.getElementById('pipelineSnapshotBody');
   host.innerHTML = order.map(k => {
     const pct = Math.max(counts[k] ? Math.round(counts[k]/max*100) : 0, counts[k] ? 3 : 0);
-    return `<div class="pipe-row">
+    return `<div class="pipe-row pipe-row-click" data-goto-view="orders" data-goto-filter-id="orderStatusFilter" data-goto-filter-val="${k}" title="Дарж шүүх">
       <div class="pipe-label"><span class="badge ${STATUS_CLASS[k]}">${STATUS_LABEL[k]}</span></div>
       <div class="pipe-bar-wrap"><div class="pipe-bar ${k}" style="width:${pct}%;"></div></div>
       <div class="pipe-count">${counts[k]}</div>
@@ -2446,6 +2535,41 @@ function renderInactiveShops(){
     <td style="text-align:right;white-space:nowrap;"><button class="rowbtn rowbtn-view" onclick="viewShop('${escJsArg(x.shop.id)}')">Харах</button></td>
   </tr>`).join('');
 }
+// "Өнөөдрийн тойм" — dashboard дээрх бусад тооцооллуудаас (шинэ захиалга,
+// борлуулалтын чиг хандлага, идэвхгүй дэлгүүр) автоматаар нэг догол мөр
+// дүгнэлт угсарна. AI ашигладаггүй, зөвхөн JS template.
+function renderTodaySummary(activeOrders){
+  const now = new Date();
+  const curKey = getMonthKey(now);
+  const prevKey = getMonthKey(new Date(now.getFullYear(), now.getMonth()-1, 1));
+  const curMonthOrders = activeOrders.filter(o=>(o.orderDate||'').slice(0,7)===curKey);
+  const prevMonthOrders = activeOrders.filter(o=>(o.orderDate||'').slice(0,7)===prevKey);
+  const curRev = curMonthOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
+  const prevRev = prevMonthOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
+  const newCount = activeOrders.filter(o=>o.status==='new').length;
+  const inactiveCount = computeInactiveShops(30).length;
+
+  let trendText = '';
+  if (prevRev > 0) {
+    const pct = ((curRev-prevRev)/prevRev)*100;
+    if (Math.abs(pct) >= 1) trendText = ` бөгөөд борлуулалт өмнөх сараас ${Math.abs(pct).toFixed(1)}% ${pct>=0?'өссөн':'буурсан'} байна`;
+  }
+  let text = `Энэ сард <strong>${curMonthOrders.length}</strong> захиалга бүртгэгдсэн${trendText}.`;
+  const actions = [];
+  if (newCount > 0) {
+    text += ` <strong>${newCount}</strong> захиалга баталгаажихыг хүлээж байна.`;
+    actions.push(`<button type="button" class="btn secondary" data-goto-view="orders" data-goto-filter-id="orderStatusFilter" data-goto-filter-val="new">Захиалга шалгах</button>`);
+  }
+  if (inactiveCount > 0) {
+    text += ` Идэвхгүй болсон <strong>${inactiveCount}</strong> дэлгүүр байна.`;
+    actions.push(`<button type="button" class="btn secondary" data-scroll-to="inactiveShopsPanel">Идэвхгүй дэлгүүр харах</button>`);
+  }
+  if (newCount === 0 && inactiveCount === 0) {
+    text += ' Онцгой анхаарах зүйл алга — бүх зүйл хэвийн байна 👍';
+  }
+  document.getElementById('todaySummaryText').innerHTML = text;
+  document.getElementById('todaySummaryActions').innerHTML = actions.join('');
+}
 function renderDashboard(){
   const activeShops = data.shops.filter(s=>!s.archived);
   const activeProducts = data.products.filter(p=>!p.archived);
@@ -2461,10 +2585,24 @@ function renderDashboard(){
   document.getElementById('statOrders').textContent = curMonthOrders.length;
   renderKpiDelta('statOrdersDelta', curMonthOrders.length, prevMonthOrders.length);
 
-  // "Хүргэлтэд гараагүй" = шинэ (баталгаажаагүй) + батлагдсан (хараахан хүргэлтэд гараагүй)
+  // "Боловсруулагдаж буй" = шинэ (баталгаажаагүй) + батлагдсан (хараахан хүргэлтэд гараагүй)
   // Энд 'shipping'/'done'/'cancelled' орохгүй — тэдгээр аль хэдийн хөдөлсөн/дууссан.
   const pending = activeOrders.filter(o => o.status === 'new' || o.status === 'confirmed').length;
   document.getElementById('statPending').textContent = pending;
+
+  // "Шинэ / баталгаажаагүй" KPI — pending-ийн доторх хамгийн яаралтай хэсгийг
+  // тусад нь ялган харуулна (Анхаарах зүйлс-ийн шинэ захиалгын insight-той тохирно).
+  const newOnlyCount = activeOrders.filter(o => o.status === 'new').length;
+  document.getElementById('statNew').textContent = newOnlyCount;
+
+  // Идэвхтэй дэлгүүр/бараа карт дор "энэ сард шинээр нэмэгдсэн" тоог харуулна
+  // (createdAt талбар дээр тулгуурлана — mergeById-ийн Last-Writer-Wins-д нөлөөлөхгүй).
+  const shopsNewThisMonth = activeShops.filter(x => x.createdAt && getMonthKey(new Date(x.createdAt)) === curKey).length;
+  const productsNewThisMonth = activeProducts.filter(x => x.createdAt && getMonthKey(new Date(x.createdAt)) === curKey).length;
+  document.getElementById('statShopsNew').textContent = shopsNewThisMonth > 0 ? `+${shopsNewThisMonth} энэ сард шинэ` : '';
+  document.getElementById('statProductsNew').textContent = productsNewThisMonth > 0 ? `+${productsNewThisMonth} энэ сард шинэ` : '';
+
+  renderTodaySummary(activeOrders);
 
   const curRevenue = curMonthOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
   const prevRevenue = prevMonthOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
@@ -4357,6 +4495,12 @@ document.getElementById('addItemRowBtn').addEventListener('click', () => {
   toast(`${addedCount} размер захиалгад нэмэгдлээ${skippedCount ? ' ('+skippedCount+' алгассан)' : ''}`, 'ok');
   resetItemPicker();
 });
+
+// Dashboard-ийн Quick Actions — Дэлгүүр/Бараа/Захиалга view-үүдийн "+" товчны
+// modal нээх логикийг дахин бичихгүйгээр, шууд дуудна (click() дамжуулна).
+document.getElementById('qaAddShop').addEventListener('click', () => document.getElementById('addShopBtn').click());
+document.getElementById('qaAddProduct').addEventListener('click', () => document.getElementById('addProductBtn').click());
+document.getElementById('qaAddOrder').addEventListener('click', () => document.getElementById('addOrderBtn').click());
 
 document.getElementById('addOrderBtn').addEventListener('click', () => {
   if (!data.shops.some(s=>!s.archived) || !data.products.some(p=>!p.archived)) {
