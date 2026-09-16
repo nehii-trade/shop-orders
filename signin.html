@@ -1377,7 +1377,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
       <div class="field">
         <label>Захиалгын мөрүүд</label>
         <div style="overflow-x:auto;border:1px solid var(--line);">
-          <table>
+          <table class="mobile-card-table">
             <thead><tr><th>Бараа</th><th>Размер</th><th>Тоо</th><th>Үнэ</th><th>Дүн</th><th></th></tr></thead>
             <tbody id="orderItemsBody"></tbody>
           </table>
@@ -4518,11 +4518,11 @@ function renderOrderItemsTable(){
         const p = data.products.find(x=>x.id===it.productId);
         const nameCell = g.indices.length > 1 ? '' : (p ? esc(p.name) : (it.productName ? esc(it.productName) : 'Устсан бараа'));
         return `<tr>
-          <td>${nameCell}</td>
-          <td>${esc(it.size||'—')}</td>
-          <td><input type="number" min="1" value="${it.qty}" style="width:60px;padding:5px;border:1px solid var(--line);" onchange="updateItemQty(${idx}, this.value)"></td>
-          <td><input type="number" min="0" value="${it.unitPrice}" style="width:80px;padding:5px;border:1px solid var(--line);" onchange="updateItemPrice(${idx}, this.value)"></td>
-          <td>${money(it.total)}</td>
+          <td data-label="Бараа">${nameCell}</td>
+          <td data-label="Размер">${esc(it.size||'—')}</td>
+          <td data-label="Тоо"><input type="number" min="1" value="${it.qty}" style="width:60px;padding:5px;border:1px solid var(--line);" onchange="updateItemQty(${idx}, this.value)"></td>
+          <td data-label="Үнэ"><input type="number" min="0" value="${it.unitPrice}" style="width:80px;padding:5px;border:1px solid var(--line);" onchange="updateItemPrice(${idx}, this.value)"></td>
+          <td data-label="Дүн">${money(it.total)}</td>
           <td><button type="button" class="rowbtn" onclick="removeOrderItem(${idx})">✕</button></td>
         </tr>`;
       }).join('');
@@ -4615,11 +4615,11 @@ function viewOrder(id){
     const p = data.products.find(x=>x.id===it.productId);
     const name = p ? p.name : (it.productName || 'Устсан бараа');
     return `<tr>
-      <td>${esc(name)}</td>
-      <td>${esc(it.size||'—')}</td>
-      <td class="num">${it.qty}</td>
-      <td class="num">${money(it.unitPrice)} ₮</td>
-      <td class="num">${money(it.total)} ₮</td>
+      <td data-label="Нэр">${esc(name)}</td>
+      <td data-label="Размер">${esc(it.size||'—')}</td>
+      <td class="num" data-label="Тоо">${it.qty}</td>
+      <td class="num" data-label="Нэгж үнэ">${money(it.unitPrice)} ₮</td>
+      <td class="num" data-label="Дүн">${money(it.total)} ₮</td>
     </tr>`;
   }).join('');
   document.getElementById('orderViewBody').innerHTML = `
@@ -4636,7 +4636,7 @@ function viewOrder(id){
       <div><div class="ov-label">Нийт дүн</div><div class="ov-val" style="font-weight:600;font-size:17px;">${money(o.total)} ₮</div></div>
     </div>
     <div class="ov-label" style="margin-top:6px;">Бараа</div>
-    <table class="aimag-table" style="margin-bottom:14px;">
+    <table class="aimag-table mobile-card-table" style="margin-bottom:14px;">
       <thead><tr><th>Нэр</th><th>Размер</th><th class="num">Тоо</th><th class="num">Нэгж үнэ</th><th class="num">Дүн</th></tr></thead>
       <tbody>${itemsHtml || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:14px;">Бараа алга</td></tr>'}</tbody>
     </table>
