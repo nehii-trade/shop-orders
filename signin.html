@@ -516,9 +516,10 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 .report-kpi .rk-label{font-size:12px;color:var(--muted);margin-bottom:5px;}
 .report-kpi .rk-val{font-family:var(--font-heading);font-size:22px;font-weight:600;overflow-wrap:anywhere;}
 .rc-chart{display:flex;align-items:flex-end;gap:5px;height:160px;padding:10px 4px 0;overflow-x:auto;}
-.rc-bar-wrap{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:26px;flex:1;}
+.rc-bar-wrap{display:flex;flex-direction:column;align-items:center;height:100%;min-width:26px;flex:1;}
+.rc-bar-track{width:100%;height:calc(100% - 20px);display:flex;align-items:flex-end;flex-shrink:0;}
 .rc-bar{width:100%;background:var(--saddle);border-radius:2px 2px 0 0;min-height:2px;}
-.rc-label{font-size:10px;color:var(--muted);margin-top:4px;white-space:nowrap;}
+.rc-label{font-size:10px;line-height:14px;height:14px;margin-top:6px;color:var(--muted);white-space:nowrap;overflow:hidden;flex-shrink:0;}
 .rlist-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);background:var(--white);color:var(--white-text);margin-bottom:6px;font-size:13.5px;}
 .badge.abc-a{background:var(--moss-dim);color:var(--moss);}
 .badge.abc-b{background:var(--amber-dim);color:var(--amber);}
@@ -3138,7 +3139,7 @@ function renderSalesTrendChart(hostId, orders){
     const pct = Math.max(2, Math.round(groups[k]/max*100));
     const label = byMonth ? k : k.slice(5);
     return `<div class="rc-bar-wrap" title="${esc(k)}: ${money(groups[k])} ₮">
-      <div class="rc-bar" style="height:${pct}%;"></div>
+      <div class="rc-bar-track"><div class="rc-bar" style="height:${pct}%;"></div></div>
       <div class="rc-label">${esc(label)}</div>
     </div>`;
   }).join('')}</div>`;
