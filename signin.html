@@ -3531,10 +3531,9 @@ function restoreAIInsightFromCache(){
   }
 }
 function printReportSummary(){
-  if (!lastAIInsightText) {
-    toast('Эхлээд "Дүгнэлт гаргах" товчийг дарна уу', 'err');
-    return;
-  }
+  // AI дүгнэлт нь ТУСДАА, заавал биш нэмэлт хэсэг — түүнийг үүсгээгүй ч
+  // хэрэглэгч KPI/Шилдэг бараа/Шилдэг дэлгүүр/Аймгийн хүснэгттэй PDF-ээ
+  // хэвлэх боломжтой байх ёстой (өмнө нь энд буцаад AI-г албадаж байсан).
   const ctx = buildReportAIContext();
   const periodLabel = document.getElementById('reportDateRange').selectedOptions[0].textContent;
 
@@ -3606,8 +3605,8 @@ function printReportSummary(){
     <div class="pa-sec-title">Аймгаар нэгтгэсэн</div>
     <table><thead><tr><th>Аймаг</th><th class="num">Захиалга</th><th class="num">Дүн</th></tr></thead><tbody>${provinceHtml}</tbody></table>
 
-    <div class="pa-sec-title">Нэгтгэл тайлангийн дүгнэлт</div>
-    <div class="pa-conclusion">${mdLiteToHtml(lastAIInsightText)}</div>
+    ${lastAIInsightText ? `<div class="pa-sec-title">Нэгтгэл тайлангийн дүгнэлт</div>
+    <div class="pa-conclusion">${mdLiteToHtml(lastAIInsightText)}</div>` : ''}
 
     <div class="pa-sign-title">Баталгаажуулалт</div>
     <div class="pa-sign">
@@ -4854,19 +4853,7 @@ function csvField(v){
 }
 document.getElementById('exportCsvBtn').addEventListener('click', () => {
   const orders = getReportFilteredOrders();
-  const map = {};
-  data.shops.forEach(s => {
-    const key = s.aimag || 'Тодорхойгүй';
-    if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
-    map[key].shops.add(s.id);
-  });
-  orders.forEach(o => {
-    const shop = data.shops.find(s=>s.id===o.shopId);
-    const key = shop ? (shop.aimag || 'Тодорхойгүй') : (o.shopAimag || 'Тодорхойгүй');
-    if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
-    map[key].orders += 1;
-    if (o.status !== 'cancelled') map[key].total += Number(o.total||0);
-  });
+  const map = computeAimagBreakdown(orders);
   let csv = 'Аймаг,Дэлгүүр,Захиалга,Нийт дүн\n';
   Object.keys(map).sort().forEach(k => {
     csv += `${csvField(k)},${map[k].shops.size},${map[k].orders},${map[k].total}\n`;
