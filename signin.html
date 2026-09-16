@@ -9,9 +9,7 @@
   зөвшөөрөл нэмэхээ бүү мартаарай (PROJECT_KNOWLEDGE_TEMPLATE.md, Хэсэг 4).
     - script-src:  Google Identity Services + jsDelivr (xlsx, SRI-тэй) + inline script
                     (энэ файл build/nonce системгүй static HTML тул 'unsafe-inline' шаардлагатай)
-    - style-src:   Google Fonts stylesheet + Google Identity Services (GSI)-ийн
-                    өөрийн ачаалдаг gsi/style stylesheet + inline style tag/style=""
-                    attribute-ууд (мөн адил шалтгаанаар)
+    - style-src:   Google Fonts stylesheet + inline style tag/style="" attribute-ууд (мөн адил шалтгаанаар)
     - font-src:    Google Fonts-ийн фонт файлууд
     - img-src:     Google профайл зураг (userinfo.picture, lh3.googleusercontent.com), data: (favicon)
     - connect-src: Google Drive/OAuth API + AI Worker — ФЭТЧ хийж болох ЦОРЫН ГАНЦ домэйнууд.
@@ -23,7 +21,7 @@
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
   script-src 'self' 'unsafe-inline' https://accounts.google.com https://cdn.jsdelivr.net;
-  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src 'self' https://fonts.gstatic.com;
   img-src 'self' data: https://*.googleusercontent.com;
   connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com https://nehii-ai-worker.munhtsetsegdn.workers.dev;
@@ -388,6 +386,8 @@ nav.navlist button.active{background:var(--saddle);color:var(--white);}
   padding:8px 12px;border:1px solid var(--line);background:var(--white);color:var(--white-text);
   font-size:13px;min-width:200px;border-radius:var(--radius);
 }
+.toolbar-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.mobile-select-all{display:none;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;}
 
 table{width:100%;border-collapse:collapse;}
 th{
@@ -470,6 +470,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 /* reports */
 .aimag-table td.num, .aimag-table th.num{text-align:right;}
 .report-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:20px;}
+.report-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .report-kpi{border:1px solid var(--line);background:var(--white);color:var(--white-text);padding:14px 16px;border-radius:var(--radius);}
 .report-kpi .rk-label{font-size:12px;color:var(--muted);margin-bottom:5px;}
 .report-kpi .rk-val{font-family:'Newsreader',serif;font-size:22px;font-weight:600;}
@@ -488,7 +489,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 .badge.seg-regular{background:var(--confirmed-bg);color:var(--confirmed-text);}
 
 .spark-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
-.spark-label{width:160px;flex-shrink:0;font-size:12.5px;display:flex;align-items:center;gap:6px;}
+.spark-label{width:160px;flex-shrink:0;font-size:12.5px;display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .spark-swatch{width:10px;height:10px;border-radius:2px;display:inline-block;flex-shrink:0;}
 .spark-chart{flex:1;display:flex;align-items:flex-end;gap:2px;height:38px;}
 .spark-bar-wrap{flex:1;height:100%;display:flex;align-items:flex-end;}
@@ -497,7 +498,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 .spark-c1, .spark-swatch.spark-c1{background:var(--amber);}
 .spark-c2, .spark-swatch.spark-c2{background:var(--moss);}
 .rlist-rank{width:18px;color:var(--muted);font-weight:600;flex:none;}
-.rlist-name{flex:1;}
+.rlist-name{flex:1;min-width:0;overflow-wrap:anywhere;}
 .rlist-val{font-weight:600;white-space:nowrap;}
 .export-row{display:flex;gap:10px;}
 
@@ -552,13 +553,46 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
   .content{padding:20px 16px 40px;}
   .topbar{padding:16px;}
   .modal{max-height:94vh;}
-  .products-table thead{display:none;}
-  .products-table, .products-table tbody, .products-table tr, .products-table td{display:block;width:100%;}
-  .products-table tr{border:1px solid var(--line);margin-bottom:10px;padding:10px 12px;background:var(--white);border-radius:var(--radius);}
-  .products-table td{border:none;padding:5px 0;display:flex;justify-content:space-between;gap:10px;text-align:right;}
-  .products-table td::before{content:attr(data-label);font-weight:600;color:var(--muted);font-size:12px;text-align:left;flex:none;}
-  .products-table td:last-child{justify-content:flex-end;}
-  .products-table td:last-child::before{content:none;}
+
+  /* Хүснэгт → карт хэлбэр. Өмнө нь зөвхөн .products-table-д хамаарч байсныг
+     .mobile-card-table классаар Дэлгүүр/Захиалга/Тайлан/RFM/Dashboard-ийн
+     бүх хүснэгтэд ерөнхийд нь ашиглах боломжтой болгов. */
+  .products-table thead, .mobile-card-table thead{display:none;}
+  .products-table, .products-table tbody, .products-table tr, .products-table td,
+  .mobile-card-table, .mobile-card-table tbody, .mobile-card-table tr, .mobile-card-table td{display:block;width:100%;}
+  .products-table tr, .mobile-card-table tr{border:1px solid var(--line);margin-bottom:10px;padding:10px 12px;background:var(--white);border-radius:var(--radius);}
+  .products-table td, .mobile-card-table td{border:none;padding:5px 0;display:flex;justify-content:space-between;gap:10px;text-align:right;}
+  .products-table td::before, .mobile-card-table td::before{content:attr(data-label);font-weight:600;color:var(--muted);font-size:12px;text-align:left;flex:none;}
+  .products-table td:last-child, .mobile-card-table td:last-child{justify-content:flex-end;}
+  .products-table td:last-child::before, .mobile-card-table td:last-child::before{content:none;}
+
+  /* Хайлт/шүүлтүүрийн мөр (toolbar) — mobile дээр босоо дараалалтай, бүрэн
+     өргөнтэй болгоно (Дэлгүүр toolbar-д flex-wrap дутуу байсан алдааг мөн
+     үүгээр ерөнхийд нь засав). */
+  .toolbar-row{flex-direction:column;align-items:stretch;}
+  .toolbar-row .search, .toolbar-row .btn, .toolbar-row label{width:100%;min-width:0;}
+  .toolbar-row .btn{justify-content:center;}
+
+  /* Утсан дээр thead (тиймээс select-all чекбокс) нуугддаг тул toolbar-д
+     дахин харагдах "Бүгдийг сонгох" сонголт нэмэв. */
+  .mobile-select-all{display:flex;}
+
+  .bulk-bar{flex-wrap:wrap;}
+
+  /* Тайлангийн 2 баганат grid-үүд (Шилдэг бараа/дэлгүүр, ABC/RFM) mobile
+     дээр 1 багана болно. */
+  .report-2col{grid-template-columns:1fr;}
+
+  #productsPagination{flex-wrap:wrap;justify-content:center;}
+
+  .modal-foot{flex-wrap:wrap;}
+  .modal-foot .btn{flex:1 1 120px;}
+}
+@media (max-width:480px){
+  .spark-row{flex-wrap:wrap;}
+  .spark-label{width:100%;white-space:normal;}
+  .spark-chart{width:100%;flex-basis:100%;}
+  .rlist-row{flex-wrap:wrap;}
 }
 @page{ margin:14mm 14mm; }
 @media print {
@@ -759,7 +793,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <div class="panel" id="inactiveShopsPanel" style="margin-bottom:20px;display:none;">
           <div class="panel-head"><h2>🕑 Идэвхгүй болсон дэлгүүрүүд</h2></div>
           <div style="overflow-x:auto;">
-          <table>
+          <table class="mobile-card-table">
             <thead><tr><th>Дэлгүүр</th><th>Аймаг</th><th>Сүүлд захиалсан</th><th>Хоног</th><th>Түүхэн дүн</th><th></th></tr></thead>
             <tbody id="inactiveShopsBody"></tbody>
           </table>
@@ -768,7 +802,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <div class="panel" id="pendingConfirmPanel" style="margin-bottom:20px;display:none;">
           <div class="panel-head"><h2>⚠ Баталгаажуулах шаардлагатай</h2></div>
           <div style="overflow-x:auto;">
-          <table>
+          <table class="mobile-card-table">
             <thead><tr><th>№</th><th>Огноо</th><th>Дэлгүүр</th><th>Дүн</th><th></th></tr></thead>
             <tbody id="pendingConfirmBody"></tbody>
           </table>
@@ -777,7 +811,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <div class="panel">
           <div class="panel-head"><h2>Сүүлийн захиалгууд</h2></div>
           <div style="overflow-x:auto;">
-          <table>
+          <table class="mobile-card-table">
             <thead><tr><th>№</th><th>Огноо</th><th>Дэлгүүр</th><th>Бүтээгдэхүүн</th><th>Тоо</th><th>Дүн</th><th>Төлөв</th></tr></thead>
             <tbody id="recentOrdersBody"></tbody>
           </table>
@@ -790,8 +824,9 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <div class="panel">
           <div class="panel-head">
             <h2>Дэлгүүрүүд</h2>
-            <div style="display:flex;gap:10px;">
+            <div class="toolbar-row">
               <input type="text" class="search" id="shopSearch" placeholder="Дэлгүүр хайх...">
+              <label class="mobile-select-all"><input type="checkbox" id="shopsSelectAllMobile"> Бүгдийг сонгох</label>
               <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;">
                 <input type="checkbox" id="shopShowArchived"> Архивласан харуулах
               </label>
@@ -807,7 +842,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             <button class="rowbtn" id="shopsBulkClearBtn">Цуцлах</button>
           </div>
           <div style="overflow-x:auto;">
-          <table>
+          <table class="mobile-card-table">
             <thead><tr><th style="width:26px;"><input type="checkbox" id="shopsSelectAll"></th><th>Нэр</th><th>Аймаг</th><th>Сум</th><th>Ангилал</th><th>Холбоо барих</th><th>Утас</th><th>Facebook</th><th></th></tr></thead>
             <tbody id="shopsBody"></tbody>
           </table>
@@ -820,9 +855,10 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <div class="panel">
           <div class="panel-head">
             <h2>Бүтээгдэхүүн</h2>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <div class="toolbar-row">
               <input type="text" class="search" id="productSearch" placeholder="Бүтээгдэхүүн хайх...">
               <select class="search" id="productCompanyFilter"><option value="">Бүх компани</option></select>
+              <label class="mobile-select-all"><input type="checkbox" id="productsSelectAllMobile"> Бүгдийг сонгох</label>
               <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);white-space:nowrap;">
                 <input type="checkbox" id="productShowArchived"> Архивласан харуулах
               </label>
@@ -852,8 +888,9 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
         <div class="panel">
           <div class="panel-head">
             <h2>Захиалгууд</h2>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <div class="toolbar-row">
               <input type="text" class="search" id="orderSearch" placeholder="Хайх (дэлгүүр, бараа, дугаар)...">
+              <label class="mobile-select-all"><input type="checkbox" id="ordersSelectAllMobile"> Бүгдийг сонгох</label>
               <select class="search" id="orderShopFilterSelect"><option value="">Бүх дэлгүүр</option></select>
               <select class="search" id="orderDateFilter">
                 <option value="all">Бүх хугацаа</option>
@@ -884,7 +921,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             <button class="rowbtn" id="ordersBulkClearBtn">Цуцлах</button>
           </div>
           <div style="overflow-x:auto;">
-          <table>
+          <table class="mobile-card-table">
             <thead><tr><th style="width:26px;"><input type="checkbox" id="ordersSelectAll"></th><th>№</th><th>Огноо</th><th>Дэлгүүр</th><th>Бараа</th><th>Тоо</th><th>Дүн</th><th>Төлөв</th><th></th></tr></thead>
             <tbody id="ordersBody"></tbody>
           </table>
@@ -903,7 +940,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             </div>
           </div>
 
-          <div style="padding:16px 20px 0;display:flex;gap:10px;flex-wrap:wrap;">
+          <div class="toolbar-row" style="padding:16px 20px 0;">
             <select class="search" id="reportDateRange">
               <option value="all">Бүх хугацаа</option>
               <option value="today">Өнөөдөр</option>
@@ -941,7 +978,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             <div id="repProductTrend"></div>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:20px;">
+          <div class="report-2col" style="padding:20px;">
             <div>
               <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Шилдэг бүтээгдэхүүн</h3>
               <div id="repTopProducts"></div>
@@ -952,7 +989,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             </div>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 20px 20px;">
+          <div class="report-2col" style="padding:0 20px 20px;">
             <div>
               <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Бүтээгдэхүүний ABC ангилал</h3>
               <div id="repAbcBody"></div>
@@ -960,7 +997,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             <div>
               <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Дэлгүүрийн сегмент (одоогийн шүүлтүүрийн хугацаанд)</h3>
               <div style="overflow-x:auto;max-height:280px;overflow-y:auto;">
-              <table class="aimag-table">
+              <table class="aimag-table mobile-card-table">
                 <thead><tr><th>Дэлгүүр</th><th>Сегмент</th><th class="num">Сүүлд (хоног)</th><th class="num">Захиалга</th><th class="num">Дүн (₮)</th></tr></thead>
                 <tbody id="repRfmBody"></tbody>
               </table>
@@ -980,7 +1017,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 
           <div style="overflow-x:auto;padding:0 20px 20px;">
             <h3 style="font-size:14px;margin-bottom:8px;color:var(--muted);">Аймгаар нэгтгэсэн</h3>
-            <table class="aimag-table">
+            <table class="aimag-table mobile-card-table">
               <thead><tr><th>Аймаг</th><th class="num">Дэлгүүр</th><th class="num">Захиалга</th><th class="num">Нийт дүн (₮)</th></tr></thead>
               <tbody id="reportsBody"></tbody>
             </table>
@@ -1455,22 +1492,31 @@ function clearBulkSelection(entity){
   bulkSelection[entity].clear();
   updateBulkBar(entity);
 }
-function wireBulkCheckboxes(entity, rowClass, selectAllId){
+function wireBulkCheckboxes(entity, rowClass, selectAllIds){
   document.querySelectorAll('.' + rowClass).forEach(chk => {
     chk.addEventListener('change', () => toggleBulkRow(entity, chk.dataset.id, chk.checked));
   });
-  const selectAll = document.getElementById(selectAllId);
-  if (selectAll) {
-    selectAll.checked = bulkLastRows[entity].length > 0 && bulkLastRows[entity].every(id => bulkSelection[entity].has(id));
-    selectAll.onchange = () => {
-      bulkLastRows[entity].forEach(id => {
-        if (selectAll.checked) bulkSelection[entity].add(id); else bulkSelection[entity].delete(id);
-      });
-      updateBulkBar(entity);
-      if (entity === 'shops') renderShops();
-      else if (entity === 'products') renderProducts();
-      else renderOrders();
-    };
+  // selectAllIds: нэг id (string) эсвэл хэд хэдэн id (array) байж болно.
+  // Desktop-ийн thead доторх чекбокс, mobile toolbar-ийн "Бүгдийг сонгох"
+  // чекбокс хоёрыг зэрэг синк хийж ажиллуулна (mobile дээр thead нуугддаг тул).
+  const ids = Array.isArray(selectAllIds) ? selectAllIds : [selectAllIds];
+  const boxes = ids.map(id => document.getElementById(id)).filter(Boolean);
+  if (boxes.length) {
+    const allChecked = bulkLastRows[entity].length > 0 && bulkLastRows[entity].every(id => bulkSelection[entity].has(id));
+    boxes.forEach(box => {
+      box.checked = allChecked;
+      box.onchange = () => {
+        const checked = box.checked;
+        boxes.forEach(b => { b.checked = checked; });
+        bulkLastRows[entity].forEach(id => {
+          if (checked) bulkSelection[entity].add(id); else bulkSelection[entity].delete(id);
+        });
+        updateBulkBar(entity);
+        if (entity === 'shops') renderShops();
+        else if (entity === 'products') renderProducts();
+        else renderOrders();
+      };
+    });
   }
 }
 function bulkArchive(entity){
@@ -2363,11 +2409,11 @@ function renderInactiveShops(){
   if (!list.length) { panel.style.display = 'none'; return; }
   panel.style.display = '';
   body.innerHTML = list.map(x => `<tr class="inactive-shop-row">
-    <td>${esc(x.shop.name)}</td>
-    <td>${esc(x.shop.aimag||'—')}</td>
-    <td>${x.lastOrderDate ? esc(x.lastOrderDate) : 'Захиалга өгөөгүй'}</td>
-    <td>${x.daysSince != null ? x.daysSince : '—'}</td>
-    <td>${money(x.totalSpent)} ₮</td>
+    <td data-label="Дэлгүүр">${esc(x.shop.name)}</td>
+    <td data-label="Аймаг">${esc(x.shop.aimag||'—')}</td>
+    <td data-label="Сүүлд захиалсан">${x.lastOrderDate ? esc(x.lastOrderDate) : 'Захиалга өгөөгүй'}</td>
+    <td data-label="Хоног">${x.daysSince != null ? x.daysSince : '—'}</td>
+    <td data-label="Түүхэн дүн">${money(x.totalSpent)} ₮</td>
     <td style="text-align:right;white-space:nowrap;"><button class="rowbtn rowbtn-view" onclick="viewShop('${escJsArg(x.shop.id)}')">Харах</button></td>
   </tr>`).join('');
 }
@@ -2405,13 +2451,13 @@ function renderDashboard(){
   body.innerHTML = rows.length ? rows.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     return `<tr>
-      <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
-      <td>${esc(o.orderDate||'—')}</td>
-      <td>${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
-      <td>${orderItemsSummary(o)}</td>
-      <td>${orderItemsQtySum(o)}</td>
-      <td>${money(o.total)} ₮</td>
-      <td><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></td>
+      <td data-label="№">${o.orderNo ? '№'+o.orderNo : '—'}</td>
+      <td data-label="Огноо">${esc(o.orderDate||'—')}</td>
+      <td data-label="Дэлгүүр">${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
+      <td data-label="Бүтээгдэхүүн">${orderItemsSummary(o)}</td>
+      <td data-label="Тоо">${orderItemsQtySum(o)}</td>
+      <td data-label="Дүн">${money(o.total)} ₮</td>
+      <td data-label="Төлөв"><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></td>
     </tr>`;
   }).join('') : `<tr class="empty-row"><td colspan="7">Захиалга бүртгэгдээгүй байна</td></tr>`;
   renderPendingConfirm();
@@ -2425,10 +2471,10 @@ function renderPendingConfirm(){
   body.innerHTML = pending.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     return `<tr>
-      <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
-      <td>${esc(o.orderDate||'—')}</td>
-      <td>${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
-      <td>${money(o.total)} ₮</td>
+      <td data-label="№">${o.orderNo ? '№'+o.orderNo : '—'}</td>
+      <td data-label="Огноо">${esc(o.orderDate||'—')}</td>
+      <td data-label="Дэлгүүр">${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
+      <td data-label="Дүн">${money(o.total)} ₮</td>
       <td style="text-align:right;white-space:nowrap;">
         <button class="rowbtn rowbtn-confirm" onclick="quickConfirmOrder('${escJsArg(o.id)}')">Батлах</button>
         <button class="rowbtn rowbtn-view" onclick="viewOrder('${escJsArg(o.id)}')">Харах</button>
@@ -2464,18 +2510,18 @@ function renderShops(){
          <button class="rowbtn rowbtn-danger" onclick="deleteShop('${escJsArg(s.id)}')">Архивлах</button>`;
     return `
     <tr>
-      <td><input type="checkbox" class="shopRowChk" data-id="${esc(s.id)}" ${bulkSelection.shops.has(s.id)?'checked':''}></td>
-      <td>${esc(s.name)}</td>
-      <td>${esc(s.aimag||'—')}</td>
-      <td>${esc(s.sum||'—')}</td>
-      <td>${SHOP_CATEGORY_LABEL[s.category] || SHOP_CATEGORY_LABEL.domestic}</td>
-      <td>${esc(s.contact||'—')}</td>
-      <td>${phones}</td>
-      <td>${fb}</td>
+      <td data-label="Сонгох"><input type="checkbox" class="shopRowChk" data-id="${esc(s.id)}" ${bulkSelection.shops.has(s.id)?'checked':''}></td>
+      <td data-label="Нэр">${esc(s.name)}</td>
+      <td data-label="Аймаг">${esc(s.aimag||'—')}</td>
+      <td data-label="Сум">${esc(s.sum||'—')}</td>
+      <td data-label="Ангилал">${SHOP_CATEGORY_LABEL[s.category] || SHOP_CATEGORY_LABEL.domestic}</td>
+      <td data-label="Холбоо барих">${esc(s.contact||'—')}</td>
+      <td data-label="Утас">${phones}</td>
+      <td data-label="Facebook">${fb}</td>
       <td style="text-align:right;white-space:nowrap;">${actions}</td>
     </tr>`;
   }).join('') : `<tr class="empty-row"><td colspan="9">${showArchived ? 'Архивласан дэлгүүр алга' : 'Дэлгүүр бүртгэгдээгүй байна'}</td></tr>`;
-  wireBulkCheckboxes('shops', 'shopRowChk', 'shopsSelectAll');
+  wireBulkCheckboxes('shops', 'shopRowChk', ['shopsSelectAll', 'shopsSelectAllMobile']);
   updateBulkBar('shops');
 }
 
@@ -2508,7 +2554,7 @@ function renderProducts(){
          <button class="rowbtn rowbtn-danger" onclick="deleteProduct('${escJsArg(p.id)}')">Архивлах</button>`;
     return `
     <tr>
-      <td><input type="checkbox" class="productRowChk" data-id="${esc(p.id)}" ${bulkSelection.products.has(p.id)?'checked':''}></td>
+      <td data-label="Сонгох"><input type="checkbox" class="productRowChk" data-id="${esc(p.id)}" ${bulkSelection.products.has(p.id)?'checked':''}></td>
       <td data-label="Барааны код">${esc(p.itemCode||'—')}</td>
       <td data-label="Загварын код">${esc(p.code||'—')}</td>
       <td data-label="Размер">${esc(p.size||'—')}</td>
@@ -2519,7 +2565,7 @@ function renderProducts(){
       <td style="text-align:right;white-space:nowrap;">${actions}</td>
     </tr>`;
   }).join('') : `<tr class="empty-row"><td colspan="9">${showArchived ? 'Архивласан бүтээгдэхүүн алга' : (q||companyFilter ? 'Хайлтад тохирох бүтээгдэхүүн алга' : 'Бүтээгдэхүүн бүртгэгдээгүй байна')}</td></tr>`;
-  wireBulkCheckboxes('products', 'productRowChk', 'productsSelectAll');
+  wireBulkCheckboxes('products', 'productRowChk', ['productsSelectAll', 'productsSelectAllMobile']);
   updateBulkBar('products');
   renderProductsPagination(rows.length, totalPages);
 }
@@ -2583,18 +2629,18 @@ function renderOrders(){
          <button class="rowbtn rowbtn-edit" onclick="editOrder('${escJsArg(o.id)}')">Засах</button>
          <button class="rowbtn rowbtn-danger" onclick="deleteOrder('${escJsArg(o.id)}')">Архивлах</button>`;
     return `<tr>
-      <td><input type="checkbox" class="orderRowChk" data-id="${esc(o.id)}" ${bulkSelection.orders.has(o.id)?'checked':''}></td>
-      <td>${o.orderNo ? '№'+o.orderNo : '—'}</td>
-      <td>${esc(o.orderDate||'—')}</td>
-      <td>${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
-      <td>${orderItemsSummary(o, 3)}</td>
-      <td>${orderItemsQtySum(o)}</td>
-      <td>${money(o.total)} ₮</td>
-      <td><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></td>
+      <td data-label="Сонгох"><input type="checkbox" class="orderRowChk" data-id="${esc(o.id)}" ${bulkSelection.orders.has(o.id)?'checked':''}></td>
+      <td data-label="№">${o.orderNo ? '№'+o.orderNo : '—'}</td>
+      <td data-label="Огноо">${esc(o.orderDate||'—')}</td>
+      <td data-label="Дэлгүүр">${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
+      <td data-label="Бараа">${orderItemsSummary(o, 3)}</td>
+      <td data-label="Тоо">${orderItemsQtySum(o)}</td>
+      <td data-label="Дүн">${money(o.total)} ₮</td>
+      <td data-label="Төлөв"><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></td>
       <td style="text-align:right;white-space:nowrap;">${actions}</td>
     </tr>`;
   }).join('') : `<tr class="empty-row"><td colspan="9">${showArchived ? 'Архивласан захиалга алга' : (q||filter||shopFilterId||start ? 'Хайлтад тохирох захиалга алга' : 'Захиалга бүртгэгдээгүй байна')}</td></tr>`;
-  wireBulkCheckboxes('orders', 'orderRowChk', 'ordersSelectAll');
+  wireBulkCheckboxes('orders', 'orderRowChk', ['ordersSelectAll', 'ordersSelectAllMobile']);
   updateBulkBar('orders');
 }
 
@@ -2841,11 +2887,11 @@ function renderReportRFM(orders){
   });
   rows.sort((a,b) => b.monetary - a.monetary);
   host.innerHTML = rows.map(r => `<tr>
-    <td>${esc(r.name)}</td>
-    <td><span class="badge ${r.segClass}">${r.segment}</span></td>
-    <td class="num">${r.recencyDays >= 999999 ? '—' : r.recencyDays}</td>
-    <td class="num">${r.frequency}</td>
-    <td class="num">${money(r.monetary)}</td>
+    <td data-label="Дэлгүүр">${esc(r.name)}</td>
+    <td data-label="Сегмент"><span class="badge ${r.segClass}">${r.segment}</span></td>
+    <td class="num" data-label="Сүүлд (хоног)">${r.recencyDays >= 999999 ? '—' : r.recencyDays}</td>
+    <td class="num" data-label="Захиалга">${r.frequency}</td>
+    <td class="num" data-label="Дүн (₮)">${money(r.monetary)}</td>
   </tr>`).join('');
 }
 function renderReportSizeDemand(orders){
@@ -3335,10 +3381,10 @@ function renderReports(){
   const keys = Object.keys(map).sort();
   body.innerHTML = keys.length ? keys.map(k => `
     <tr>
-      <td>${esc(k)}</td>
-      <td class="num">${map[k].shops.size}</td>
-      <td class="num">${map[k].orders}</td>
-      <td class="num">${money(map[k].total)}</td>
+      <td data-label="Аймаг">${esc(k)}</td>
+      <td class="num" data-label="Дэлгүүр">${map[k].shops.size}</td>
+      <td class="num" data-label="Захиалга">${map[k].orders}</td>
+      <td class="num" data-label="Нийт дүн (₮)">${money(map[k].total)}</td>
     </tr>`).join('') : `<tr class="empty-row"><td colspan="4">Өгөгдөл алга</td></tr>`;
 
   renderReportChart(orders);
