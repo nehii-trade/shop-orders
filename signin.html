@@ -2323,7 +2323,10 @@ document.getElementById('backupRestoreFile').addEventListener('change', (e) => {
       return;
     }
     const incoming = sanitizeBackupData(rawIncoming);
-    const summary = `Энэ файлд ${incoming.shops.length} дэлгүүр, ${incoming.products.length} бараа, ${incoming.orders.length} захиалга байна.\n\nОДООГИЙН бүх өгөгдлийг ЭНЭ файлаар БҮРЭН СОЛИХ уу? Энэ үйлдлийг буцаах боломжгүй!`;
+    // АНХААР: "Сэргээх" зөвхөн энэ төхөөрөмж дээрх локал өгөгдлийг БИШ, харин
+    // дараа нь автомат синк хийгдэхэд бусад төхөөрөмжийн ашигладаг Google Drive-ийн
+    // хуваалцсан файлыг Ч мөн дарж бичдэг тул анхааруулгад үүнийг тодорхой дурдана.
+    const summary = `Энэ файлд ${incoming.shops.length} дэлгүүр, ${incoming.products.length} бараа, ${incoming.orders.length} захиалга байна.\n\nОДООГИЙН өгөгдлийг (энэ төхөөрөмж дээрх локал өгөгдөл, МӨН Google Drive дээрх хуваалцсан файл ХОЁУЛАНГ) ЭНЭ файлаар БҮРЭН СОЛИХ уу?\n\n⚠ Хэрэв өөр төхөөрөмж дээр үүнээс хойш шинэ захиалга нэмэгдсэн бол тэдгээр нь ЭНД ОРОХГҮЙ бөгөөд дараагийн синкээр Drive дээрээс ч арилна. Энэ үйлдлийг буцаах боломжгүй!`;
     if (!confirm(summary)) { e.target.value = ''; return; }
     data = incoming;
     if (!data.tombstones) data.tombstones = {};
