@@ -504,7 +504,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 .report-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .report-kpi{border:1px solid var(--line);background:var(--white);color:var(--white-text);padding:14px 16px;border-radius:var(--radius);}
 .report-kpi .rk-label{font-size:12px;color:var(--muted);margin-bottom:5px;}
-.report-kpi .rk-val{font-family:'Newsreader',serif;font-size:22px;font-weight:600;}
+.report-kpi .rk-val{font-family:'Newsreader',serif;font-size:22px;font-weight:600;overflow-wrap:anywhere;}
 .rc-chart{display:flex;align-items:flex-end;gap:5px;height:160px;padding:10px 4px 0;overflow-x:auto;}
 .rc-bar-wrap{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:26px;flex:1;}
 .rc-bar{width:100%;background:var(--saddle);border-radius:2px 2px 0 0;min-height:2px;}
@@ -2741,7 +2741,7 @@ function renderShops(){
   const q = (document.getElementById('shopSearch').value||'').toLowerCase();
   const showArchived = document.getElementById('shopShowArchived').checked;
   const body = document.getElementById('shopsBody');
-  const rows = data.shops.filter(s => !!s.archived === showArchived && (!q || (s.name+s.aimag+s.sum).toLowerCase().includes(q)));
+  const rows = data.shops.filter(s => !!s.archived === showArchived && (!q || ((s.name||'')+(s.aimag||'')+(s.sum||'')).toLowerCase().includes(q)));
   bulkLastRows.shops = rows.map(s=>s.id);
   body.innerHTML = rows.length ? rows.map(s => {
     const phones = [s.phone1, s.phone2].filter(Boolean).join(' / ') || '—';
@@ -4141,7 +4141,10 @@ function renderProductImportPreview(){
   document.getElementById('confirmProductImportBtn').disabled = !(newCount + dupCount);
 }
 document.getElementById('confirmProductImportBtn').addEventListener('click', () => {
-  const toApply = productImportRows.filter(r => r.checked && !r.isEmpty);
+  // r.checked-ээс гадна Барааны код заавал талбар, Үнэ хүчинтэй байх, файл
+  // дотор давхардаагүй байх зэрэг шалгалтыг энд ч дахин хийж, хэрэглэгч
+  // чекбоксыг гараар идэвхжүүлсэн ч дутуу/буруу бичлэг үүсэхээс сэргийлнэ.
+  const toApply = productImportRows.filter(r => r.checked && !r.isEmpty && !r.itemCodeMissing && !r.priceInvalid && !r.priceEmpty && !r.isDuplicateInFile);
   if (!toApply.length) return;
   let added = 0, updated = 0;
   toApply.forEach(r => {
@@ -4312,7 +4315,10 @@ function renderShopImportPreview(){
   document.getElementById('confirmShopImportBtn').disabled = !(newCount + dupCount);
 }
 document.getElementById('confirmShopImportBtn').addEventListener('click', () => {
-  const toApply = shopImportRows.filter(r => r.checked && !r.isEmpty);
+  // r.checked-ээс гадна аймаг заавал талбар (гар маягттай адил дүрэм) болон
+  // файл дотор давхардсан мөрийг энд ч дахин шалгаж, хэрэглэгч чекбоксыг гараар
+  // идэвхжүүлсэн ч заавал талбаргүй/давхардсан бичлэг үүсэхээс сэргийлнэ.
+  const toApply = shopImportRows.filter(r => r.checked && !r.isEmpty && !r.aimagMissing && !r.isDuplicateInFile);
   if (!toApply.length) return;
   let added = 0, updated = 0;
   toApply.forEach(r => {
