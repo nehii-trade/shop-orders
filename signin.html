@@ -3037,6 +3037,17 @@ async function generateReportAIInsight(){
     return;
   }
 
+  // Нэвтрээгүй/токенгүй үед AI Worker рүү огт дуудахгүй — Worker талд
+  // Authorization header-гүй хүсэлт очвол зөвшөөрөлгүй гэдгийг тодорхой харуулна.
+  // ЧУХАЛ: энэ шалгалтыг btn.disabled/textContent өөрчлөхөөс ӨМНӨ хийнэ — эс бол
+  // энд return хийхэд try/finally-д хүрэхгүй тул товч "Шинжилж байна..." төлөвт
+  // мөнхөд царцах байсан.
+  if (!accessToken) {
+    card.style.display = '';
+    body.innerHTML = '<span style="color:var(--brick);">Нэвтрэх эрх дууссан байна. Дахин нэвтэрч орно уу.</span>';
+    return;
+  }
+
   const ctx = buildReportAIContext();
   const prompt = buildReportAIPrompt(ctx);
 
@@ -3045,14 +3056,6 @@ async function generateReportAIInsight(){
   btn.textContent = 'Шинжилж байна...';
   card.style.display = '';
   body.innerHTML = '<span style="color:var(--muted);">⏳ Дүгнэлт бэлтгэж байна...</span>';
-
-  // Нэвтрээгүй/токенгүй үед AI Worker рүү огт дуудахгүй — Worker талд
-  // Authorization header-гүй хүсэлт очвол зөвшөөрөлгүй гэдгийг тодорхой харуулна.
-  if (!accessToken) {
-    card.style.display = '';
-    body.innerHTML = '<span style="color:var(--brick);">Нэвтрэх эрх дууссан байна. Дахин нэвтэрч орно уу.</span>';
-    return;
-  }
 
   // 30 секундийн timeout: Worker гацах/удаашрах тохиолдолд "Шинжилж байна..."
   // төлөв хугацаагүй зогсохоос сэргийлнэ. driveFetch()-ийн retry давхарт нийт
