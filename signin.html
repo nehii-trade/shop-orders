@@ -9,9 +9,7 @@
   зөвшөөрөл нэмэхээ бүү мартаарай (PROJECT_KNOWLEDGE_TEMPLATE.md, Хэсэг 4).
     - script-src:  Google Identity Services + jsDelivr (xlsx, SRI-тэй) + inline script
                     (энэ файл build/nonce системгүй static HTML тул 'unsafe-inline' шаардлагатай)
-    - style-src:   Google Fonts stylesheet + Google Identity Services (GSI)-ийн
-                    өөрийн ачаалдаг gsi/style stylesheet + inline style tag/style=""
-                    attribute-ууд (мөн адил шалтгаанаар)
+    - style-src:   Google Fonts stylesheet + inline style tag/style="" attribute-ууд (мөн адил шалтгаанаар)
     - font-src:    Google Fonts-ийн фонт файлууд
     - img-src:     Google профайл зураг (userinfo.picture, lh3.googleusercontent.com), data: (favicon)
     - connect-src: Google Drive/OAuth API + AI Worker — ФЭТЧ хийж болох ЦОРЫН ГАНЦ домэйнууд.
@@ -23,7 +21,7 @@
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
   script-src 'self' 'unsafe-inline' https://accounts.google.com https://cdn.jsdelivr.net;
-  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src 'self' https://fonts.gstatic.com;
   img-src 'self' data: https://*.googleusercontent.com;
   connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com https://nehii-ai-worker.munhtsetsegdn.workers.dev;
@@ -377,6 +375,13 @@ nav.navlist button.active{background:var(--saddle);color:var(--white);}
 .pipe-bar.cancelled{background:var(--brick);}
 .pipe-count{width:34px;text-align:right;font-weight:600;font-size:13px;flex-shrink:0;}
 
+/* Dashboard: Аймгийн борлуулалтын жижиг horizontal bar жагсаалт */
+.aimag-row{display:flex;align-items:center;gap:10px;padding:7px 20px;font-size:13px;}
+.aimag-name{width:110px;flex-shrink:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.aimag-bar-wrap{flex:1;background:var(--stone-dim);height:10px;border-radius:var(--radius);overflow:hidden;}
+.aimag-bar{height:100%;background:var(--saddle);}
+.aimag-pct{width:38px;text-align:right;font-weight:600;font-size:12.5px;color:var(--muted);flex-shrink:0;}
+
 .panel{background:var(--paper);border:1px solid var(--line);}
 .panel-head{
   display:flex;align-items:center;justify-content:space-between;
@@ -595,6 +600,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
   .spark-label{width:100%;white-space:normal;}
   .spark-chart{width:100%;flex-basis:100%;}
   .rlist-row{flex-wrap:wrap;}
+  .aimag-name{width:82px;font-size:12px;}
 }
 @page{ margin:14mm 14mm; }
 @media print {
@@ -784,13 +790,34 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           <div class="stat-card"><div class="lbl">Хүргэлтэд гараагүй</div><div class="val" id="statPending">0</div></div>
           <div class="stat-card"><div class="lbl">Энэ сарын борлуулалт</div><div class="val" id="statRevenue">0<small> ₮</small></div><div class="kpi-delta" id="statRevenueDelta"></div></div>
         </div>
+        <div class="panel" style="margin-bottom:20px;">
+          <div class="panel-head"><h2>📈 Борлуулалтын хандлага</h2><span style="font-size:12px;color:var(--muted);">Сүүлийн 30 хоног</span></div>
+          <div id="dashTrendChart" style="padding:10px 20px 16px;"></div>
+        </div>
         <div class="panel" id="smartInsightsPanel" style="margin-bottom:20px;display:none;">
           <div class="panel-head"><h2>🔔 Анхаарах зүйлс</h2></div>
           <div id="smartInsightsBody"></div>
         </div>
+        <div class="panel" style="margin-bottom:20px;">
+          <div class="panel-head"><h2>🏆 Шилдэг гүйцэтгэл</h2><span style="font-size:12px;color:var(--muted);">Сүүлийн 30 хоног</span></div>
+          <div class="report-2col" style="padding:16px 20px;">
+            <div>
+              <h3 style="font-size:13px;margin-bottom:8px;color:var(--muted);">Шилдэг дэлгүүр</h3>
+              <div id="dashTopShops"></div>
+            </div>
+            <div>
+              <h3 style="font-size:13px;margin-bottom:8px;color:var(--muted);">Шилдэг бүтээгдэхүүн</h3>
+              <div id="dashTopProducts"></div>
+            </div>
+          </div>
+        </div>
         <div class="panel" id="pipelineSnapshotPanel" style="margin-bottom:20px;">
           <div class="panel-head"><h2>📊 Захиалгын одоогийн байдал</h2></div>
           <div id="pipelineSnapshotBody" style="padding:14px 0;"></div>
+        </div>
+        <div class="panel" style="margin-bottom:20px;">
+          <div class="panel-head"><h2>🗺️ Борлуулалт — Аймгаар</h2><span style="font-size:12px;color:var(--muted);">Сүүлийн 30 хоног</span></div>
+          <div id="dashAimagBreakdown" style="padding:10px 0;"></div>
         </div>
         <div class="panel" id="inactiveShopsPanel" style="margin-bottom:20px;display:none;">
           <div class="panel-head"><h2>🕑 Идэвхгүй болсон дэлгүүрүүд</h2></div>
@@ -2448,6 +2475,16 @@ function renderDashboard(){
   renderPipelineSnapshot(activeOrders);
   renderInactiveShops();
 
+  // Dashboard-ийн график/шилдэг жагсаалт/аймгийн задаргаа — Тайлангийн адил
+  // тооцооллыг (computeSalesTrendBuckets/computeTopProducts/computeTopShops/
+  // computeAimagBreakdown) дахин ашиглаж, сүүлийн 30 хоногийн цонхоор харуулна.
+  const cutoff30Dash = localDateStr(new Date(Date.now() - 29*86400000));
+  const recentOrders = activeOrders.filter(o => (o.orderDate||'') >= cutoff30Dash);
+  renderSalesTrendChart('dashTrendChart', recentOrders);
+  renderTopListInto('dashTopProducts', computeTopProducts(recentOrders, 3), v => v + ' ш');
+  renderTopListInto('dashTopShops', computeTopShops(recentOrders, 3), v => money(v) + ' ₮');
+  renderDashboardAimag('dashAimagBreakdown', recentOrders);
+
   const body = document.getElementById('recentOrdersBody');
   const rows = [...activeOrders].sort((a,b)=> (b.orderDate||'').localeCompare(a.orderDate||'')).slice(0,8);
   body.innerHTML = rows.length ? rows.map(o => {
@@ -2721,10 +2758,50 @@ function populateReportFilterOptions(){
   productSel.innerHTML = '<option value="">Бүх бараа</option>' + productsSorted.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}${p.itemName?' · '+esc(p.itemName):''}</option>`).join('');
   if (curProduct) productSel.value = curProduct;
 }
-function renderReportChart(orders){
-  const host = document.getElementById('reportChart');
+// ---- Аймгийн задаргаа: тооцоолол тусад нь, Тайлан (хүснэгт) ба Dashboard
+// (horizontal bar жагсаалт) хоёулаа дахин ашиглана.
+function computeAimagBreakdown(orders){
+  const map = {};
+  data.shops.forEach(s => {
+    const key = s.aimag || 'Тодорхойгүй';
+    if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
+    map[key].shops.add(s.id);
+  });
+  orders.forEach(o => {
+    const shop = data.shops.find(s=>s.id===o.shopId);
+    const key = shop ? (shop.aimag || 'Тодорхойгүй') : (o.shopAimag || 'Тодорхойгүй');
+    if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
+    map[key].orders += 1;
+    if (o.status !== 'cancelled') map[key].total += Number(o.total||0);
+  });
+  return map;
+}
+function renderDashboardAimag(hostId, orders){
+  const host = document.getElementById(hostId);
+  if (!host) return;
+  const map = computeAimagBreakdown(orders);
+  const entries = Object.entries(map).map(([name, v]) => [name, v.total]).filter(([,total]) => total > 0);
+  entries.sort((a,b) => b[1]-a[1]);
+  const totalAll = entries.reduce((s,[,v])=>s+v, 0);
+  if (!totalAll || !entries.length) { host.innerHTML = '<div class="empty-row" style="padding:16px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>'; return; }
+  const TOP_N = 5;
+  const top = entries.slice(0, TOP_N);
+  const restTotal = entries.slice(TOP_N).reduce((s,[,v])=>s+v, 0);
+  const rows = restTotal > 0 ? [...top, ['Бусад', restTotal]] : top;
+  host.innerHTML = rows.map(([name, val]) => {
+    const pct = totalAll ? Math.round(val/totalAll*100) : 0;
+    return `<div class="aimag-row">
+      <span class="aimag-name" title="${esc(name)}">${esc(name)}</span>
+      <span class="aimag-bar-wrap"><span class="aimag-bar" style="width:${Math.max(pct,2)}%;"></span></span>
+      <span class="aimag-pct">${pct}%</span>
+    </div>`;
+  }).join('');
+}
+// ---- Борлуулалтын trend chart: тооцоолол ба render-ийг тусад нь гаргаж,
+// Тайлан (reportChart) ба Dashboard (dashTrendChart) хоёулаа дахин ашиглана.
+function computeSalesTrendBuckets(orders){
   const active = orders.filter(o=>o.status!=='cancelled' && o.orderDate);
-  if (!active.length) { host.innerHTML = '<div class="empty-row" style="padding:30px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>'; return; }
+  if (!active.length) return { keys: [], groups: {}, max: 1, byMonth: false };
   const dates = active.map(o=>o.orderDate).sort();
   const spanDays = (parseLocalDate(dates[dates.length-1]) - parseLocalDate(dates[0])) / 86400000;
   const byMonth = spanDays > 62;
@@ -2735,6 +2812,13 @@ function renderReportChart(orders){
   });
   const keys = Object.keys(groups).sort();
   const max = Math.max(...keys.map(k=>groups[k]), 1);
+  return { keys, groups, max, byMonth };
+}
+function renderSalesTrendChart(hostId, orders){
+  const host = document.getElementById(hostId);
+  if (!host) return;
+  const { keys, groups, max, byMonth } = computeSalesTrendBuckets(orders);
+  if (!keys.length) { host.innerHTML = '<div class="empty-row" style="padding:30px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>'; return; }
   host.innerHTML = `<div class="rc-chart">${keys.map(k => {
     const pct = Math.max(2, Math.round(groups[k]/max*100));
     const label = byMonth ? k : k.slice(5);
@@ -2744,7 +2828,12 @@ function renderReportChart(orders){
     </div>`;
   }).join('')}</div>`;
 }
-function renderReportTopLists(orders){
+function renderReportChart(orders){
+  renderSalesTrendChart('reportChart', orders);
+}
+// ---- Шилдэг бараа/дэлгүүр: тооцоолол ба render тусад нь, Тайлан ба
+// Dashboard хоёулаа дахин ашиглана (Dashboard дээр limit=3, Тайланд limit=5).
+function computeTopProducts(orders, limit){
   const active = orders.filter(o=>o.status!=='cancelled');
   const prodMap = {};
   active.forEach(o => (o.items||[]).forEach(it => {
@@ -2752,21 +2841,28 @@ function renderReportTopLists(orders){
     const name = p ? p.name : (it.productName || 'Устсан бараа');
     prodMap[name] = (prodMap[name]||0) + Number(it.qty||0);
   }));
-  const topProducts = Object.entries(prodMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  document.getElementById('repTopProducts').innerHTML = topProducts.length ? topProducts.map(([name,qty],i)=>`
-    <div class="rlist-row"><span class="rlist-rank">${i+1}</span><span class="rlist-name">${esc(name)}</span><span class="rlist-val">${qty} ш</span></div>`).join('')
-    : '<div class="empty-row" style="padding:16px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>';
-
+  return Object.entries(prodMap).sort((a,b)=>b[1]-a[1]).slice(0, limit||5);
+}
+function computeTopShops(orders, limit){
+  const active = orders.filter(o=>o.status!=='cancelled');
   const shopMap = {};
   active.forEach(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     const name = shop ? shop.name : (o.shopName || 'Тодорхойгүй');
     shopMap[name] = (shopMap[name]||0) + Number(o.total||0);
   });
-  const topShops = Object.entries(shopMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  document.getElementById('repTopShops').innerHTML = topShops.length ? topShops.map(([name,total],i)=>`
-    <div class="rlist-row"><span class="rlist-rank">${i+1}</span><span class="rlist-name">${esc(name)}</span><span class="rlist-val">${money(total)} ₮</span></div>`).join('')
+  return Object.entries(shopMap).sort((a,b)=>b[1]-a[1]).slice(0, limit||5);
+}
+function renderTopListInto(hostId, entries, unitFn){
+  const host = document.getElementById(hostId);
+  if (!host) return;
+  host.innerHTML = entries.length ? entries.map(([name,val],i)=>`
+    <div class="rlist-row"><span class="rlist-rank">${i+1}</span><span class="rlist-name">${esc(name)}</span><span class="rlist-val">${unitFn(val)}</span></div>`).join('')
     : '<div class="empty-row" style="padding:16px;text-align:center;color:var(--muted);">Өгөгдөл алга</div>';
+}
+function renderReportTopLists(orders){
+  renderTopListInto('repTopProducts', computeTopProducts(orders, 5), v => v + ' ш');
+  renderTopListInto('repTopShops', computeTopShops(orders, 5), v => money(v) + ' ₮');
 }
 function renderReportTopProductTrend(orders){
   const host = document.getElementById('repProductTrend');
@@ -3366,19 +3462,7 @@ function renderReports(){
     });
   }
 
-  const map = {};
-  data.shops.forEach(s => {
-    const key = s.aimag || 'Тодорхойгүй';
-    if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
-    map[key].shops.add(s.id);
-  });
-  orders.forEach(o => {
-    const shop = data.shops.find(s=>s.id===o.shopId);
-    const key = shop ? (shop.aimag || 'Тодорхойгүй') : (o.shopAimag || 'Тодорхойгүй');
-    if (!map[key]) map[key] = { shops: new Set(), orders: 0, total: 0 };
-    map[key].orders += 1;
-    if (o.status !== 'cancelled') map[key].total += Number(o.total||0);
-  });
+  const map = computeAimagBreakdown(orders);
   const body = document.getElementById('reportsBody');
   const keys = Object.keys(map).sort();
   body.innerHTML = keys.length ? keys.map(k => `
