@@ -1436,6 +1436,10 @@ const TOKEN_KEY = 'nehiitrade_token_v1';
 // тайлангийн "Нийт борлуулалт" KPI) тооцоонд ашиглана — өгөгдлийн санд (order.total
 // гэх мэт) хадгалагддаггүй тул захиалга/бараа тус бүрийн дүн өөрчлөгдөхгүй.
 const DISCOUNT_RATE = 0.10;
+// Нэгтгэл тайлангийн PDF/хэвлэлт дээр "Гаргасан ажилтан" хэсэгт харуулах нэр,
+// албан тушаал. 1 админтай систем тул тогтмол утга — өөр хүн болвол энд солино.
+const REPORT_ISSUER_NAME = 'Б.Мөнхцэцэг';
+const REPORT_ISSUER_ROLE = 'Онлайн борлуулалтын ажилтан';
 function saveTokenToStorage(){
   try { localStorage.setItem(TOKEN_KEY, JSON.stringify({ accessToken, tokenExpiresAt })); } catch(e){}
 }
@@ -3601,7 +3605,7 @@ function printReportSummary(){
     ? ctx.provinceStats.map(p=>`<tr><td>${esc(p.aimag)}</td><td style="text-align:right;">${p.orders}</td><td style="text-align:right;">${money(p.total)}₮</td></tr>`).join('')
     : '<tr><td colspan="3">Өгөгдөл алга</td></tr>';
 
-  const issuedBy = (currentUser && (currentUser.name || currentUser.email)) || '—';
+  const issuedBy = REPORT_ISSUER_NAME;
 
   document.getElementById('printArea').innerHTML = `
     <div class="pa-head">
@@ -3619,7 +3623,7 @@ function printReportSummary(){
       </div>
       <div class="half">
         Гаргасан ажилтан: <b>${esc(issuedBy)}</b><br>
-        Албан тушаал: <b>Борлуулалтын ажилтан</b>
+        Албан тушаал: <b>${esc(REPORT_ISSUER_ROLE)}</b>
       </div>
     </div>
 
