@@ -412,6 +412,8 @@ nav.navlist button.active{background:var(--saddle);color:var(--white);}
 .aimag-pct{width:38px;text-align:right;font-weight:600;font-size:12.5px;color:var(--muted);flex-shrink:0;}
 
 .panel{background:var(--paper);border:1px solid var(--line);transition:box-shadow .15s;}
+.panel-appear{animation:panelFadeIn .3s ease;}
+@keyframes panelFadeIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
 .panel:hover{box-shadow:0 2px 10px rgba(0,0,0,.05);}
 .panel-head{
   display:flex;align-items:center;justify-content:space-between;
@@ -1759,6 +1761,27 @@ function animateCount(elId, endValue, renderFn){
   el._animFrame = requestAnimationFrame(frame);
 }
 
+// Панель нуугдмал төлөвөөс ШИНЭЭР харагдах болоход зөөлөн fade-in
+// анимацитайгаар гаргаж ирнэ (аль хэдийн харагдаж байсан бол дахин
+// анимацлахгүй). Dashboard 2 удаа render хийгддэг тул (эхлээд локал
+// кэшээр, дараа нь Drive-с 1-2 секундын дараа шинэчлэгдэж) энэ хугацаанд
+// шинээр гарч ирэх панель (жиш: Анхаарах зүйлс) огцом "цохилт" мэт биш,
+// зөөлөн харагдана.
+function setPanelVisible(panel, visible){
+  const wasHidden = panel.style.display === 'none';
+  if (visible) {
+    panel.style.display = '';
+    if (wasHidden) {
+      panel.classList.remove('panel-appear');
+      void panel.offsetWidth; // reflow — анимацийг дахин эхлүүлэхийн тулд
+      panel.classList.add('panel-appear');
+    }
+  } else {
+    panel.style.display = 'none';
+    panel.classList.remove('panel-appear');
+  }
+}
+
 // Хос панель бүхий dash-row мөр бүрийг шалгаж:
 //  - хоёул нуугдсан бол мөрийг өөрийг нь нуух (хоосон зай үлдэхгүй)
 //  - зөвхөн нэг нь харагдаж байвал тэрийг бүтэн өргөн болгох (хажуугийн
@@ -2661,8 +2684,8 @@ function renderSmartInsights(activeOrders){
   const insights = computeSmartInsights(activeOrders);
   const panel = document.getElementById('smartInsightsPanel');
   const body = document.getElementById('smartInsightsBody');
-  if (!insights.length) { panel.style.display = 'none'; return; }
-  panel.style.display = '';
+  if (!insights.length) { setPanelVisible(panel, false); return; }
+  setPanelVisible(panel, true);
   body.innerHTML = insights.map(i => `<div class="insight-row insight-${i.kind}">
     <span class="insight-icon">${i.icon}</span>
     <div class="insight-body">
@@ -2703,8 +2726,8 @@ function renderInactiveShops(precomputedList){
   const list = (precomputedList || computeInactiveShops(30)).slice(0, 8);
   const panel = document.getElementById('inactiveShopsPanel');
   const body = document.getElementById('inactiveShopsBody');
-  if (!list.length) { panel.style.display = 'none'; return; }
-  panel.style.display = '';
+  if (!list.length) { setPanelVisible(panel, false); return; }
+  setPanelVisible(panel, true);
   body.innerHTML = list.map(x => `<tr class="inactive-shop-row">
     <td data-label="Дэлгүүр">${esc(x.shop.name)}</td>
     <td data-label="Аймаг">${esc(x.shop.aimag||'—')}</td>
@@ -2827,8 +2850,8 @@ function renderPendingConfirm(){
   const pending = data.orders.filter(o => !o.archived && o.status === 'new').sort((a,b)=>(a.orderDate||'').localeCompare(b.orderDate||''));
   const panel = document.getElementById('pendingConfirmPanel');
   const body = document.getElementById('pendingConfirmBody');
-  if (!pending.length) { panel.style.display = 'none'; return; }
-  panel.style.display = '';
+  if (!pending.length) { setPanelVisible(panel, false); return; }
+  setPanelVisible(panel, true);
   body.innerHTML = pending.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     return `<tr>
