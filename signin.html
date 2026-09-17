@@ -483,6 +483,12 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
   width:100%;padding:9px 11px;border:1px solid var(--line);background:var(--white);color:var(--white-text);
   border-radius:var(--radius);font-size:14px;
 }
+/* iOS Safari: type="date" input-ийн БОДИТ утга (жиш: "16 Sep 2026") нь
+   өөрийн shadow-DOM дотоод элемент (-webkit-date-and-time-value) дээр
+   зурагддаг бөгөөд энэ нь input-ийн ердийн font-size-г үл тоомсорлож,
+   системийн өөрийн (илт том) фонтоор харуулдаг quirk байдаг. Үүнийг
+   тусгайлан заахгүй бол Огноо талбар бусад талбараас хэт том харагдана. */
+.field input[type="date"]::-webkit-date-and-time-value{font-size:14px;text-align:left;font-family:var(--font-body);}
 .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--saddle-dim);outline-offset:0;border-color:var(--saddle);}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .item-search-results{margin-top:6px;max-height:230px;overflow-y:auto;}
@@ -605,6 +611,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
      16px-с доошгүй болгож zoom-ыг бүрэн зайлуулна (desktop-д нөлөөлөхгүй,
      зөвхөн энэ mobile breakpoint дотор).  */
   .field input, .field select, .field textarea{font-size:16px;}
+  .field input[type="date"]::-webkit-date-and-time-value{font-size:16px;}
 
   /* Хүснэгт → карт хэлбэр. Өмнө нь зөвхөн .products-table-д хамаарч байсныг
      .mobile-card-table классаар Дэлгүүр/Захиалга/Тайлан/RFM/Dashboard-ийн
