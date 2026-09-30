@@ -667,6 +667,17 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
   .insight-row{flex-wrap:wrap;}
   .insight-action{margin-left:30px;}
 }
+/* --- Тохиргоо: хэвлэлтийн гарын үсэг, тамгын зураг --- */
+.sig-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
+.sig-box{ border:1px solid var(--line); border-radius:10px; padding:14px; }
+.sig-ttl{ font-weight:600; margin-bottom:4px; }
+.sig-hint{ font-size:12px; color:var(--muted); margin-bottom:10px; }
+.sig-prev{ height:110px; border:1px dashed var(--line); border-radius:8px; display:flex;
+  align-items:center; justify-content:center; background:#fff; margin-bottom:12px; overflow:hidden; }
+.sig-prev img{ max-width:100%; max-height:96px; object-fit:contain; }
+.sig-empty{ font-size:12.5px; color:var(--muted); }
+.sig-acts{ display:flex; gap:8px; flex-wrap:wrap; }
+
 @page{ margin:14mm 14mm; }
 @media print {
   /* Хэвлэхэд зөвхөн #printArea харагдана. Login/апп/modal бүгд нуугдана.
@@ -760,6 +771,28 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
     transform:rotate(-14deg); opacity:.6; pointer-events:none; }
   #printArea .pa-seal .t1{ font-size:9px; font-weight:700; letter-spacing:1.5px; color:#c2530f; text-align:center; }
   #printArea .pa-seal .t2{ font-size:7px; font-weight:600; color:#c2530f; text-align:center; margin-top:2px; letter-spacing:.5px; }
+
+  /* --- Захиалгын хуудасны тусгай толгой/хөл (ЗӨВХӨН .pa-order дотор).
+         Нэгтгэл тайлангийн хэвлэлт нь .pa-order-гүй тул хөндөгдөхгүй. --- */
+  #printArea .pa-order .pa-title{ margin:2px 0 14px; }
+  #printArea .pa-order .pa-meta{ background:#fff !important; }
+  #printArea .pa-order .pa-meta .half{ padding:10px 14px; line-height:1.7; }
+  #printArea .pa-order .pa-meta .mt{ font-size:10.5px; font-weight:700; letter-spacing:1px;
+    text-transform:uppercase; color:#16305c; border-bottom:1px solid #b7c8db;
+    padding-bottom:5px; margin-bottom:7px; }
+  #printArea .pa-order .pa-meta .ln{ font-size:12.5px; }
+  #printArea .pa-order .pa-meta .ln .k{ color:#3a4a5e; }
+
+  #printArea .pa-order .pa-sign .half{ line-height:2.45; }
+  #printArea .pa-order .pa-sign .val{ font-weight:700; color:#16233b; }
+  #printArea .pa-order .pa-sign .fill{ min-width:170px; }
+  /* Гарын үсгийн зураг мөрийн зураасан дээр суух — доод мөрийг түлхэхгүй. */
+  #printArea .pa-order .pa-sign .fill.sig{ position:relative; height:18px; }
+  #printArea .pa-order .pa-sign .fill.sig img{ position:absolute; left:10px; bottom:-1px;
+    height:46px; width:auto; max-width:160px; }
+  #printArea .pa-order .pa-stampimg{ position:absolute; right:0; bottom:-10px; width:120px;
+    height:auto; pointer-events:none;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 
   /* --- Хөл --- */
   #printArea .pa-foot{ margin-top:22px; padding-top:8px; border-top:1px dashed #b7c8db;
@@ -1222,6 +1255,37 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 
         <div class="panel" style="margin-top:20px;">
           <div class="panel-head">
+            <h2>Хэвлэлтийн гарын үсэг, тамга</h2>
+          </div>
+          <div style="padding:20px;">
+            <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px;">Захиалгын хуудсыг хэвлэх / PDF болгоход "Захиалга хүлээн авсан" хэсэгт гарын үсэг, баруун доод буланд байгууллагын тамга автоматаар тавигдана. Цагаан (эсвэл тунгалаг) дэвсгэртэй, тод скан/зураг оруулна уу — PNG бол тунгалаг дэвсгэр хадгалагдана. Зураг зөвхөн ЭНЭ browser дээр хадгалагдана (Google Drive руу синк хийгдэхгүй) тул өөр компьютер дээр дахин оруулах шаардлагатай.</p>
+            <div class="sig-grid">
+              <div class="sig-box">
+                <div class="sig-ttl">Гарын үсэг</div>
+                <div class="sig-hint">Хүлээн авсан ажилтны гарын үсэг.</div>
+                <div class="sig-prev" id="signPreview"></div>
+                <div class="sig-acts">
+                  <button class="btn secondary" id="signUploadBtn">Зураг оруулах</button>
+                  <button class="btn secondary" id="signClearBtn">Устгах</button>
+                </div>
+                <input type="file" id="signFile" accept="image/*" style="display:none;">
+              </div>
+              <div class="sig-box">
+                <div class="sig-ttl">Тамга</div>
+                <div class="sig-hint">Байгууллагын тамга/тэмдэг.</div>
+                <div class="sig-prev" id="stampPreview"></div>
+                <div class="sig-acts">
+                  <button class="btn secondary" id="stampUploadBtn">Зураг оруулах</button>
+                  <button class="btn secondary" id="stampClearBtn">Устгах</button>
+                </div>
+                <input type="file" id="stampFile" accept="image/*" style="display:none;">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:20px;">
+          <div class="panel-head">
             <h2>Захиалгын дугаарлалт</h2>
           </div>
           <div style="padding:20px;">
@@ -1487,6 +1551,12 @@ const DISCOUNT_RATE = 0.10;
 // албан тушаал. 1 админтай систем тул тогтмол утга — өөр хүн болвол энд солино.
 const REPORT_ISSUER_NAME = 'Б.Мөнхцэцэг';
 const REPORT_ISSUER_ROLE = 'Онлайн борлуулалтын ажилтан';
+// Захиалгын хуудасны "Төлбөрийн мэдээлэл" хэсэгт хэвлэгдэх данс. Данс/банк
+// солигдвол ЗӨВХӨН энд өөрчилнө — хэвлэх код өөрөө эдгээрийг л уншина.
+const COMPANY_NAME = 'Нэхий Трейд ХХК';
+const COMPANY_BANK = 'Голомт банк';
+const COMPANY_ACCOUNT = '4305104589';
+const COMPANY_PHONE = '95054504';
 function saveTokenToStorage(){
   try { localStorage.setItem(TOKEN_KEY, JSON.stringify({ accessToken, tokenExpiresAt })); } catch(e){}
 }
@@ -1876,6 +1946,79 @@ function applyFont(id){
   else document.documentElement.setAttribute('data-font', id);
   try { localStorage.setItem(FONT_KEY, id); } catch(e){}
 }
+/* ---------------- Хэвлэлтийн гарын үсэг, тамга ---------------- */
+const SIGN_KEY  = 'nehiitrade_sign_v1';
+const STAMP_KEY = 'nehiitrade_stamp_v1';
+function getStoredImg(key){
+  try { return localStorage.getItem(key) || ''; } catch(e){ return ''; }
+}
+function setStoredImg(key, dataUrl){
+  try {
+    if (dataUrl) localStorage.setItem(key, dataUrl); else localStorage.removeItem(key);
+    return true;
+  } catch(e){
+    // localStorage дүүрсэн (ихэвчлэн 5MB) — хэрэглэгчид жижиг зураг сонгохыг зөвлөнө.
+    toast('Зураг хадгалах багтаамж хүрсэнгүй. Арай жижиг зураг сонгоно уу.', 'err');
+    return false;
+  }
+}
+// Эх зураг ихэвчлэн хэдэн MB байдаг тул localStorage-д багтахгүй. Хэвлэхэд
+// 120px орчим өргөнтэй гарах тул 600px хүрэлцээтэй (300dpi-аас дээш).
+function readImageScaled(file, maxW){
+  return new Promise((resolve, reject) => {
+    if (!file.type || file.type.indexOf('image/') !== 0) { reject(new Error('зураг файл биш байна')); return; }
+    const fr = new FileReader();
+    fr.onerror = () => reject(new Error('файлыг уншиж чадсангүй'));
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('зургийг задалж чадсангүй'));
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, maxW / (img.width || maxW));
+          const w = Math.max(1, Math.round((img.width||maxW) * scale));
+          const h = Math.max(1, Math.round((img.height||maxW) * scale));
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          // PNG-г PNG хэвээр (тунгалаг дэвсгэр хадгалагдана), бусдыг JPEG.
+          resolve(file.type === 'image/png' ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.92));
+        } catch(e){ reject(new Error('зургийг боловсруулж чадсангүй')); }
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+function renderSignStampSettings(){
+  [['signPreview', SIGN_KEY, 'Гарын үсэг'], ['stampPreview', STAMP_KEY, 'Тамга']].forEach(pair => {
+    const el = document.getElementById(pair[0]); if (!el) return;
+    const src = getStoredImg(pair[1]);
+    // src нь зөвхөн энэ аппын canvas-аас үүссэн data: URL — гаднаас ирдэггүй.
+    el.innerHTML = src ? '<img src="' + src + '" alt="' + pair[2] + '">'
+                       : '<span class="sig-empty">Ороогүй байна</span>';
+  });
+}
+function wireImgPicker(btnId, clearId, fileId, key, maxW, label){
+  const btn = document.getElementById(btnId), clr = document.getElementById(clearId),
+        f = document.getElementById(fileId);
+  if (!btn || !clr || !f) return;
+  btn.addEventListener('click', () => f.click());
+  f.addEventListener('change', () => {
+    const file = f.files && f.files[0];
+    f.value = '';                       // ижил файлыг дахин сонгож болохын тулд
+    if (!file) return;
+    readImageScaled(file, maxW).then(url => {
+      if (setStoredImg(key, url)) { renderSignStampSettings(); toast(label + ' хадгалагдлаа', 'ok'); }
+    }).catch(e => toast(label + ' оруулж чадсангүй — ' + e.message, 'err'));
+  });
+  clr.addEventListener('click', () => {
+    if (!getStoredImg(key)) { toast(label + ' одоогоор ороогүй байна', 'err'); return; }
+    if (!confirm(label + '-ийн зургийг устгах уу? Хэвлэхэд хоосон мөр үлдэнэ.')) return;
+    setStoredImg(key, ''); renderSignStampSettings(); toast(label + ' устлаа', 'ok');
+  });
+}
+wireImgPicker('signUploadBtn',  'signClearBtn',  'signFile',  SIGN_KEY,  600, 'Гарын үсэг');
+wireImgPicker('stampUploadBtn', 'stampClearBtn', 'stampFile', STAMP_KEY, 600, 'Тамга');
+
 document.getElementById('saveNextOrderNoBtn').addEventListener('click', () => {
   const input = document.getElementById('nextOrderNoInput');
   const val = Number(input.value);
@@ -1926,6 +2069,8 @@ function renderSettings(){
       });
     });
   }
+
+  renderSignStampSettings();
 
   const nextNoInput = document.getElementById('nextOrderNoInput');
   if (nextNoInput && document.activeElement !== nextNoInput) {
@@ -4848,23 +4993,25 @@ document.getElementById('orderViewPrintBtn').addEventListener('click', () => {
     groupSet.add(modelCode + '||' + name);
     return `<tr><td class="num">${i+1}</td><td>${esc(modelCode)}</td><td>${esc(name)}</td><td class="ctr">${esc(it.size||'—')}</td><td class="num">${it.qty}</td><td class="num">${money(it.unitPrice)} ₮</td><td class="num">${money(it.total)} ₮</td></tr>`;
   }).join('');
+  const sigSrc   = getStoredImg(SIGN_KEY);
+  const stampSrc = getStoredImg(STAMP_KEY);
   document.getElementById('printArea').innerHTML = `
-    <div class="pa-head">
-      <div class="pa-logo"><span class="d">D</span><span class="n">N</span></div>
-      <div class="pa-brandtext">
-        <div class="b1"><span class="q">"НЭХИЙ ТРЕЙД"</span> <span class="co">ХХК</span></div>
-        <div class="b2">МОНГОЛ АРЬС ШИР</div>
-      </div>
-    </div>
+    <div class="pa-order">
     <div class="pa-title">ЗАХИАЛГЫН ХУУДАС</div>
     <div class="pa-meta">
       <div class="half">
-        Захиалгын №: <b>${o.orderNo ?? '—'}</b><br>
-        Огноо: <b>${esc(o.orderDate||'—')}</b>
+        <div class="mt">Захиалгын мэдээлэл</div>
+        <div class="ln"><span class="k">Захиалгын №:</span> <b>${o.orderNo ?? '—'}</b></div>
+        <div class="ln"><span class="k">Дэлгүүр:</span> <b>${esc(shopName)}${shopAimag ? ' — '+esc(shopAimag) : ''}</b></div>
+        <div class="ln"><span class="k">Утас:</span> ${shopPhones ? `<b>${esc(shopPhones)}</b>` : '<span class="fill">&nbsp;</span>'}</div>
+        <div class="ln"><span class="k">Огноо:</span> <b>${esc(o.orderDate||'—')}</b></div>
       </div>
       <div class="half">
-        Дэлгүүр: <b>${esc(shopName)}${shopAimag ? ' — '+esc(shopAimag) : ''}</b><br>
-        Утас: ${shopPhones ? `<b>${esc(shopPhones)}</b>` : '<span class="fill">&nbsp;</span>'}
+        <div class="mt">Төлбөрийн мэдээлэл</div>
+        <div class="ln"><span class="k">Байгууллагын нэр:</span> <b>${esc(COMPANY_NAME)}</b></div>
+        <div class="ln"><span class="k">Банк:</span> <b>${esc(COMPANY_BANK)}</b></div>
+        <div class="ln"><span class="k">Дансны дугаар:</span> <b>${esc(COMPANY_ACCOUNT)}</b></div>
+        <div class="ln"><span class="k">Утас:</span> <b>${esc(COMPANY_PHONE)}</b></div>
       </div>
     </div>
     <table>
@@ -4887,21 +5034,24 @@ document.getElementById('orderViewPrintBtn').addEventListener('click', () => {
     <div class="pa-sign">
       <div class="half">
         <span class="role">Захиалга өгсөн</span>
+        Дэлгүүр: <span class="fill">&nbsp;</span><br>
         Нэр: <span class="fill">&nbsp;</span><br>
-        Албан тушаал: <span class="fill">&nbsp;</span><br>
         Гарын үсэг: <span class="fill">&nbsp;</span><br>
         Огноо: <span class="fill">&nbsp;</span>
       </div>
       <div class="half">
-        <span class="role">Хүлээн авсан</span>
-        Нэр: <span class="fill">&nbsp;</span><br>
-        Албан тушаал: <span class="fill">&nbsp;</span><br>
-        Гарын үсэг: <span class="fill">&nbsp;</span><br>
+        <span class="role">Захиалга хүлээн авсан</span>
+        Нэр: <span class="val">${esc(REPORT_ISSUER_NAME)}</span><br>
+        Албан тушаал: <span class="val">${esc(REPORT_ISSUER_ROLE)}</span><br>
+        Гарын үсэг: <span class="fill sig">${sigSrc ? `<img src="${sigSrc}" alt="">` : '&nbsp;'}</span><br>
         Огноо: <span class="fill">&nbsp;</span>
       </div>
-      <div class="pa-seal"><div><div class="t1">ТАМГА</div><div class="t2">байрлуулах</div></div></div>
+      ${stampSrc
+        ? `<img class="pa-stampimg" src="${stampSrc}" alt="">`
+        : `<div class="pa-seal"><div><div class="t1">ТАМГА</div><div class="t2">байрлуулах</div></div></div>`}
     </div>
-    <div class="pa-foot">Нэхий Трейд ХХК · Хэвлэсэн: ${esc(new Date().toLocaleString('mn-MN'))}</div>
+    <div class="pa-foot">${esc(COMPANY_NAME)} · Хэвлэсэн: ${esc(new Date().toLocaleString('mn-MN'))}</div>
+    </div>
   `;
   window.print();
 });
