@@ -38,15 +38,13 @@
 (function(){
   try {
     var t = localStorage.getItem('nehiitrade_theme_v1');
-    if (t && t !== 'leather') document.documentElement.setAttribute('data-theme', t);
-    var f = localStorage.getItem('nehiitrade_font_v1');
-    if (f && f !== 'default') document.documentElement.setAttribute('data-font', f);
+    if (t === 'sky' || t === 'glass') document.documentElement.setAttribute('data-theme', t);
   } catch(e){}
 })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Noto+Sans:wght@400;500;600;700&display=optional" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Noto+Sans:wght@400;500;600;700&display=optional" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
@@ -80,35 +78,6 @@
   --shipping-text:#6b3fa0;
 }
 
-/* ---------- Theme: Эсгий ба хужир (felt/wool) ---------- */
-html[data-theme="felt"]{
-  --ink:#201d1a;
-  --text:#201d1a;
-  --stone:#e3e0d3;
-  --stone-dim:#d5d1c3;
-  --paper:#efe9df;
-  --line:#d9d3c4;
-  --saddle:#7a2e2e;
-  --saddle-dim:#9c4a4a;
-  --moss:#4f6b6a;
-  --moss-dim:#e8eeed;
-  --brick:#a1402c;
-  --brick-dim:#f5e6e1;
-  --amber:#c08a2e;
-  --amber-dim:#f7ecd7;
-  --muted:#736f63;
-  --white:#fffcf7;
-  --white-text:#201d1a;
-  --sidebar-text:#beb6a4;
-  --sidebar-muted:#9a9284;
-  --btn-hover:#322d28;
-  --btn-danger-hover:#7c301f;
-  --confirmed-bg:#e6eaf0;
-  --confirmed-text:#3f5773;
-  --shipping-bg:#f0e6ec;
-  --shipping-text:#7a4d67;
-}
-
 /* ---------- Theme: Тэнгэр, наран (sky/sun) ---------- */
 html[data-theme="sky"]{
   --ink:#14213d;
@@ -138,39 +107,120 @@ html[data-theme="sky"]{
   --shipping-text:#6d28d9;
 }
 
-/* ---------- Theme: Шөнө, од (night mode) ---------- */
-html[data-theme="night"]{
-  --ink:#0b0c0e;
-  --text:#e5e7eb;
-  --stone:#14161a;
-  --stone-dim:#1c1f24;
-  --paper:#1e2128;
-  --line:#2f333c;
-  --saddle:#c9834f;
-  --saddle-dim:#dba578;
-  --moss:#4ade80;
-  --moss-dim:#16321f;
-  --brick:#f87171;
-  --brick-dim:#3a1f1f;
-  --amber:#fbbf24;
-  --amber-dim:#3a2f14;
-  --muted:#9199a8;
-  --white:#f5f6f8;
-  --white-text:#14161a;
-  --sidebar-text:#d8dbe3;
-  --sidebar-muted:#8b93a3;
-  --btn-hover:#b3703d;
-  --btn-danger-hover:#e05252;
-  --confirmed-bg:#1c2a3d;
-  --confirmed-text:#7fb0e8;
-  --shipping-bg:#2a2038;
-  --shipping-text:#b794f4;
+/* ---------- Theme: Шилэн (glass) ---------- */
+/* Тунгалаг шилэн гадаргуу + арын зөөлөн өнгөт толбо. Зөвхөн харагдах байдал —
+   JS логик, өгөгдөлд хүрэхгүй. Бүх дүрэм html[data-theme="glass"] дор тул өөр
+   загвар сонговол бүрэн буцна. */
+html[data-theme="glass"]{
+  --ink:#0e2830;
+  --text:#0e2830;
+  --stone:#e4eef1;
+  --stone-dim:rgba(14,40,48,.07);
+  --paper:rgba(255,255,255,.55);
+  --line:rgba(14,40,48,.13);
+  --saddle:#138CA4;
+  --saddle-dim:#17A8C4;
+  --moss:#1E8449;
+  --moss-dim:rgba(30,158,90,.15);
+  --brick:#b93a2b;
+  --brick-dim:rgba(192,57,43,.13);
+  --amber:#a8690a;
+  --amber-dim:rgba(243,156,18,.18);
+  --muted:#4d6770;
+  --white:rgba(255,255,255,.86);
+  --white-text:#0e2830;
+  --radius:10px;
+  --sidebar-text:#f1fafc;
+  --sidebar-muted:#cfe9ef;
+  --btn-hover:#2C3E8C;
+  --btn-danger-hover:#962d21;
+  --confirmed-bg:rgba(44,62,140,.13);
+  --confirmed-text:#2C3E8C;
+  --shipping-bg:rgba(123,31,162,.12);
+  --shipping-text:#7B1FA2;
+  --g-accent:#17A8C4;
+  --g-accent2:#2C3E8C;
+  --g-edge:rgba(255,255,255,.8);
+  --g-solid:rgba(255,255,255,.9);
+  --g-shadow:0 10px 36px -14px rgba(16,70,86,.30);
+  --g-blur:18px;
 }
+/* Арын өнгөт толбо — хөдөлгөөнгүй (blur-ийг байнга дахин тооцуулахгүй) */
+.glass-scene{display:none;}
+html[data-theme="glass"] .glass-scene{display:block;position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+html[data-theme="glass"] .glass-scene i{position:absolute;border-radius:50%;filter:blur(70px);opacity:.7;}
+html[data-theme="glass"] .glass-scene i:nth-child(1){width:46vw;height:46vw;left:-6vw;top:-12vw;background:#17A8C4;}
+html[data-theme="glass"] .glass-scene i:nth-child(2){width:40vw;height:40vw;right:-10vw;top:12vh;background:#8fd3f0;}
+html[data-theme="glass"] .glass-scene i:nth-child(3){width:34vw;height:34vw;left:34vw;bottom:-16vw;background:#f2c79b;opacity:.5;}
+html[data-theme="glass"] #app, html[data-theme="glass"] #loginScreen{position:relative;z-index:1;}
+html[data-theme="glass"] #loginScreen{background:transparent;}
+/* Шилэн гадаргуу — нэгдсэн дүрэм */
+html[data-theme="glass"] .panel,
+html[data-theme="glass"] .stat-card,
+html[data-theme="glass"] .topbar,
+html[data-theme="glass"] .login-card{
+  background:var(--paper);
+  border:1px solid var(--g-edge);
+  box-shadow:var(--g-shadow), inset 0 1px 0 var(--g-edge);
+  -webkit-backdrop-filter:blur(var(--g-blur)) saturate(160%);
+  backdrop-filter:blur(var(--g-blur)) saturate(160%);
+}
+html[data-theme="glass"] .panel, html[data-theme="glass"] .login-card{border-radius:18px;}
+html[data-theme="glass"] .panel{overflow:hidden;}
+html[data-theme="glass"] .panel .panel{box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--white);}
+/* KPI картын өнгөт дээд зураас (inline border-top-color) дугуй булантай зохицдоггүй тул
+   шилэн загварт нимгэн цагаан ирмэгээр солиж, дүрсийг өнгөөр тодотгоно. */
+html[data-theme="glass"] .stat-card{border-radius:18px;border-top:1px solid var(--g-edge) !important;transition:transform .2s ease, box-shadow .15s;}
+html[data-theme="glass"] .stat-icon-svg, html[data-theme="glass"] .panel-icon{color:var(--saddle);}
+html[data-theme="glass"] .stat-card:hover{transform:translateY(-2px);}
+html[data-theme="glass"] .stat-card .val{font-variant-numeric:tabular-nums;}
+html[data-theme="glass"] .topbar{border-width:0 0 1px 0;position:sticky;top:0;z-index:30;}
+html[data-theme="glass"] #todaySummaryPanel{background:var(--paper) !important;border:1px solid var(--g-edge) !important;}
+/* Цонх (modal) — уншигдахуйц байхаар илүү өтгөн шил */
+html[data-theme="glass"] .modal{
+  background:var(--g-solid);border:1px solid var(--g-edge);border-radius:18px;overflow:hidden;
+  box-shadow:0 24px 60px -20px rgba(16,70,86,.45);
+  -webkit-backdrop-filter:blur(var(--g-blur));backdrop-filter:blur(var(--g-blur));
+}
+html[data-theme="glass"] .overlay{background:rgba(14,40,48,.38);}
+/* Sidebar — өнгөт шил: ардах толбо нэвт харагдана, цагаан бичвэр хэвээр */
+html[data-theme="glass"] .sidebar{
+  background:linear-gradient(180deg, rgba(23,168,196,.84) 0%, rgba(44,62,140,.90) 100%);
+  -webkit-backdrop-filter:blur(var(--g-blur)) saturate(150%);backdrop-filter:blur(var(--g-blur)) saturate(150%);
+  border-right:1px solid rgba(255,255,255,.25);
+  box-shadow:4px 0 30px -12px rgba(0,0,0,.25);
+}
+html[data-theme="glass"] .brand .name, html[data-theme="glass"] nav.navlist button:hover{color:#fff;}
+html[data-theme="glass"] nav.navlist button.active{background:rgba(255,255,255,.24);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.35);}
+/* Товч — үндсэн товч өнгөт градиент, туслах товч шил */
+html[data-theme="glass"] .btn{color:#fff;border-color:transparent;background:linear-gradient(135deg,var(--g-accent),var(--g-accent2));box-shadow:0 6px 16px -8px var(--g-accent);}
+html[data-theme="glass"] .btn:hover{background:linear-gradient(135deg,var(--g-accent),var(--g-accent2));filter:brightness(1.08);}
+html[data-theme="glass"] .btn.secondary{color:var(--ink);background:var(--white);border:1px solid var(--g-edge);box-shadow:none;filter:none;}
+html[data-theme="glass"] .btn.secondary:hover{background:#fff;border-color:var(--saddle);}
+html[data-theme="glass"] .btn.danger{background:var(--brick);box-shadow:none;}
+html[data-theme="glass"] .btn.danger:hover{background:var(--btn-danger-hover);filter:none;}
+html[data-theme="glass"] .field input:focus, html[data-theme="glass"] .field select:focus, html[data-theme="glass"] .field textarea:focus{
+  outline:none;border-color:var(--saddle);box-shadow:0 0 0 3px rgba(23,168,196,.18);}
+html[data-theme="glass"] .toast{color:#fff;border-radius:12px;}
+html[data-theme="glass"] ::selection{background:var(--g-accent);color:#fff;}
+html[data-theme="glass"] .theme-card{border-radius:14px;}
+html[data-theme="glass"] .rc-bar{background:linear-gradient(180deg,var(--g-accent),var(--saddle));}
+/* Утас/таблет — blur багасгаж гүйцэтгэл хэмнэнэ */
+@media (max-width:840px){
+  html[data-theme="glass"]{--g-blur:10px;}
+  html[data-theme="glass"] .glass-scene i{filter:blur(50px);}
+  html[data-theme="glass"] .sidebar{background:linear-gradient(180deg, rgba(23,168,196,.95) 0%, rgba(44,62,140,.97) 100%);}
+}
+/* backdrop-filter дэмждэггүй хөтөч / тунгалаг байдлыг багасгах тохиргоо — бараг цагаан картаар */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  html[data-theme="glass"] .panel, html[data-theme="glass"] .stat-card, html[data-theme="glass"] .topbar, html[data-theme="glass"] .login-card{background:rgba(255,255,255,.93);}
+}
+@media (prefers-reduced-transparency:reduce){
+  html[data-theme="glass"] .panel, html[data-theme="glass"] .stat-card, html[data-theme="glass"] .topbar, html[data-theme="glass"] .login-card{background:rgba(255,255,255,.95);}
+}
+/* Фонт: ганц хос — Merriweather (гарчиг) + Noto Sans (эх бичвэр). Монгол кирилл
+   (Ү/ү, Ө/ө) зөв харагддаг. Өмнөх фонт сонгогчийг хассан. */
 :root{
-  --font-heading:'Newsreader',serif;
-  --font-body:'IBM Plex Sans',sans-serif;
-}
-:root[data-font="reading"]{
   --font-heading:'Merriweather',serif;
   --font-body:'Noto Sans',sans-serif;
 }
@@ -683,9 +733,9 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
   /* Хэвлэхэд зөвхөн #printArea харагдана. Login/апп/modal бүгд нуугдана.
      (Modal-ууд #app-ийн ГАДНА байдаг тул тусад нь нуух ёстой — эс бол
       modal тэр чигээрээ хэвлэгддэг байсан.) */
-  #loginScreen, #app, .overlay { display:none !important; }
+  #loginScreen, #app, .overlay, .glass-scene { display:none !important; }
   body { background:#fff !important; }
-  #printArea { display:block !important; color:#16233b; font-family:'IBM Plex Sans',Arial,sans-serif; }
+  #printArea { display:block !important; color:#16233b; font-family:'Noto Sans',Arial,sans-serif; }
 
   /* --- Толгой: лого + компанийн нэр --- */
   #printArea .pa-head{ display:flex; align-items:center; gap:14px; padding-bottom:12px;
@@ -695,14 +745,14 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
   #printArea .pa-logo .d{ color:#e0631e; }
   #printArea .pa-logo .n{ color:#232323; }
   #printArea .pa-brandtext{ line-height:1.15; }
-  #printArea .pa-brandtext .b1{ font-family:'Newsreader',Georgia,serif; font-weight:700; font-size:19px; }
+  #printArea .pa-brandtext .b1{ font-family:'Merriweather',Georgia,serif; font-weight:700; font-size:19px; }
   #printArea .pa-brandtext .b1 .q{ color:#e0631e; }
   #printArea .pa-brandtext .b1 .co{ color:#16233b; }
   #printArea .pa-brandtext .b2{ font-size:11px; font-weight:600; letter-spacing:1.5px;
     color:#16305c; margin-top:2px; }
 
   /* --- Гарчиг --- */
-  #printArea .pa-title{ text-align:center; font-family:'Newsreader',Georgia,serif; font-weight:700;
+  #printArea .pa-title{ text-align:center; font-family:'Merriweather',Georgia,serif; font-weight:700;
     font-size:25px; letter-spacing:1px; color:#16305c; margin:14px 0 16px; }
 
   /* --- Мэдээллийн хайрцаг --- */
@@ -742,7 +792,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
   #printArea .pa-notes .lbl{ font-weight:700; color:#16305c; }
 
   /* --- Тайлангийн хэсгийн гарчиг (Шилдэг бараа, дэлгүүр гэх мэт) --- */
-  #printArea .pa-sec-title{ font-family:'Newsreader',Georgia,serif; font-weight:700; font-size:14.5px;
+  #printArea .pa-sec-title{ font-family:'Merriweather',Georgia,serif; font-weight:700; font-size:14.5px;
     color:#16305c; margin:18px 0 8px; border-bottom:1px solid #b7c8db; padding-bottom:5px; }
 
   /* --- Гол үзүүлэлтийн карт (KPI) --- */
@@ -806,6 +856,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 </style>
 </head>
 <body>
+<div class="glass-scene" aria-hidden="true"><i></i><i></i><i></i></div>
 
 <!-- ===================== LOGIN ===================== -->
 <div id="loginScreen">
@@ -1220,16 +1271,6 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           <div style="padding:20px;">
             <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">Системийн өнгө, харагдах загварыг сонгоно уу. Сонголт таны browser дээр хадгалагдана.</p>
             <div class="theme-grid" id="themeGrid"></div>
-          </div>
-        </div>
-
-        <div class="panel" style="margin-top:20px;">
-          <div class="panel-head">
-            <h2>Фонт</h2>
-          </div>
-          <div style="padding:20px;">
-            <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">Дэлгэц дээр харагдах фонтыг сонгоно уу (хэвлэлт/PDF-д нөлөөлөхгүй, тогтмол хэвээр үлдэнэ).</p>
-            <div class="theme-grid" id="fontGrid"></div>
           </div>
         </div>
 
@@ -1957,14 +1998,8 @@ const THEMES = [
   {
     id: 'leather',
     name: 'Арьс, шир',
-    desc: 'Одоогийн загвар — саддл хүрэн өнгө, цаас-шир мэдрэмж.',
+    desc: 'Саддл хүрэн өнгө, цаас-шир мэдрэмж.',
     swatch: ['#241f19', '#f6f2e9', '#a6592e', '#5f6f4e', '#b5852b']
-  },
-  {
-    id: 'felt',
-    name: 'Эсгий, хужир',
-    desc: 'Хүйтэн саарал дэвсгэр, бордо улаан өнгө голлосон.',
-    swatch: ['#201d1a', '#efe9df', '#7a2e2e', '#4f6b6a', '#c08a2e']
   },
   {
     id: 'sky',
@@ -1973,15 +2008,19 @@ const THEMES = [
     swatch: ['#14213d', '#eaf1fb', '#2563eb', '#f97316', '#16a34a']
   },
   {
-    id: 'night',
-    name: 'Шөнө, од',
-    desc: 'Бараан дэвсгэртэй, шөнийн цагт нүд амраах горим.',
-    swatch: ['#0b0c0e', '#1e2128', '#c9834f', '#fbbf24', '#4ade80']
+    id: 'glass',
+    name: 'Шилэн',
+    desc: 'Тунгалаг шилэн гадаргуу, далайн цэнхэр өнгө. Төхөөрөмж удаашрвал өөр загвар сонгоно уу.',
+    swatch: ['#2C3E8C', '#17A8C4', '#8fd3f0', '#e4eef1', '#f2c79b']
   }
 ];
 
 function getCurrentTheme(){
-  try { return localStorage.getItem(THEME_KEY) || 'leather'; } catch(e){ return 'leather'; }
+  // Хасагдсан загвар (Эсгий, Шөнө) хадгалагдсан байвал анхдагч руу буцна.
+  try {
+    const t = localStorage.getItem(THEME_KEY);
+    return THEMES.some(x => x.id === t) ? t : 'leather';
+  } catch(e){ return 'leather'; }
 }
 function applyTheme(id){
   if (id === 'leather') document.documentElement.removeAttribute('data-theme');
@@ -1989,32 +2028,6 @@ function applyTheme(id){
   try { localStorage.setItem(THEME_KEY, id); } catch(e){}
 }
 
-/* ---------------- Фонт ---------------- */
-const FONT_KEY = 'nehiitrade_font_v1';
-const FONTS = [
-  {
-    id: 'default',
-    name: 'Уран зохиолын',
-    desc: 'Newsreader (гарчиг) + IBM Plex Sans (эх бичвэр) — одоогийн фонт.',
-    heading: "'Newsreader',serif",
-    body: "'IBM Plex Sans',sans-serif"
-  },
-  {
-    id: 'reading',
-    name: 'Дэлгэцэд ээлтэй',
-    desc: 'Merriweather (гарчиг) + Noto Sans (эх бичвэр) — монгол кирилл (Ү/ү) дэмжлэг сайтай.',
-    heading: "'Merriweather',serif",
-    body: "'Noto Sans',sans-serif"
-  }
-];
-function getCurrentFont(){
-  try { return localStorage.getItem(FONT_KEY) || 'default'; } catch(e){ return 'default'; }
-}
-function applyFont(id){
-  if (id === 'default') document.documentElement.removeAttribute('data-font');
-  else document.documentElement.setAttribute('data-font', id);
-  try { localStorage.setItem(FONT_KEY, id); } catch(e){}
-}
 /* ---------------- Хэвлэлтийн гарын үсэг, тамга ---------------- */
 const SIGN_KEY  = 'nehiitrade_sign_v1';
 const STAMP_KEY = 'nehiitrade_stamp_v1';
@@ -2121,24 +2134,6 @@ function renderSettings(){
     });
   });
 
-  const fontGrid = document.getElementById('fontGrid');
-  if (fontGrid) {
-    const currentFont = getCurrentFont();
-    fontGrid.innerHTML = FONTS.map(f => `
-      <button type="button" class="theme-card${f.id===currentFont?' selected':''}" data-font-id="${esc(f.id)}">
-        <div class="tname" style="font-family:${f.heading};font-size:17px;margin-bottom:4px;">Аа Бб Вв — ${esc(f.name)}</div>
-        <div class="tdesc" style="font-family:${f.body};">${esc(f.desc)}</div>
-        <div class="tcheck">${f.id===currentFont?'✓ Идэвхтэй':''}</div>
-      </button>`).join('');
-    fontGrid.querySelectorAll('.theme-card').forEach(card => {
-      card.addEventListener('click', () => {
-        applyFont(card.dataset.fontId);
-        renderSettings();
-        toast('Фонт солигдлоо', 'ok');
-      });
-    });
-  }
-
   renderSignStampSettings();
 
   const nextNoInput = document.getElementById('nextOrderNoInput');
@@ -2150,7 +2145,6 @@ function renderSettings(){
 /* ---------------- Auth ---------------- */
 window.addEventListener('load', () => {
   applyTheme(getCurrentTheme());
-  applyFont(getCurrentFont());
   // localStorage.getItem нь зарим орчинд (private mode, storage хаагдсан,
   // browser тохиргоо) SecurityError шидэж болзошгүй тул try/catch-гүй бол
   // апп эхлэлдээ л цохигдоно. Уншиж чадахгүй бол зүгээр л хоосноос эхэлнэ.
