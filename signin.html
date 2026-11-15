@@ -1282,13 +1282,22 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
             <div style="margin-bottom:18px;">
               <div style="font-weight:600;margin-bottom:4px;">Нөөцлөх</div>
               <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px;">Бүх өгөгдлийг (дэлгүүр, бараа, захиалга) нэг JSON файл болгон компьютерт татаж авна. Тогтмол нөөцлөх нь Google Drive-той холбоотой асуудал гарвал сэргээх боломж өгнө.</p>
-              <button class="btn secondary" id="backupExportBtn">Нөөцлөх</button>
+              <button class="btn secondary" id="backupExportBtn">Нөөцлөх (компьютерт татах)</button>
             </div>
             <div style="margin-bottom:18px;">
               <div style="font-weight:600;margin-bottom:4px;">Сэргээх</div>
               <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px;">Өмнө нөөцөлсөн JSON файлаас өгөгдлийг сэргээж, ОДООГИЙН бүх өгөгдлийг БҮРЭН СОЛИНО. Энэ үйлдлийг буцаах боломжгүй тул зөвхөн итгэлтэй нөөцлөлтийн файлаар ашиглана уу.</p>
               <button class="btn secondary" id="backupRestoreBtn">Сэргээх</button>
               <input type="file" id="backupRestoreFile" accept=".json" style="display:none;">
+            </div>
+            <div style="margin-bottom:18px;">
+              <div style="font-weight:600;margin-bottom:4px;">Google Drive дээрх автомат нөөц</div>
+              <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px;">Өдөр бүрийн эхний синкийн үед өгөгдлийн хуулбарыг Google Drive-ийн "Нэхий Трейд Захиалга/backups" хавтаст автоматаар хадгална. Сүүлийн 14 нөөц үлдэж, хуучин нь өөрөө устна. Алдаа гарвал доорх жагсаалтаас өдрөө сонгож сэргээнэ — сэргээхийн өмнө одоогийн байдлыг дахин нөөцөлдөг тул буцаах боломжтой.</p>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn secondary" id="driveBackupListBtn">Нөөцийн жагсаалт харах</button>
+                <button class="btn secondary" id="driveBackupNowBtn">Одоо нөөцлөх</button>
+              </div>
+              <div id="driveBackupList" style="margin-top:12px;"></div>
             </div>
             <div>
               <div style="font-weight:600;margin-bottom:4px;">Дахин ачаалах</div>
@@ -2238,7 +2247,7 @@ function initGSI(){
   btn.addEventListener('click', () => {
     hideLoginError();
     authCallbackMode = 'login';
-    tokenClient.requestAccessToken({ prompt: '' });
+    tokenClient.requestAccessToken(tokenRequestOpts());
   });
   host.appendChild(btn);
 
@@ -2333,8 +2342,41 @@ window.addEventListener('online', () => {
   loadFromDrive({ silent: true });
 });
 
-function tokenExpiringSoon(){
-  return !tokenExpiresAt || Date.now() > tokenExpiresAt - 120000; // дуусахаас 2 минутын өмнө
+function tokenExpiringSoon(marginMs){
+  const m = marginMs == null ? 120000 : marginMs;            // анхдагч: дуусахаас 2 минутын өмнө
+  return !tokenExpiresAt || Date.now() > tokenExpiresAt - m;
+}
+function tokenExpired(){ return tokenExpiringSoon(0); }
+// Сүүлд нэвтэрсэн имэйлийг Google-д "hint" болгон өгнө — акаунт сонгох цонх
+// гарахгүй, popup бараг анивчаад л хаагдана.
+function tokenRequestOpts(){
+  const email = (currentUser && currentUser.email) || ((readUserCache() || {}).email) || '';
+  return email ? { prompt: '', login_hint: email } : { prompt: '' };
+}
+// Хөтөч popup-ыг ЗӨВХӨН хэрэглэгчийн шууд үйлдлийн (товч дарах, бичих) дотор
+// нээхийг зөвшөөрдөг. Таймер/фон дээрээс оролдвол хаагдаж, хэрэглэгчид улаан
+// товч л харагддаг байв. Тиймээс токен дуусахаас 5 минутын өмнө "дараагийн
+// даралтад" сунгалтыг холбоно — хэрэглэгч апп дотор юу ч дарахад чимээгүй
+// сунгагдана (товч нь өөрийн ажлаа хэвийн хийнэ).
+let reauthArmed = false;
+function armReauthOnNextInteraction(){
+  if (reauthArmed || !accessToken) return;
+  reauthArmed = true;
+  const handler = () => {
+    reauthArmed = false;
+    document.removeEventListener('click', handler, true);
+    document.removeEventListener('keydown', handler, true);
+    if (accessToken && tokenExpiringSoon(5*60*1000)) silentRefresh({ gesture: true });
+  };
+  // pointerdown биш click: утсан дээр touch-ийн pointerdown нь popup нээх эрх өгдөггүй.
+  document.addEventListener('click', handler, true);
+  document.addEventListener('keydown', handler, true);
+}
+function disarmReauth(){ reauthArmed = false; }
+let pendingSaveAfterAuth = false;   // токен дууссанаас болж хадгалагдаагүй өөрчлөлт байгаа эсэх
+function hasUserActivationNow(){
+  const ua = navigator.userActivation;
+  return !!(ua && ua.isActive);
 }
 
 const REFRESH_TIMEOUT_MS = 30000;
@@ -2342,8 +2384,18 @@ function setReauthBanner(show){
   const el = document.getElementById('reauthBanner');
   if (el) el.style.display = show ? '' : 'none';
 }
-function silentRefresh(){
+// opts.gesture — хэрэглэгчийн даралтын дотроос дуудагдсан (popup нээж болно).
+// opts.invalid — Google токеныг хүчингүй гэж хариулсан (401).
+function silentRefresh(opts){
   if (refreshPromise) return refreshPromise; // аль хэдийн давхар яваа бол шинэ хүсэлт үүсгэхгүй, хуучныг буцаана
+  const gesture = !!(opts && opts.gesture) || hasUserActivationNow();
+  if (!gesture) {
+    // Даралтгүй үед popup нээгдэхгүй (хөтөч хаана) — оролдохгүй. Токен хүчинтэй
+    // хэвээр бол дараагийн даралтад холбоно; дууссан бол сунгах товчийг харуулна.
+    armReauthOnNextInteraction();
+    if (tokenExpired() || (opts && opts.invalid)) setReauthBanner(true);
+    return Promise.resolve(false);
+  }
   refreshPromise = new Promise((resolve) => {
     if (!tokenClient) { resolve(false); return; }
     authCallbackMode = 'refresh';
@@ -2359,40 +2411,45 @@ function silentRefresh(){
     };
     const timer = setTimeout(() => finish(false), REFRESH_TIMEOUT_MS);
     pendingRefreshResolve = finish;
-    try { tokenClient.requestAccessToken({ prompt: '' }); }
+    try { tokenClient.requestAccessToken(tokenRequestOpts()); }
     catch(e){ console.error(e); finish(false); }
   }).then((ok) => {
-    // Амжилтгүй бол хэрэглэгчид "дарж сунгах" товч харуулна — хэрэглэгчийн
-    // ДАРАЛТААР нээгдсэн popup-ыг хөтөч хаадаггүй.
-    setReauthBanner(!ok);
+    if (ok) {
+      setReauthBanner(false);
+      disarmReauth();
+      // Токен дууссанаас болж хүлээгдэж байсан өөрчлөлтийг одоо Drive руу илгээнэ.
+      if (pendingSaveAfterAuth) { pendingSaveAfterAuth = false; doSave(); }
+    } else if (tokenExpired() || (opts && opts.invalid)) {
+      setReauthBanner(true);   // хэрэглэгчийн ДАРАЛТААР нээгдсэн popup-ыг хөтөч хаадаггүй
+    } else {
+      armReauthOnNextInteraction();
+    }
     return ok;
   }).finally(() => { refreshPromise = null; });
   return refreshPromise;
 }
 document.getElementById('reauthBanner').addEventListener('click', async () => {
-  // Аль хэдийн хүлээгдэж буй (хаагдсан popup-ын) сунгалт байвал энэ даралтаар
-  // popup-ыг шинээр нээнэ — хариу нь мөн тэр хүлээлтийг шийднэ.
-  if (refreshPromise && tokenClient) {
-    authCallbackMode = 'refresh';
-    try { tokenClient.requestAccessToken({ prompt: '' }); } catch(e){ console.error(e); }
-  }
-  const ok = await silentRefresh();
+  pendingSaveAfterAuth = true;     // сунгасны дараа хадгалалтыг заавал үргэлжлүүлнэ
+  const ok = await silentRefresh({ gesture: true });
   if (ok) {
     toast('Нэвтрэлт сунгагдлаа', 'ok');
-    doSave();          // хүлээгдэж байсан өөрчлөлтийг Drive руу (нэгтгээд) хадгална
   } else {
     toast('Сунгаж чадсангүй. "Гарах" дараад дахин нэвтэрнэ үү — өгөгдөл тань энэ төхөөрөмжид хадгалагдсан.', 'err');
   }
 });
 
-// 30 секунд тутам токены хугацааг шалгаж, дуусахад ойртсон бол нам гүм шинэчилнэ
-setInterval(() => {
-  if (accessToken && tokenExpiringSoon()) silentRefresh();
-}, 30000);
+// 30 секунд тутам токены хугацааг шалгана: дуусахаас 5 минутын өмнө дараагийн
+// даралтад сунгалт холбоно, бүр дууссан бол сунгах товч харуулна.
+function checkTokenState(){
+  if (!accessToken || document.getElementById('app').style.display === 'none') return;
+  if (tokenExpired()) { armReauthOnNextInteraction(); setReauthBanner(true); }
+  else if (tokenExpiringSoon(5*60*1000)) armReauthOnNextInteraction();
+}
+setInterval(checkTokenState, 30000);
 
 // Хэрэглэгч tab руу буцаж ирэхэд (жиш. унтраасан утаснаасаа буцаж нээхэд) шууд шалгах
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && accessToken && tokenExpiringSoon()) silentRefresh();
+  if (document.visibilityState === 'visible') checkTokenState();
 });
 // Tab/апп руу буцаж ирэхэд өөр төхөөрөмжөөс орсон өөрчлөлтийг Drive-с татна
 // (минутад 1-ээс олонгүй). Ингэснээр удаан нээлттэй байсан таб хуучирсан
@@ -2410,6 +2467,9 @@ function signOutLocal(){
   }
   cancelSaveRetry();
   setReauthBanner(false);
+  disarmReauth();
+  pendingSaveAfterAuth = false;
+  clearTimeout(verifyTimer);
   try { localStorage.removeItem(USER_CACHE_KEY); } catch(_){}
   clearTokenStorage();
   authCallbackMode = 'login';
@@ -2418,6 +2478,7 @@ function signOutLocal(){
   tokenExpiresAt = 0;
   driveFileId = null;
   driveFolderId = null;
+  backupFolderId = null;
   clearFileIdCache();
   document.getElementById('app').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
@@ -2442,7 +2503,7 @@ async function driveFetch(url, opts){
     try {
       let res = await fetch(url, opts);
       if (res.status === 401) {
-        const refreshed = await silentRefresh();
+        const refreshed = await silentRefresh({ invalid: true });
         // silentRefresh() амжилтгүй бол accessToken=null болсон байна (initGSI-ийн
         // 'refresh' callback-т тодорхойлсон). Ийм үед "Bearer null"-ээр дахин
         // оролдохгүй — шууд гарж, дуудагч талд (doSave/loadFromDrive) тодорхой
@@ -2588,8 +2649,21 @@ async function writeDriveFile(fileId, obj){
   }
 }
 
+// ---- Drive үйлдлийг дараалуулах ----
+// Хадгалах (doSave) ба ачаалах (loadFromDrive) нь Drive-г уншаад бичдэг тул хоёр
+// нь зэрэг явбал хуучин өгөгдөлтэй хүсэлт СҮҮЛД бичигдэж, шинэ өөрчлөлтийг
+// түр дарах боломжтой байв. Одоо бүгд нэг дараалалд орж, нэг нэгээр гүйцэтгэгдэнэ.
+let _driveChain = Promise.resolve();
+function withDriveLock(fn){
+  const p = _driveChain.then(() => fn());
+  _driveChain = p.catch(() => {});
+  return p;
+}
 let lastDriveLoadAt = 0;
 async function loadFromDrive(opts){
+  return withDriveLock(() => loadFromDriveCore(opts));
+}
+async function loadFromDriveCore(opts){
   // opts.silent: tab руу буцаж ирэхэд автоматаар дуудагдах үед алдааны toast
   // гаргахгүй (сүлжээ түр тасарсан бүрд хэрэглэгчийг залхаахгүй).
   const silent = !!(opts && opts.silent);
@@ -2622,6 +2696,7 @@ async function loadFromDrive(opts){
     setSync('', 'Синк хийгдсэн');
     render();
     if (needsPush) queueSave();
+    maybeAutoBackup();
   } catch(e){
     console.error(e);
     // Кэшнээс авсан ID хуучирсан (файл устсан/зөөгдсөн) байж болзошгүй тул
@@ -2668,7 +2743,228 @@ function cancelSaveRetry(){
   if (banner) banner.style.display = 'none';
 }
 
+// ---- Бичсэний дараах шалгалт ----
+// Drive-д "өөрчлөгдөөгүй бол л бич" (conditional write) байхгүй тул хоёр
+// төхөөрөмж яг зэрэг бичвэл нэгнийх нь шинэ мөр Drive-аас түр алга болж
+// болно (тэр төхөөрөмжийн локалд хэвээр). Тиймээс бичснээс 30 секундын дараа
+// Drive-г дахин уншиж, манай бичлэг бүр тэнд (ижил эсвэл шинэ хувилбараар)
+// байгаа эсэхийг шалгана; дутуу бол дахин нэгтгэж хадгална. 3 удаа дараалан
+// дутуу гарвал зогсоод дараагийн ердийн хадгалалтыг хүлээнэ.
+const VERIFY_DELAY_MS = 30000;
+let verifyTimer = null, verifyStreak = 0;
+function scheduleVerify(){
+  clearTimeout(verifyTimer);
+  verifyTimer = setTimeout(verifyDriveConsistency, VERIFY_DELAY_MS);
+}
+function countMissingOnRemote(remote){
+  let missing = 0;
+  ['shops','products','orders'].forEach(k => {
+    const remoteTs = Object.create(null);
+    (Array.isArray(remote[k]) ? remote[k] : []).forEach(r => { if (r && r.id != null) remoteTs[String(r.id)] = Number(r.updatedAt) || 0; });
+    data[k].forEach(x => {
+      const t = remoteTs[String(x.id)];
+      if (t === undefined || (Number(x.updatedAt) || 0) > t) missing++;
+    });
+  });
+  const rt = (remote.tombstones && typeof remote.tombstones === 'object') ? remote.tombstones : {};
+  Object.keys(data.tombstones || {}).forEach(id => { if (!(Number(rt[id]) >= data.tombstones[id])) missing++; });
+  if ((Number(data.nextOrderNo) || 1) > (Number(remote.nextOrderNo) || 1)) missing++;
+  return missing;
+}
+async function verifyDriveConsistency(){
+  if (!accessToken || !driveFileId || tokenExpiringSoon()) return;   // фон дээрээс токен сунгахгүй
+  if (document.getElementById('app').style.display === 'none') return;
+  let missing = 0;
+  await withDriveLock(async () => {
+    if (!driveFileId) return;
+    let remote;
+    try { remote = await readDriveFile(driveFileId); } catch(e){ return; }
+    missing = countMissingOnRemote(remote);
+  });
+  if (!missing) { verifyStreak = 0; return; }
+  if (++verifyStreak > 3) {
+    console.warn('[Sync] Drive дээр дутуу бичлэг үлдсээр байна — дараагийн хадгалалтаар дахин оролдоно');
+    verifyStreak = 0;
+    return;
+  }
+  console.warn(`[Sync] Өөр төхөөрөмж зэрэг бичсэн тул ${missing} бичлэг Drive-д дутуу — дахин нэгтгэж хадгална`);
+  doSave();
+}
+
+// ═════════════════════════════════════════════════════════════════
+// АВТОМАТ НӨӨЦ — Google Drive дээр өдөрт нэг удаа, сүүлийн 14-ийг хадгална
+// ═════════════════════════════════════════════════════════════════
+// Байршил: "Нэхий Трейд Захиалга/backups/backup_YYYY-MM-DD.json". Өдрийн
+// ЭХНИЙ амжилттай синкийн үеийн байдлыг авна — тухайн өдөр ямар нэг алдаатай
+// өгөгдөл синк хийгдсэн ч өмнөх өдрүүдийн нөөц хөндөгдөхгүй.
+const BACKUP_FOLDER_NAME = 'backups';
+const MAX_DRIVE_BACKUPS = 14;       // өдрийн автомат нөөц
+const MAX_EXTRA_BACKUPS = 5;        // "Одоо нөөцлөх" болон сэргээхийн өмнөх нөөц (тусдаа тоологдоно)
+const AUTO_BACKUP_RX = /^backup_\d{4}-\d{2}-\d{2}\.json$/;
+const BACKUP_DAY_KEY = 'nehiitrade_last_backup_day_v1';
+let backupFolderId = null;
+let backupRunning = false;
+async function driveListFiles(q, orderBy){
+  const url = 'https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) +
+    '&spaces=drive&fields=files(id,name,createdTime)' + (orderBy ? '&orderBy=' + encodeURIComponent(orderBy) : '');
+  const res = await driveFetch(url);
+  if (!res.ok) { const err = new Error('list failed'); err.status = res.status; throw err; }
+  const json = await res.json();
+  return Array.isArray(json.files) ? json.files : [];
+}
+async function driveCreateJsonFile(name, parentId, obj, mimeType){
+  const metadata = { name, parents: [parentId] };
+  if (mimeType) metadata.mimeType = mimeType;
+  const boundary = '-------nehiitrade' + uid();
+  const body =
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+    `--${boundary}\r\nContent-Type: application/json\r\n\r\n${obj == null ? '' : JSON.stringify(obj)}\r\n--${boundary}--`;
+  const res = await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body
+  });
+  if (!res.ok) { const err = new Error('create failed'); err.status = res.status; throw err; }
+  return (await res.json()).id;
+}
+async function driveDeleteFile(id){
+  const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${id}`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 404) { const err = new Error('delete failed'); err.status = res.status; throw err; }
+}
+async function ensureBackupFolder(){
+  if (backupFolderId) return backupFolderId;
+  const parent = await ensureDriveFolder();
+  const found = await driveListFiles(`name='${driveEsc(BACKUP_FOLDER_NAME)}' and '${driveEsc(parent)}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  backupFolderId = found.length ? found[0].id
+    : await driveCreateJsonFile(BACKUP_FOLDER_NAME, parent, null, 'application/vnd.google-apps.folder');
+  return backupFolderId;
+}
+function backupPayload(reason){
+  return { app: 'Нэхий Трейд — Захиалгын систем', exportedAt: new Date().toISOString(), reason: reason || 'auto', data };
+}
+function localRecordCount(){ return data.shops.length + data.products.length + data.orders.length; }
+// name — файлын нэр; skipIfExists — тухайн нэртэй файл байвал шинээр үүсгэхгүй
+async function createDriveBackup(name, reason, skipIfExists){
+  const folder = await ensureBackupFolder();
+  if (skipIfExists) {
+    const same = await driveListFiles(`name='${driveEsc(name)}' and '${driveEsc(folder)}' in parents and trashed=false`);
+    if (same.length) return 'exists';
+  }
+  await driveCreateJsonFile(name, folder, backupPayload(reason));
+  await cleanupDriveBackups(folder);
+  return 'created';
+}
+async function cleanupDriveBackups(folder){
+  try {
+    const files = await driveListFiles(`'${driveEsc(folder)}' in parents and trashed=false`, 'createdTime desc');
+    // Гараар/сэргээхийн өмнөх нөөц олширсон ч өдрийн түүхийг шахаж устгахгүйн тулд тусад нь тоолно.
+    const auto = files.filter(f => AUTO_BACKUP_RX.test(f.name || ''));
+    const extra = files.filter(f => !AUTO_BACKUP_RX.test(f.name || ''));
+    for (const f of [...auto.slice(MAX_DRIVE_BACKUPS), ...extra.slice(MAX_EXTRA_BACKUPS)]) await driveDeleteFile(f.id);
+  } catch(e){ console.warn('[Backup] Хуучин нөөц цэвэрлэж чадсангүй — дараа дахин оролдоно:', e); }
+}
+// Синк амжилттай болсны дараа дуудагдана. Өнөөдөр нөөц аль хэдийн хийгдсэн
+// (энэ эсвэл өөр төхөөрөмжөөс) бол юу ч хийхгүй. Хоосон өгөгдлийг нөөцлөхгүй.
+async function maybeAutoBackup(){
+  if (backupRunning || !accessToken || tokenExpiringSoon()) return;
+  if (localRecordCount() === 0) return;
+  const today = todayStr();
+  let lastDay = null;
+  try { lastDay = localStorage.getItem(BACKUP_DAY_KEY); } catch(_){}
+  if (lastDay === today) return;
+  backupRunning = true;
+  try {
+    await createDriveBackup('backup_' + today + '.json', 'auto', true);
+    safeSetItem(BACKUP_DAY_KEY, today);
+  } catch(e){
+    console.warn('[Backup] Автомат нөөц үүсгэж чадсангүй — дараагийн синкээр дахин оролдоно:', e);
+  } finally { backupRunning = false; }
+}
+function backupStamp(){
+  const d = new Date();
+  return todayStr() + '_' + String(d.getHours()).padStart(2,'0') + String(d.getMinutes()).padStart(2,'0');
+}
+async function renderDriveBackupList(){
+  const host = document.getElementById('driveBackupList');
+  if (!host) return;
+  if (!accessToken) { host.innerHTML = '<div class="hint" style="margin-top:0;">Нэвтэрсний дараа харагдана.</div>'; return; }
+  host.innerHTML = '<div class="hint" style="margin-top:0;">Уншиж байна…</div>';
+  try {
+    const folder = await ensureBackupFolder();
+    const files = await driveListFiles(`'${driveEsc(folder)}' in parents and trashed=false`, 'createdTime desc');
+    if (!files.length) { host.innerHTML = '<div class="hint" style="margin-top:0;">Одоогоор нөөц алга. Өнөөдрийн эхний синкийн дараа автоматаар үүснэ.</div>'; return; }
+    host.innerHTML = files.map(f => {
+      const when = f.createdTime ? new Date(f.createdTime).toLocaleString('mn-MN') : '';
+      const base = String(f.name || '').replace(/^backup_/, '').replace(/\.json$/, '');
+      const m = base.match(/^(\d{4}-\d{2}-\d{2})(?:_(\d{2})(\d{2}))?(?:_(manual|before-restore))?$/);
+      const kind = m && m[4] === 'manual' ? ' — гараар' : (m && m[4] === 'before-restore' ? ' — сэргээхийн өмнөх' : (m && !m[2] ? ' — өдрийн автомат' : ''));
+      const label = m ? (m[1] + (m[2] ? ' ' + m[2] + ':' + m[3] : '') + kind) : base;
+      return `<div class="rlist-row">
+        <span class="rlist-name">${esc(label)}<div style="font-size:11.5px;color:var(--muted);">${esc(when)}</div></span>
+        <button type="button" class="btn secondary" data-restore-backup="${esc(f.id)}" data-restore-label="${esc(label)}">Сэргээх</button>
+      </div>`;
+    }).join('');
+  } catch(e){
+    console.error(e);
+    host.innerHTML = '<div class="hint" style="margin-top:0;color:var(--brick);">Нөөцийн жагсаалтыг уншиж чадсангүй. Холболтоо шалгаад дахин оролдоно уу.</div>';
+  }
+}
+async function restoreDriveBackup(fileId, label){
+  const msg = `"${label}" нөөцөөр сэргээх үү?\n\n• Одоогийн бүх өгөгдөл энэ нөөцийн байдлаар солигдоно.\n• Сэргээхийн ӨМНӨ одоогийн байдлыг тусад нь нөөцөлнө (буцаах боломжтой).\n• Өөр төхөөрөмж (утас г.м.) дээр нээлттэй байгаа өгөгдөл дараа нь Drive руу буцаж нэгтгэгдэж болно — бүрэн цэвэр сэргээлт хүсвэл тэдгээрээсээ эхлээд "Гарах" хийнэ үү.`;
+  if (!confirm(msg)) return;
+  try {
+    // 1) Одоогийн байдлыг заавал нөөцөлнө — амжилтгүй бол сэргээхгүй.
+    await createDriveBackup('backup_' + backupStamp() + '_before-restore.json', 'before-restore', false);
+    // 2) Нөөцийг уншина
+    const content = await readDriveFile(fileId);
+    const raw = content && content.data ? content.data : content;
+    if (!raw || !Array.isArray(raw.shops) || !Array.isArray(raw.products) || !Array.isArray(raw.orders)) {
+      throw new Error('Нөөцийн файл танигдахгүй бүтэцтэй байна');
+    }
+    const incoming = sanitizeBackupData(raw);
+    // Сэргээсэн бичлэгийн updatedAt-г "одоо" болгоно — эс бол өөр төхөөрөмжийн
+    // хуучин хувилбар (updatedAt нь их) дараагийн синкээр давамгайлж, сэргээлт буцна.
+    const now = Date.now();
+    ['shops','products','orders'].forEach(k => { incoming[k].forEach(x => { x.updatedAt = now; }); });
+    data = incoming;
+    if (!data.tombstones) data.tombstones = {};
+    migrateData(data);
+    forceOverwriteNextSave = true;      // сэргээлт = бүрэн солих; Drive-тай нэгтгэхгүй
+    queueSave();
+    render();
+    toast('Нөөцөөс сэргээгдлээ', 'ok');
+    renderDriveBackupList();
+  } catch(e){
+    console.error(e);
+    toast('Сэргээж чадсангүй — өгөгдөл өөрчлөгдөөгүй. ' + (e && e.message && !/failed/.test(e.message) ? e.message : 'Холболтоо шалгаад дахин оролдоно уу.'), 'err');
+  }
+}
+document.getElementById('driveBackupListBtn').addEventListener('click', renderDriveBackupList);
+document.getElementById('driveBackupNowBtn').addEventListener('click', async () => {
+  if (!accessToken) { toast('Эхлээд нэвтэрнэ үү', 'err'); return; }
+  if (localRecordCount() === 0) { toast('Нөөцлөх өгөгдөл алга', 'err'); return; }
+  const btn = document.getElementById('driveBackupNowBtn');
+  btn.disabled = true;
+  try {
+    await createDriveBackup('backup_' + backupStamp() + '_manual.json', 'manual', false);
+    toast('Нөөц Google Drive-д үүслээ', 'ok');
+    renderDriveBackupList();
+  } catch(e){ console.error(e); toast('Нөөц үүсгэж чадсангүй. Холболтоо шалгаад дахин оролдоно уу.', 'err'); }
+  finally { btn.disabled = false; }
+});
+document.getElementById('driveBackupList').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-restore-backup]');
+  if (b) restoreDriveBackup(b.dataset.restoreBackup, b.dataset.restoreLabel);
+});
+
+// Хадгалах хүсэлтүүдийг нэгтгэнэ: дараалалд хүлээж буй хадгалалт аль хэдийн
+// байвал шинээр нэмэхгүй (тэр нь эхлэхдээ хамгийн сүүлийн өгөгдлийг илгээнэ).
+let _savePending = null;
 async function doSave(){
+  if (_savePending) return _savePending;
+  const p = withDriveLock(() => { _savePending = null; return doSaveCore(); });
+  _savePending = p;
+  return p;
+}
+async function doSaveCore(){
   if (!driveFileId) {
     try {
       const folderId = await ensureDriveFolder();
@@ -2700,7 +2996,7 @@ async function doSave(){
       }
     }
     catch(e){
-      if (isAuthExpired(e)) { setSync('err','Нэвтрэлт дууссан'); return; }  // "сунгах" товчоор үргэлжилнэ
+      if (isAuthExpired(e)) { pendingSaveAfterAuth = true; setSync('err','Нэвтрэлт дууссан'); return; }  // сунгасны дараа үргэлжилнэ
       setSync('err','Холбогдоогүй'); scheduleSaveRetry(); return;
     }
   }
@@ -2744,11 +3040,14 @@ async function doSave(){
     lastDriveLoadAt = Date.now();
     setSync('', 'Хадгалагдсан');
     cancelSaveRetry();
+    scheduleVerify();
+    maybeAutoBackup();
   } catch(e){
     console.error(e);
     if (isAuthExpired(e)) {
-      // Токен дууссан: 60 секунд тутам дэмий оролдохын оронд хэрэглэгч "сунгах"
-      // товч дармагц (reauthBanner) хадгалалт үргэлжилнэ. Өгөгдөл localStorage-д бүрэн бий.
+      // Токен дууссан: 60 секунд тутам дэмий оролдохын оронд токен сунгагдмагц
+      // (дараагийн даралт эсвэл сунгах товч) хадгалалт автоматаар үргэлжилнэ.
+      pendingSaveAfterAuth = true;
       setSync('err', 'Нэвтрэлт дууссан');
       return;
     }
