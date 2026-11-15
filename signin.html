@@ -1542,7 +1542,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 
       <div class="field-row">
         <div class="field"><label for="orderGrandTotal">Барааны нийт дүн (₮)</label><input type="text" id="orderGrandTotal" readonly style="background:var(--stone);font-weight:600;"></div>
-        <div class="field"><label for="orderDiscountPct">Хөнгөлөлт (%)</label><input type="number" id="orderDiscountPct" min="0" max="100" step="any" inputmode="decimal" placeholder="Хөнгөлөлтгүй бол хоосон орхино"></div>
+        <div class="field"><label for="orderDiscountPct">Хөнгөлөлт (%)</label><input type="text" id="orderDiscountPct" inputmode="decimal" autocomplete="off" placeholder="Хөнгөлөлтгүй бол хоосон орхино"></div>
       </div>
       <div class="field-row">
         <div class="field"><label for="orderPayable">Төлөх дүн (₮)</label><input type="text" id="orderPayable" readonly style="background:var(--stone);font-weight:600;"></div>
@@ -2867,7 +2867,7 @@ document.getElementById('backupRestoreFile').addEventListener('change', (e) => {
     // АНХААР: "Сэргээх" зөвхөн энэ төхөөрөмж дээрх локал өгөгдлийг БИШ, харин
     // дараа нь автомат синк хийгдэхэд бусад төхөөрөмжийн ашигладаг Google Drive-ийн
     // хуваалцсан файлыг Ч мөн дарж бичдэг тул анхааруулгад үүнийг тодорхой дурдана.
-    const summary = `Энэ файлд ${incoming.shops.length} дэлгүүр, ${incoming.products.length} бараа, ${incoming.orders.length} захиалга байна.\n\nОДООГИЙН өгөгдлийг (энэ төхөөрөмж дээрх локал өгөгдөл, МӨН Google Drive дээрх хуваалцсан файл ХОЁУЛАНГ) ЭНЭ файлаар БҮРЭН СОЛИХ уу?\n\n⚠ Хэрэв өөр төхөөрөмж дээр үүнээс хойш шинэ захиалга нэмэгдсэн бол тэдгээр нь ЭНД ОРОХГҮЙ бөгөөд дараагийн синкээр Drive дээрээс ч арилна. Энэ үйлдлийг буцаах боломжгүй!`;
+    const summary = `Энэ файлд ${incoming.shops.length} дэлгүүр, ${incoming.products.length} бараа, ${incoming.orders.length} захиалга байна.\n\nОДООГИЙН өгөгдлийг (энэ төхөөрөмж дээрх локал өгөгдөл, МӨН Google Drive дээрх хуваалцсан файл ХОЁУЛАНГ) ЭНЭ файлаар БҮРЭН СОЛИХ уу?\n\n⚠ Өөр төхөөрөмж (утас г.м.) дээр нээлттэй байгаа өгөгдөл тэр төхөөрөмж дараа нь синк хийхэд Drive руу буцаж нэгтгэгдэж болно — бүрэн цэвэр сэргээлт хүсвэл бусад төхөөрөмжөө эхлээд "Гарах" хийнэ үү. Энэ үйлдлийг буцаах боломжгүй!`;
     if (!confirm(summary)) { e.target.value = ''; return; }
     data = incoming;
     if (!data.tombstones) data.tombstones = {};
@@ -5313,9 +5313,13 @@ function orderAmounts(o){
   return { subtotal, discount, payable: subtotal - discount, pct };
 }
 // Маягтын "Хөнгөлөлт (%)" талбарыг уншина. Хоосон = 0 (хөнгөлөлтгүй).
+// Талбар нь type="text" — type="number" үед Chrome "5,5"-ын таслалыг чимээгүй
+// хаяж "55" болгодог тул 5.5%-ийн оронд 55% хөнгөлөлт хэвлэгдэх эрсдэлтэй байв.
+// Одоо "5,5" / "5.5" / "5.5%" бүгд 5.5 болно; өөр бүх хэлбэр алдаа өгнө.
 function parseDiscountInput(raw){
-  const str = String(raw == null ? '' : raw).trim().replace(',', '.').replace('%', '');
+  const str = String(raw == null ? '' : raw).trim().replace(/\s*%$/, '').replace(',', '.');
   if (str === '') return { pct: 0, invalid: false };
+  if (!/^\d+(\.\d+)?$/.test(str)) return { pct: 0, invalid: true };
   const n = Number(str);
   if (!Number.isFinite(n) || n < 0 || n > 100) return { pct: 0, invalid: true };
   return { pct: n, invalid: false };
