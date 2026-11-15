@@ -789,9 +789,12 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
   /* Гарын үсгийн зураг мөрийн зураасан дээр суух — доод мөрийг түлхэхгүй. */
   #printArea .pa-order .pa-sign .fill.sig{ position:relative; height:18px; }
   #printArea .pa-order .pa-sign .fill.sig img{ position:absolute; left:10px; bottom:-1px;
-    height:46px; width:auto; max-width:160px; }
+    height:46px; width:auto; max-width:160px; mix-blend-mode:multiply; }
+  /* mix-blend-mode:multiply — зургийн ЦАГААН хэсэг тунгалаг мэт болно. Утсаар авсан
+     JPG (цагаан дэвсгэртэй) гарын үсэг/тамга дээд, хажуугийн бичвэрийг цагаан
+     дөрвөлжнөөр дарахаас сэргийлнэ; PNG (тунгалаг)-д нөлөөгүй. */
   #printArea .pa-order .pa-stampimg{ position:absolute; right:0; bottom:-10px; width:120px;
-    height:auto; pointer-events:none;
+    height:auto; pointer-events:none; mix-blend-mode:multiply;
     -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 
   /* --- Хөл --- */
@@ -1720,6 +1723,15 @@ function updateBulkBar(entity){
   if (restoreBtn) restoreBtn.style.display = showArchived ? '' : 'none';
   if (hardDeleteBtn) hardDeleteBtn.style.display = showArchived ? '' : 'none';
 }
+// Хайлт/шүүлтээр жагсаалтаас гарсан мөрийг сонголтоос хасна — "3 сонгогдсон"
+// гэж харагдаж байхад дэлгэцэнд байхгүй мөр архивлагдах/устахаас сэргийлнэ.
+function pruneBulkSelection(entity){
+  const visible = new Set(bulkLastRows[entity]);
+  bulkSelection[entity].forEach(id => { if (!visible.has(id)) bulkSelection[entity].delete(id); });
+}
+// Бүтээгдэхүүн хуудаслагддаг тул "Бүгдийг сонгох" нь зөвхөн ОДОО ХАРАГДАЖ БУЙ
+// хуудасны мөрүүдэд үйлчилнэ (өмнө нь бүх хуудасны барааг сонгодог байв).
+const bulkPageRows = { products: null };
 function toggleBulkRow(entity, id, checked){
   if (checked) bulkSelection[entity].add(id); else bulkSelection[entity].delete(id);
   updateBulkBar(entity);
@@ -1738,13 +1750,14 @@ function wireBulkCheckboxes(entity, rowClass, selectAllIds){
   const ids = Array.isArray(selectAllIds) ? selectAllIds : [selectAllIds];
   const boxes = ids.map(id => document.getElementById(id)).filter(Boolean);
   if (boxes.length) {
-    const allChecked = bulkLastRows[entity].length > 0 && bulkLastRows[entity].every(id => bulkSelection[entity].has(id));
+    const scope = bulkPageRows[entity] || bulkLastRows[entity];
+    const allChecked = scope.length > 0 && scope.every(id => bulkSelection[entity].has(id));
     boxes.forEach(box => {
       box.checked = allChecked;
       box.onchange = () => {
         const checked = box.checked;
         boxes.forEach(b => { b.checked = checked; });
-        bulkLastRows[entity].forEach(id => {
+        scope.forEach(id => {
           if (checked) bulkSelection[entity].add(id); else bulkSelection[entity].delete(id);
         });
         updateBulkBar(entity);
@@ -2259,18 +2272,38 @@ function hideLoginError(){
 }
 
 let currentUser = null;
+// Сүүлд амжилттай баталгаажсан хэрэглэгчийн нэр/имэйл. Зөвхөн хуудас ачаалах
+// үед сүлжээ түр тасарсан тохиолдолд (Google-ээс асууж чадахгүй үед) ашиглана.
+const USER_CACHE_KEY = 'nehiitrade_user_v1';
+function readUserCache(){
+  try { const r = localStorage.getItem(USER_CACHE_KEY); const u = r ? JSON.parse(r) : null; return (u && u.email) ? u : null; }
+  catch(_) { return null; }
+}
 async function onSignedIn(){
+  let offline = false;
   try {
     const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: 'Bearer ' + accessToken }
     });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) { const httpErr = new Error('HTTP ' + r.status); httpErr.httpStatus = r.status; throw httpErr; }
     currentUser = await r.json();
   } catch(e){
-    clearTokenStorage();
-    showLoginError('Нэвтрэх хугацаа дууссан байна. Дахин нэвтэрнэ үү.');
-    signOutLocal();
-    return;
+    if (e && (e.httpStatus === 401 || e.httpStatus === 403)) {
+      // Google токеныг ҮНЭХЭЭР хүчингүй гэж хариулсан — зөвхөн энэ үед л гаргана.
+      clearTokenStorage();
+      showLoginError('Нэвтрэх хугацаа дууссан байна. Дахин нэвтэрнэ үү.');
+      signOutLocal();
+      return;
+    }
+    // Сүлжээ тасарсан / Google түр хариулаагүй. Өмнө нь энэ тохиолдлыг ч "хугацаа
+    // дууссан" гэж үзээд токеныг хүчингүй болгож, системээс гаргадаг байв.
+    const cachedUser = readUserCache();
+    if (!cachedUser) {
+      showLoginError('Интернэт холболтгүй байна. Холболтоо шалгаад дахин оролдоно уу.');
+      return;                       // токеныг хэвээр үлдээнэ — дахин оролдоход шууд орно
+    }
+    currentUser = cachedUser;       // кэш өгөгдлөөр офлайн үргэлжлүүлнэ
+    offline = true;
   }
 
   // Зөвшөөрөгдсөн имэйлийн жагсаалт (allowlist) шалгах
@@ -2287,12 +2320,24 @@ async function onSignedIn(){
   document.getElementById('userName').textContent = currentUser.name || currentUser.email || 'Хэрэглэгч';
   document.getElementById('userAvatar').src = currentUser.picture || '';
 
+  if (!offline) safeSetItem(USER_CACHE_KEY, JSON.stringify({ email: currentUser.email, name: currentUser.name || '', picture: currentUser.picture || '' }));
+
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
 
   render();
+  if (offline) {
+    setSync('err', 'Офлайн — холболт сэргэхэд синк хийнэ');
+    toast('Интернэт холболтгүй байна. Энэ төхөөрөмжид хадгалагдсан өгөгдлөөр ажиллаж байна.', 'err');
+    return;
+  }
   await loadFromDrive();
 }
+// Холболт сэргэмэгц Drive-тай синк хийнэ (офлайн эхэлсэн эсвэл дундаас тасарсан үед).
+window.addEventListener('online', () => {
+  if (!accessToken || document.getElementById('app').style.display === 'none') return;
+  loadFromDrive({ silent: true });
+});
 
 function tokenExpiringSoon(){
   return !tokenExpiresAt || Date.now() > tokenExpiresAt - 120000; // дуусахаас 2 минутын өмнө
@@ -2371,6 +2416,7 @@ function signOutLocal(){
   }
   cancelSaveRetry();
   setReauthBanner(false);
+  try { localStorage.removeItem(USER_CACHE_KEY); } catch(_){}
   clearTokenStorage();
   authCallbackMode = 'login';
   pendingRefreshResolve = null;
@@ -2920,6 +2966,25 @@ function orderItemsQtySum(o){ return (o.items||[]).reduce((s,it)=>s+Number(it.qt
 function getMonthKey(dateObj){
   return `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}`;
 }
+// Энэ сарын (өнөөдрийг хүртэлх) захиалгыг өмнөх сарын МӨН ҮЕ-ийн (1-нээс мөн тэр
+// өдөр хүртэл) захиалгатай харьцуулахаар хуваана. Өмнө нь дутуу энэ сарыг БҮТЭН
+// өмнөх сартай харьцуулдаг байсан тул сарын эхээр борлуулалт үргэлж "огцом
+// буурсан" мэт харагддаг байв. Сарын сүүлийн өдөр бол өмнөх сарыг бүтнээр авна.
+function splitMonthToDate(orders){
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth(), day = now.getDate();
+  const curKey = getMonthKey(now);
+  const lastDayCur = new Date(y, m+1, 0).getDate();
+  const lastDayPrev = new Date(y, m, 0).getDate();
+  const prevDay = day >= lastDayCur ? lastDayPrev : Math.min(day, lastDayPrev);
+  const prevStart = localDateStr(new Date(y, m-1, 1));
+  const prevEnd = localDateStr(new Date(y, m-1, prevDay));
+  return {
+    cur: orders.filter(o => (o.orderDate||'').slice(0,7) === curKey),
+    prev: orders.filter(o => { const d = o.orderDate||''; return d >= prevStart && d <= prevEnd; })
+  };
+}
+const MTD_LABEL = 'өмнөх сарын мөн үеэс';
 function renderKpiDelta(elId, cur, prev, opts){
   const el = document.getElementById(elId);
   if (!el) return;
@@ -2954,11 +3019,7 @@ function computeSmartInsights(activeOrders){
       action: { view:'orders', filterId:'orderStatusFilter', filterVal:'new' } });
   }
 
-  const now = new Date();
-  const curKey = getMonthKey(now);
-  const prevKey = getMonthKey(new Date(now.getFullYear(), now.getMonth()-1, 1));
-  const curOrders = activeOrders.filter(o=>(o.orderDate||'').slice(0,7)===curKey);
-  const prevOrders = activeOrders.filter(o=>(o.orderDate||'').slice(0,7)===prevKey);
+  const { cur: curOrders, prev: prevOrders } = splitMonthToDate(activeOrders);
   const curRev = curOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
   const prevRev = prevOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
   if (prevRev > 0) {
@@ -2968,7 +3029,7 @@ function computeSmartInsights(activeOrders){
         icon: pct>=0 ? '📈' : '📉',
         kind: pct>=0 ? 'good' : 'attention',
         tag: pct>=0 ? 'Сайн мэдээ' : 'Анхаарах',
-        text: `Энэ сарын борлуулалт өмнөх сараас ${Math.abs(pct).toFixed(1)}% ${pct>=0?'өссөн':'буурсан'} байна.`
+        text: `Энэ сарын борлуулалт ${MTD_LABEL} ${Math.abs(pct).toFixed(1)}% ${pct>=0?'өссөн':'буурсан'} байна.`
       });
     }
   }
@@ -3099,9 +3160,7 @@ function renderTodaySummary(activeOrders, precomputedInactiveCount){
   document.getElementById('todaySummaryLabel').textContent =
     `Өнөөдрийн тойм — ${now.getFullYear()} оны ${now.getMonth()+1}-р сарын ${now.getDate()}, ${WEEKDAY_MN[now.getDay()]} гараг`;
   const curKey = getMonthKey(now);
-  const prevKey = getMonthKey(new Date(now.getFullYear(), now.getMonth()-1, 1));
-  const curMonthOrders = activeOrders.filter(o=>(o.orderDate||'').slice(0,7)===curKey);
-  const prevMonthOrders = activeOrders.filter(o=>(o.orderDate||'').slice(0,7)===prevKey);
+  const { cur: curMonthOrders, prev: prevMonthOrders } = splitMonthToDate(activeOrders);
   const curRev = curMonthOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
   const prevRev = prevMonthOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
   const newCount = activeOrders.filter(o=>o.status==='new').length;
@@ -3110,7 +3169,7 @@ function renderTodaySummary(activeOrders, precomputedInactiveCount){
   let trendText = '';
   if (prevRev > 0) {
     const pct = ((curRev-prevRev)/prevRev)*100;
-    if (Math.abs(pct) >= 1) trendText = ` бөгөөд борлуулалт өмнөх сараас ${Math.abs(pct).toFixed(1)}% ${pct>=0?'өссөн':'буурсан'} байна`;
+    if (Math.abs(pct) >= 1) trendText = ` бөгөөд борлуулалт ${MTD_LABEL} ${Math.abs(pct).toFixed(1)}% ${pct>=0?'өссөн':'буурсан'} байна`;
   }
   let text = `Энэ сард <strong>${curMonthOrders.length}</strong> захиалга бүртгэгдсэн${trendText}.`;
   const actions = [];
@@ -3137,11 +3196,9 @@ function renderDashboard(){
 
   const now = new Date();
   const curKey = getMonthKey(now);
-  const prevKey = getMonthKey(new Date(now.getFullYear(), now.getMonth()-1, 1));
-  const curMonthOrders = activeOrders.filter(o=>(o.orderDate||'').slice(0,7)===curKey);
-  const prevMonthOrders = activeOrders.filter(o=>(o.orderDate||'').slice(0,7)===prevKey);
+  const { cur: curMonthOrders, prev: prevMonthOrders } = splitMonthToDate(activeOrders);
   animateCount('statOrders', curMonthOrders.length, (el,v,done) => el.textContent = Math.round(v));
-  renderKpiDelta('statOrdersDelta', curMonthOrders.length, prevMonthOrders.length);
+  renderKpiDelta('statOrdersDelta', curMonthOrders.length, prevMonthOrders.length, {label: MTD_LABEL});
 
   // "Боловсруулагдаж буй" = шинэ (баталгаажаагүй) + батлагдсан (хараахан хүргэлтэд гараагүй)
   // Энд 'shipping'/'done'/'cancelled' орохгүй — тэдгээр аль хэдийн хөдөлсөн/дууссан.
@@ -3166,7 +3223,7 @@ function renderDashboard(){
   const curRevenue = curMonthOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
   const prevRevenue = prevMonthOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
   animateCount('statRevenue', curRevenue, (el,v,done) => el.innerHTML = money(Math.round(v)) + ' <small>₮</small>');
-  renderKpiDelta('statRevenueDelta', curRevenue, prevRevenue);
+  renderKpiDelta('statRevenueDelta', curRevenue, prevRevenue, {label: MTD_LABEL});
 
   renderSmartInsights(activeOrders);
   renderPipelineSnapshot(activeOrders);
@@ -3187,7 +3244,7 @@ function renderDashboard(){
   body.innerHTML = rows.length ? rows.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     return `<tr>
-      <td data-label="№">${o.orderNo ? '№'+o.orderNo : '—'}</td>
+      <td data-label="№">${o.orderNo ? '№'+esc(o.orderNo) : '—'}</td>
       <td data-label="Огноо">${esc(o.orderDate||'—')}</td>
       <td data-label="Дэлгүүр">${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
       <td data-label="Бүтээгдэхүүн">${orderItemsSummary(o)}</td>
@@ -3208,7 +3265,7 @@ function renderPendingConfirm(){
   body.innerHTML = pending.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     return `<tr>
-      <td data-label="№">${o.orderNo ? '№'+o.orderNo : '—'}</td>
+      <td data-label="№">${o.orderNo ? '№'+esc(o.orderNo) : '—'}</td>
       <td data-label="Огноо">${esc(o.orderDate||'—')}</td>
       <td data-label="Дэлгүүр">${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
       <td data-label="Дүн">${money(o.total)} ₮</td>
@@ -3235,6 +3292,7 @@ function renderShops(){
   const body = document.getElementById('shopsBody');
   const rows = data.shops.filter(s => !!s.archived === showArchived && (!q || ((s.name||'')+(s.aimag||'')+(s.sum||'')).toLowerCase().includes(q)));
   bulkLastRows.shops = rows.map(s=>s.id);
+  pruneBulkSelection('shops');
   body.innerHTML = rows.length ? rows.map(s => {
     const phones = [s.phone1, s.phone2].filter(Boolean).join(' / ') || '—';
     const fb = isSafeHttpsUrl(s.facebook) ? `<a href="${esc(s.facebook)}" target="_blank" rel="noopener" title="Facebook хуудас руу очих" style="color:var(--saddle);font-weight:600;">FB ↗</a>` : '—';
@@ -3253,7 +3311,7 @@ function renderShops(){
       <td data-label="Сум">${esc(s.sum||'—')}</td>
       <td data-label="Ангилал">${SHOP_CATEGORY_LABEL[s.category] || SHOP_CATEGORY_LABEL.domestic}</td>
       <td data-label="Холбоо барих">${esc(s.contact||'—')}</td>
-      <td data-label="Утас">${phones}</td>
+      <td data-label="Утас">${esc(phones)}</td>
       <td data-label="Facebook">${fb}</td>
       <td style="text-align:right;white-space:nowrap;">${actions}</td>
     </tr>`;
@@ -3279,10 +3337,12 @@ function renderProducts(){
     && (!q || ((p.itemCode||'')+(p.code||'')+(p.company||'')+(p.name||'')+(p.itemName||'')).toLowerCase().includes(q))
     && (!companyFilter || p.company === companyFilter));
   bulkLastRows.products = rows.map(p=>p.id);
+  pruneBulkSelection('products');
   const totalPages = Math.max(1, Math.ceil(rows.length / PRODUCTS_PAGE_SIZE));
   if (productsPage > totalPages) productsPage = totalPages;
   if (productsPage < 1) productsPage = 1;
   const pageRows = rows.slice((productsPage-1)*PRODUCTS_PAGE_SIZE, productsPage*PRODUCTS_PAGE_SIZE);
+  bulkPageRows.products = pageRows.map(p=>p.id);
   body.innerHTML = pageRows.length ? pageRows.map(p => {
     const actions = showArchived
       ? `<button class="rowbtn rowbtn-restore" onclick="restoreProduct('${escJsArg(p.id)}')">Сэргээх</button>
@@ -3356,6 +3416,7 @@ function renderOrders(){
     });
   }
   bulkLastRows.orders = rows.map(o=>o.id);
+  pruneBulkSelection('orders');
   body.innerHTML = rows.length ? rows.map(o => {
     const shop = data.shops.find(s=>s.id===o.shopId);
     const actions = showArchived
@@ -3367,7 +3428,7 @@ function renderOrders(){
          <button class="rowbtn rowbtn-danger" onclick="deleteOrder('${escJsArg(o.id)}')">Архивлах</button>`;
     return `<tr>
       <td data-label="Сонгох"><input type="checkbox" class="orderRowChk" data-id="${esc(o.id)}" ${bulkSelection.orders.has(o.id)?'checked':''}></td>
-      <td data-label="№">${o.orderNo ? '№'+o.orderNo : '—'}</td>
+      <td data-label="№">${o.orderNo ? '№'+esc(o.orderNo) : '—'}</td>
       <td data-label="Огноо">${esc(o.orderDate||'—')}</td>
       <td data-label="Дэлгүүр">${shop ? esc(shop.name) : (o.shopName ? esc(o.shopName) : '—')}</td>
       <td data-label="Бараа">${orderItemsSummary(o, 3)}</td>
@@ -4287,13 +4348,36 @@ document.getElementById('ordersBulkHardDeleteBtn').addEventListener('click', () 
 document.getElementById('ordersBulkClearBtn').addEventListener('click', () => { clearBulkSelection('orders'); renderOrders(); });
 
 /* ---------------- Modal helpers ---------------- */
-function openModal(id){ document.getElementById(id).classList.add('show'); }
+// Цонх нээгдэх үеийн маягтын төлөвийг санаж, гадна талд (сүүдэр дээр) дарахад
+// ямар нэг зүйл өөрчлөгдсөн эсэхийг харьцуулна.
+const modalSnapshots = {};
+function modalFormSignature(id){
+  const ov = document.getElementById(id);
+  if (!ov) return '';
+  const vals = [...ov.querySelectorAll('input, select, textarea')].map(el =>
+    (el.type === 'checkbox' || el.type === 'radio') ? (el.checked ? '1' : '0') : String(el.value));
+  if (id === 'orderModal') vals.push(JSON.stringify(currentOrderItems));
+  return vals.join('\u0001');
+}
+function openModal(id){
+  document.getElementById(id).classList.add('show');
+  modalSnapshots[id] = modalFormSignature(id);
+}
 function closeModal(id){ document.getElementById(id).classList.remove('show'); }
 document.querySelectorAll('[data-close]').forEach(el => {
   el.addEventListener('click', () => closeModal(el.dataset.close));
 });
 document.querySelectorAll('.overlay').forEach(ov => {
-  ov.addEventListener('click', (e) => { if (e.target === ov) closeModal(ov.id); });
+  ov.addEventListener('click', (e) => {
+    if (e.target !== ov) return;
+    // Маягтад өөрчлөлт орсон бол санамсаргүй гадна дарснаар бүгд алдагдахаас
+    // сэргийлж асууна. "Харах" цонх зэрэг өөрчлөлтгүй үед шууд хаагдана.
+    // (× болон "Цуцлах" товч нь зориуд хийсэн үйлдэл тул асуухгүй.)
+    if (modalSnapshots[ov.id] !== undefined && modalFormSignature(ov.id) !== modalSnapshots[ov.id]) {
+      if (!confirm('Оруулсан мэдээлэл хадгалагдаагүй байна. Цонхыг хаах уу?')) return;
+    }
+    closeModal(ov.id);
+  });
 });
 
 /* ---------------- Shops CRUD ---------------- */
@@ -4655,8 +4739,9 @@ document.getElementById('confirmProductImportBtn').addEventListener('click', () 
     if (r.existingId) {
       data.products = data.products.map(p => p.id === r.existingId ? {
         ...p,
-        itemCode: r.itemCode, code: r.code, size: r.size, company: r.company,
-        name: r.name || p.name, itemName: r.itemName,
+        // Excel-ийн ХООСОН нүд хуучин утгыг арилгахгүй — зөвхөн утгатай нүд шинэчилнэ.
+        itemCode: r.itemCode, code: r.code || p.code, size: r.size || p.size, company: r.company || p.company,
+        name: r.name || p.name, itemName: r.itemName || p.itemName,
         price: r.price || p.price,
         updatedAt: Date.now()
       } : p);
@@ -4746,16 +4831,25 @@ document.getElementById('shopImportFile').addEventListener('change', (e) => {
   reader.onerror = () => { statusEl.textContent = 'Файл уншихад алдаа гарлаа.'; };
   reader.readAsArrayBuffer(file);
 });
+// Дэлгүүрийг НЭР + АЙМАГ хосоор таньна (зай, зураас, том/жижиг үсгийг үл харгалзана).
+// Өмнө нь зөвхөн нэрээр таньдаг байсан тул өөр аймгийн ижил нэртэй дэлгүүрүүд
+// импортоор бие биенээ дарж бичдэг байв.
+function shopMatchKey(name, aimag){
+  const norm = (v) => String(v||'').toLowerCase().replace(/[\s\-–—]+/g, '');
+  return norm(name) + '|' + norm(aimag);
+}
 function parseShopImportRows(raw){
   const byName = {};
-  data.shops.forEach(s => { if (s.name) byName[s.name.trim().toLowerCase()] = s; });
+  data.shops.forEach(s => { if (s.name) byName[shopMatchKey(s.name, s.aimag)] = s; });
   const seenInBatch = {};
   shopImportRows = raw.map(rawRow => {
     const r = normalizeRowKeys(rawRow);
     const name = getFieldFromRow(r, SHOP_IMPORT_ALIASES.name);
     const aimag = getFieldFromRow(r, SHOP_IMPORT_ALIASES.aimag);
     const sum = getFieldFromRow(r, SHOP_IMPORT_ALIASES.sum);
-    const category = parseShopCategoryValue(getFieldFromRow(r, SHOP_IMPORT_ALIASES.category));
+    const categoryRaw = getFieldFromRow(r, SHOP_IMPORT_ALIASES.category);
+    const category = parseShopCategoryValue(categoryRaw);
+    const categoryGiven = !!categoryRaw;
     const contact = getFieldFromRow(r, SHOP_IMPORT_ALIASES.contact);
     const phone1 = getFieldFromRow(r, SHOP_IMPORT_ALIASES.phone1);
     const phone2 = getFieldFromRow(r, SHOP_IMPORT_ALIASES.phone2);
@@ -4768,12 +4862,12 @@ function parseShopImportRows(raw){
     // шалгалт). Import энэ дүрмийг тойрч гарах ёсгүй тул нэртэй ч аймаггүй
     // мөрийг "aimagMissing" гэж тэмдэглэж, default-аар un-checked үлдээнэ.
     const aimagMissing = !isEmpty && !aimag;
-    const nameKey = name.trim().toLowerCase();
+    const nameKey = name ? shopMatchKey(name, aimag) : '';
     const isDuplicateInFile = !isEmpty && !!nameKey && !!seenInBatch[nameKey];
     if (!isEmpty && nameKey) seenInBatch[nameKey] = (seenInBatch[nameKey]||0) + 1;
     const existing = name ? byName[nameKey] : null;
     return {
-      name, aimag, sum, category, contact, phone1, phone2, facebook, address, notes,
+      name, aimag, sum, category, categoryGiven, contact, phone1, phone2, facebook, address, notes,
       isEmpty, isDuplicateInFile, aimagMissing,
       existingId: existing ? existing.id : null,
       existingLabel: existing ? `${existing.aimag||'—'} · ${existing.contact||'—'}` : '',
@@ -4800,7 +4894,7 @@ function renderShopImportPreview(){
       : (r.isDuplicateInFile ? '<span class="badge cancelled">Файлд давхардсан</span>'
       : (r.existingId ? '<span class="badge confirmed">Шинэчлэгдэнэ</span>' : '<span class="badge new">Шинэ</span>')));
     const sub = r.aimagMissing ? `<div style="font-size:11px;color:var(--brick);">Аймаг хоосон — гар маягтаар нэмэхэд заавал талбар тул шалгана уу</div>`
-      : (r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : (r.isDuplicateInFile ? `<div style="font-size:11px;color:var(--brick);">Энэ нэр файл дотроо дахин давтагдсан</div>` : ''));
+      : (r.existingId ? `<div style="font-size:11px;color:var(--muted);">хуучин: ${esc(r.existingLabel)}</div>` : (r.isDuplicateInFile ? `<div style="font-size:11px;color:var(--brick);">Энэ нэр (ижил аймагтай) файл дотроо дахин давтагдсан</div>` : ''));
     const aimagCell = r.aimagMissing ? `<span style="color:var(--brick);">хоосон</span>` : esc(r.aimag||'—');
     const phones = [r.phone1, r.phone2].filter(Boolean).join(' / ') || '—';
     return `<tr>
@@ -4829,9 +4923,15 @@ document.getElementById('confirmShopImportBtn').addEventListener('click', () => 
     if (r.existingId) {
       data.shops = data.shops.map(s => s.id === r.existingId ? {
         ...s,
-        name: r.name || s.name, aimag: r.aimag || s.aimag, sum: r.sum, category: r.category,
-        contact: r.contact, phone1: r.phone1, phone2: r.phone2,
-        facebook: r.facebook, address: r.address, notes: r.notes,
+        // Excel-ийн ХООСОН нүд хуучин утгыг арилгахгүй — зөвхөн утгатай нүд шинэчилнэ
+        // (өмнө нь утасны багана хоосон файл оруулахад бүртгэлтэй утас устдаг байв).
+        // Нэр/аймаг аль хэдийн (зай, зураас, үсгийн томыг үл харгалзан) таарсан тул
+        // БҮРТГЭЛТЭЙ бичиглэлийг хэвээр үлдээнэ — Excel-ийн "дархан уул" нь
+        // "Дархан-Уул"-ыг сольж, тайланд аймаг хоёр хуваагдахаас сэргийлнэ.
+        name: s.name || r.name, aimag: s.aimag || r.aimag, sum: r.sum || s.sum,
+        category: r.categoryGiven ? r.category : (s.category || r.category),
+        contact: r.contact || s.contact, phone1: r.phone1 || s.phone1, phone2: r.phone2 || s.phone2,
+        facebook: r.facebook || s.facebook, address: r.address || s.address, notes: r.notes || s.notes,
         updatedAt: Date.now()
       } : s);
       updated++;
@@ -5238,7 +5338,7 @@ document.getElementById('orderViewPrintBtn').addEventListener('click', () => {
     <div class="pa-meta">
       <div class="half">
         <div class="mt">Захиалгын мэдээлэл</div>
-        <div class="ln"><span class="k">Захиалгын №:</span> <b>${o.orderNo ?? '—'}</b></div>
+        <div class="ln"><span class="k">Захиалгын №:</span> <b>${esc(o.orderNo ?? '—')}</b></div>
         <div class="ln"><span class="k">Дэлгүүр:</span> <b>${esc(shopName)}${shopAimag ? ' — '+esc(shopAimag) : ''}</b></div>
         <div class="ln"><span class="k">Утас:</span> ${shopPhones ? `<b>${esc(shopPhones)}</b>` : '<span class="fill">&nbsp;</span>'}</div>
         <div class="ln"><span class="k">Огноо:</span> <b>${esc(o.orderDate||'—')}</b></div>
@@ -5290,8 +5390,17 @@ document.getElementById('orderViewPrintBtn').addEventListener('click', () => {
     <div class="pa-foot">${esc(COMPANY_NAME)} · Хэвлэсэн: ${esc(new Date().toLocaleString('mn-MN'))}</div>
     </div>
   `;
-  window.print();
+  printWhenImagesReady();
 });
+// Гарын үсэг/тамгын зураг задарч (decode) дуусахаас өмнө хэвлэх цонх нээгдвэл
+// зарим хөтөч (ялангуяа Safari) эхний хэвлэлтэд зургийг орхидог. Зураг бэлэн
+// болохыг (дээд тал нь 1.5 сек) хүлээгээд хэвлэнэ. Зураггүй бол шууд хэвлэнэ.
+function printWhenImagesReady(){
+  const imgs = [...document.querySelectorAll('#printArea img')];
+  if (!imgs.length) { window.print(); return; }
+  const waits = imgs.map(im => (typeof im.decode === 'function' ? im.decode() : Promise.resolve()).catch(() => {}));
+  Promise.race([Promise.all(waits), new Promise(r => setTimeout(r, 1500))]).then(() => window.print());
+}
 document.getElementById('orderViewWhatsappBtn').addEventListener('click', () => {
   if (!orderViewCurrentId) return;
   const o = data.orders.find(x=>x.id===orderViewCurrentId); if (!o) return;
