@@ -1285,6 +1285,12 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           </div>
           <div style="padding:20px;">
             <div style="margin-bottom:18px;">
+              <div style="font-weight:600;margin-bottom:4px;">Автомат нэвтрэлт</div>
+              <p id="autoAuthStatus" style="font-size:12.5px;color:var(--muted);margin-bottom:8px;"></p>
+              <button class="btn secondary" id="autoAuthEnableBtn" style="display:none;">Идэвхжүүлэх</button>
+              <button class="btn secondary" id="autoAuthDisableBtn" style="display:none;">Унтраах</button>
+            </div>
+            <div style="margin-bottom:18px;">
               <div style="font-weight:600;margin-bottom:4px;">Нөөцлөх</div>
               <p style="font-size:12.5px;color:var(--muted);margin-bottom:8px;">Бүх өгөгдлийг (дэлгүүр, бараа, захиалга) нэг JSON файл болгон компьютерт татаж авна. Тогтмол нөөцлөх нь Google Drive-той холбоотой асуудал гарвал сэргээх боломж өгнө.</p>
               <button class="btn secondary" id="backupExportBtn">Нөөцлөх (компьютерт татах)</button>
@@ -2149,6 +2155,7 @@ function renderSettings(){
   });
 
   renderSignStampSettings();
+  renderAutoAuthSettings();
 
   const nextNoInput = document.getElementById('nextOrderNoInput');
   if (nextNoInput && document.activeElement !== nextNoInput) {
@@ -2249,12 +2256,24 @@ function initGSI(){
   btn.style.width = '100%';
   btn.style.justifyContent = 'center';
   btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="#fff" d="M21.35 11.1h-9.17v2.92h5.27c-.23 1.44-1.62 4.22-5.27 4.22-3.17 0-5.76-2.62-5.76-5.85s2.59-5.85 5.76-5.85c1.8 0 3.01.77 3.7 1.43l2.52-2.43C16.96 3.9 14.7 2.8 11.99 2.8 6.98 2.8 2.9 6.9 2.9 11.9s4.08 9.1 9.09 9.1c5.25 0 8.73-3.69 8.73-8.89 0-.6-.06-1.05-.16-1.51z"/></svg> Google-ээр нэвтрэх';
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', async () => {
     hideLoginError();
+    // Worker автомат нэвтрэлтийг дэмждэг бол код урсгалаар нэвтэрнэ — Google нэг удаа
+    // зөвшөөрөл авч, цаашид токеныг Worker popup-гүйгээр сунгана. requestCode()-г
+    // даралтын ДОТОР шууд дуудах ёстой тул refreshSupported-ийг урьдчилан шалгадаг.
+    if (refreshSupported && google.accounts.oauth2.initCodeClient) {
+      const r = await requestOfflineAccess();
+      if (r === 'ok' || r === 'no-rt') { await onSignedIn(); return; }
+      if (r === 'cancel') return;
+      refreshSupported = false;      // дараагийн даралт хуучин (токен) аргаар
+      showLoginError(lastAuthWorkerError || 'Нэвтэрч чадсангүй. "Google-ээр нэвтрэх" товчийг дахин дарна уу.');
+      return;
+    }
     authCallbackMode = 'login';
     tokenClient.requestAccessToken(tokenRequestOpts());
   });
   host.appendChild(btn);
+  checkAuthWorker();
 
   attemptSilentRestore();
 }
@@ -2264,10 +2283,15 @@ function initGSI(){
 // шууд үйлдэлгүй тул browser-ийн popup blocker-т хаагдах эрсдэлтэй тул ашиглахгүй.)
 async function attemptSilentRestore(){
   const stored = loadTokenFromStorage();
-  if (!stored) return;
-  accessToken = stored.accessToken;
-  tokenExpiresAt = stored.tokenExpiresAt;
-  await onSignedIn();
+  if (stored) {
+    accessToken = stored.accessToken;
+    tokenExpiresAt = stored.tokenExpiresAt;
+    await onSignedIn();
+    return;
+  }
+  // Токен дууссан (жиш: өчигдөр нээсэн) ч автомат нэвтрэлт идэвхтэй бол дахин
+  // нэвтрэх товч дарахгүйгээр Worker-ээс шинэ токен аваад шууд орно.
+  if (getRtBlob() && await refreshViaWorker()) await onSignedIn();
 }
 
 function showLoginError(msg){
@@ -2386,6 +2410,140 @@ function hasUserActivationNow(){
 }
 
 const REFRESH_TIMEOUT_MS = 30000;
+/* ---------------- Автомат нэвтрэлт (Worker + refresh token) ----------------
+   Google-ийн access token 1 цаг хүчинтэй. Өмнө нь хугацаа дуусах бүрт popup
+   (эсвэл "сунгах" товч) шаардлагатай байв. Одоо нэг удаа зөвшөөрөл өгөхөд Worker
+   Google-ээс refresh token авч, ШИФРЛЭЭД энд буцаана (энэ браузер задалж
+   чадахгүй — зөвхөн Worker-т буцааж илгээнэ). Цаашид токен дуусах бүрт Worker-ээс
+   чимээгүй шинэ токен авна. Worker тохируулагдаагүй бол хуучнаараа ажиллана. */
+const RT_KEY = 'nehiitrade_rt_v1';
+let refreshSupported = false;
+let lastAuthWorkerError = '';
+function getRtBlob(){ try { return localStorage.getItem(RT_KEY) || ''; } catch(_) { return ''; } }
+function clearRtBlob(){ try { localStorage.removeItem(RT_KEY); } catch(_){} }
+async function authWorker(path, body, method){
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 12000);
+  try {
+    const opts = { method: method || 'POST', signal: ctl.signal, headers: { 'X-Requested-With': 'XmlHttpRequest' } };
+    if (opts.method === 'POST') { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body || {}); }
+    const res = await fetch(AI_WORKER_URL + path, opts);
+    let data = {};
+    try { data = await res.json(); } catch(_){}
+    return { ok: res.ok, status: res.status, data: data || {} };
+  } finally { clearTimeout(t); }
+}
+// Worker автомат нэвтрэлтийг дэмжих эсэх (2 secret тохируулсан эсэх). Хуудас ачаалахад нэг удаа.
+async function checkAuthWorker(){
+  if (!AI_WORKER_URL) { refreshSupported = false; return false; }
+  try {
+    const r = await authWorker('/auth/status', null, 'GET');
+    refreshSupported = !!(r.ok && r.data.refresh === true);
+  } catch(_) { refreshSupported = false; }
+  if (document.getElementById('view-settings')) renderAutoAuthSettings();
+  return refreshSupported;
+}
+let _rtRefreshing = null;
+function refreshViaWorker(){
+  if (_rtRefreshing) return _rtRefreshing;
+  const rt = getRtBlob();
+  if (!rt || !AI_WORKER_URL) return Promise.resolve(false);
+  _rtRefreshing = (async () => {
+    try {
+      const r = await authWorker('/auth/refresh', { rt });
+      if (r.ok && r.data.access_token) {
+        accessToken = r.data.access_token;
+        tokenExpiresAt = Date.now() + (Number(r.data.expires_in) || 3600) * 1000;
+        saveTokenToStorage();
+        return true;
+      }
+      // 401 — Google эрх цуцлагдсан / "Testing" горимын 7 хоног дууссан; 403 — зөвшөөрлөөс хасагдсан.
+      // Хайрцаг ашиглагдахгүй болсон тул устгаж, хуучин (popup) арга руу шилжинэ.
+      if (r.status === 401 || r.status === 403) { clearRtBlob(); renderAutoAuthSettings(); }
+      return false;
+    } catch(e) { console.warn('[Auth] Worker-ээр сунгаж чадсангүй:', e); return false; }
+    finally { setTimeout(() => { _rtRefreshing = null; }, 0); }
+  })();
+  return _rtRefreshing;
+}
+// Нэг удаагийн зөвшөөрөл (popup) → refresh token. ЗААВАЛ хэрэглэгчийн даралтын дотор дуудна.
+// Буцаах: 'ok' (автомат нэвтрэлт идэвхжсэн) | 'no-rt' (нэвтэрсэн ч Google refresh token
+// өгөөгүй) | 'cancel' (popup хаасан) | 'fail'
+function requestOfflineAccess(){
+  lastAuthWorkerError = '';
+  return new Promise(resolve => {
+    if (!window.google || !google.accounts || !google.accounts.oauth2 || !google.accounts.oauth2.initCodeClient) { resolve('fail'); return; }
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; clearTimeout(guard); resolve(v); } };
+    const guard = setTimeout(() => finish('cancel'), 5 * 60 * 1000);
+    const email = tokenRequestOpts().login_hint;
+    const cfg = {
+      client_id: CLIENT_ID, scope: SCOPES, ux_mode: 'popup',
+      callback: async (resp) => {
+        if (!resp || resp.error || !resp.code) { finish(resp && resp.error === 'access_denied' ? 'cancel' : 'fail'); return; }
+        try {
+          const r = await authWorker('/auth/exchange', { code: resp.code });
+          if (!r.ok || !r.data.access_token) {
+            if (r.status === 501) refreshSupported = false;
+            if (r.status === 403 && r.data.error) lastAuthWorkerError = r.data.error;
+            finish('fail'); return;
+          }
+          accessToken = r.data.access_token;
+          tokenExpiresAt = Date.now() + (Number(r.data.expires_in) || 3600) * 1000;
+          saveTokenToStorage();
+          if (r.data.rt) safeSetItem(RT_KEY, r.data.rt);
+          finish(r.data.rt ? 'ok' : 'no-rt');
+        } catch(e) { console.warn('[Auth] Код солилцоо амжилтгүй:', e); finish('fail'); }
+      },
+      error_callback: (err) => finish(err && (err.type === 'popup_closed') ? 'cancel' : 'fail')
+    };
+    if (email) cfg.login_hint = email;
+    try { google.accounts.oauth2.initCodeClient(cfg).requestCode(); }
+    catch(e) { console.warn('[Auth] requestCode алдаа:', e); finish('fail'); }
+  });
+}
+// Токен (аль ч аргаар) шинэчлэгдсэний дараах нийтлэг алхам.
+function onTokenRefreshed(){
+  setReauthBanner(false);
+  disarmReauth();
+  // Токен дууссанаас болж хүлээгдэж байсан өөрчлөлтийг одоо Drive руу илгээнэ.
+  if (pendingSaveAfterAuth) { pendingSaveAfterAuth = false; doSave(); }
+}
+// Тохиргоо → "Автомат нэвтрэлт"
+function renderAutoAuthSettings(){
+  const st = document.getElementById('autoAuthStatus');
+  const on = document.getElementById('autoAuthEnableBtn');
+  const off = document.getElementById('autoAuthDisableBtn');
+  if (!st || !on || !off) return;
+  if (getRtBlob()) {
+    st.innerHTML = '<span class="badge done">Идэвхтэй</span> Нэвтрэлт автоматаар сунгагдана — цагт нэг удаа дахин зөвшөөрөх шаардлагагүй.';
+    on.style.display = 'none'; off.style.display = '';
+  } else if (refreshSupported) {
+    st.innerHTML = '<span class="badge new">Идэвхгүй</span> Одоогоор нэвтрэлт 1 цаг тутамд сунгагдана (товч дарахад Google-ийн цонх анивчина).';
+    on.style.display = ''; off.style.display = 'none';
+  } else {
+    st.innerHTML = '<span class="badge seg-lost">Боломжгүй</span> AI Worker дээр автомат нэвтрэлт тохируулагдаагүй байна.';
+    on.style.display = 'none'; off.style.display = 'none';
+  }
+}
+document.getElementById('autoAuthEnableBtn').addEventListener('click', async () => {
+  const r = await requestOfflineAccess();
+  if (r === 'ok') { onTokenRefreshed(); toast('Автомат нэвтрэлт идэвхжлээ', 'ok'); }
+  else if (r === 'no-rt') {
+    onTokenRefreshed();
+    toast('Google сунгах эрх өгсөнгүй (та өмнө нь зөвшөөрсөн байсан тул). "Гарах" дараад дахин нэвтэрвэл автоматаар идэвхжинэ.', 'err');
+  }
+  else if (r === 'fail') toast(lastAuthWorkerError || 'Идэвхжүүлж чадсангүй. Дараа дахин оролдоно уу.', 'err');
+  renderAutoAuthSettings();
+});
+document.getElementById('autoAuthDisableBtn').addEventListener('click', () => {
+  if (!confirm('Автомат нэвтрэлтийг унтраах уу? Цаашид нэвтрэлт 1 цаг тутамд сунгагдана.')) return;
+  const rt = getRtBlob();
+  if (rt) authWorker('/auth/revoke', { rt }).catch(() => {});
+  clearRtBlob();
+  renderAutoAuthSettings();
+  toast('Автомат нэвтрэлт унтарлаа', 'ok');
+});
 function setReauthBanner(show){
   const el = document.getElementById('reauthBanner');
   if (el) el.style.display = show ? '' : 'none';
@@ -2393,6 +2551,15 @@ function setReauthBanner(show){
 // opts.gesture — хэрэглэгчийн даралтын дотроос дуудагдсан (popup нээж болно).
 // opts.invalid — Google токеныг хүчингүй гэж хариулсан (401).
 function silentRefresh(opts){
+  if (getRtBlob()) {
+    return refreshViaWorker().then(ok => {
+      if (ok) { onTokenRefreshed(); return true; }
+      return popupRefresh(opts);     // Worker бүтэлгүйтсэн (эрх цуцлагдсан г.м.) → хуучин арга
+    });
+  }
+  return popupRefresh(opts);
+}
+function popupRefresh(opts){
   if (refreshPromise) return refreshPromise; // аль хэдийн давхар яваа бол шинэ хүсэлт үүсгэхгүй, хуучныг буцаана
   const gesture = !!(opts && opts.gesture) || hasUserActivationNow();
   if (!gesture) {
@@ -2421,10 +2588,7 @@ function silentRefresh(opts){
     catch(e){ console.error(e); finish(false); }
   }).then((ok) => {
     if (ok) {
-      setReauthBanner(false);
-      disarmReauth();
-      // Токен дууссанаас болж хүлээгдэж байсан өөрчлөлтийг одоо Drive руу илгээнэ.
-      if (pendingSaveAfterAuth) { pendingSaveAfterAuth = false; doSave(); }
+      onTokenRefreshed();
     } else if (tokenExpired() || (opts && opts.invalid)) {
       setReauthBanner(true);   // хэрэглэгчийн ДАРАЛТААР нээгдсэн popup-ыг хөтөч хаадаггүй
     } else {
@@ -2436,7 +2600,16 @@ function silentRefresh(opts){
 }
 document.getElementById('reauthBanner').addEventListener('click', async () => {
   pendingSaveAfterAuth = true;     // сунгасны дараа хадгалалтыг заавал үргэлжлүүлнэ
-  const ok = await silentRefresh({ gesture: true });
+  let ok;
+  if (refreshSupported && !getRtBlob()) {
+    // Энэ даралтаар нэг удаа зөвшөөрөл авч, цаашид автомат болгоно.
+    const r = await requestOfflineAccess();
+    ok = (r === 'ok' || r === 'no-rt');
+    if (ok) onTokenRefreshed();
+    renderAutoAuthSettings();
+  } else {
+    ok = await silentRefresh({ gesture: true });
+  }
   if (ok) {
     toast('Нэвтрэлт сунгагдлаа', 'ok');
   } else {
@@ -2448,6 +2621,7 @@ document.getElementById('reauthBanner').addEventListener('click', async () => {
 // даралтад сунгалт холбоно, бүр дууссан бол сунгах товч харуулна.
 function checkTokenState(){
   if (!accessToken || document.getElementById('app').style.display === 'none') return;
+  if (getRtBlob()) { if (tokenExpiringSoon(5*60*1000)) silentRefresh(); return; }
   if (tokenExpired()) { armReauthOnNextInteraction(); setReauthBanner(true); }
   else if (tokenExpiringSoon(5*60*1000)) armReauthOnNextInteraction();
 }
@@ -2471,6 +2645,9 @@ function signOutLocal(){
   if (accessToken) {
     google.accounts.oauth2.revoke(accessToken, () => {});
   }
+  const rtBlob = getRtBlob();
+  if (rtBlob) authWorker('/auth/revoke', { rt: rtBlob }).catch(() => {});   // токен дууссан ч цуцлагдана
+  clearRtBlob();
   cancelSaveRetry();
   setReauthBanner(false);
   disarmReauth();
