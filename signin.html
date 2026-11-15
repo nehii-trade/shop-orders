@@ -526,6 +526,11 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
 .modal-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
 .modal-head h3{font-size:17px;font-weight:600;}
 .modal-close{background:none;border:none;font-size:20px;color:var(--muted);line-height:1;}
+.modal:focus{outline:none;}
+.modal-close:focus-visible, .btn:focus-visible, .rowbtn:focus-visible{outline:2px solid var(--saddle);outline-offset:2px;}
+/* Маягтын доторх алдааны мэдэгдэл (toast-ын оронд — хаана юу буруу байгааг цонхон дотор нь харуулна) */
+.form-err{background:var(--brick-dim);color:var(--brick);border-left:3px solid var(--brick);
+  padding:9px 12px;font-size:13px;margin-bottom:14px;border-radius:var(--radius);line-height:1.45;}
 .modal-body{padding:20px 22px;overflow-y:auto;flex:1 1 auto;min-height:0;}
 .field{margin-bottom:15px;}
 .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;}
@@ -2329,6 +2334,7 @@ async function onSignedIn(){
   document.getElementById('app').style.display = 'block';
 
   render();
+  if (readOrderDraft()) toast('Дуусгаагүй захиалгын ноорог байна — "+ Захиалга нэмэх" (эсвэл тухайн захиалгын "Засах") дарж сэргээнэ үү.', 'ok');
   if (offline) {
     setSync('err', 'Офлайн — холболт сэргэхэд синк хийнэ');
     toast('Интернэт холболтгүй байна. Энэ төхөөрөмжид хадгалагдсан өгөгдлөөр ажиллаж байна.', 'err');
@@ -4698,26 +4704,196 @@ function modalFormSignature(id){
   if (id === 'orderModal') vals.push(JSON.stringify(currentOrderItems));
   return vals.join('\u0001');
 }
-function openModal(id){
-  document.getElementById(id).classList.add('show');
-  modalSnapshots[id] = modalFormSignature(id);
+// Нээлттэй цонхны стек — Escape/Tab нь хамгийн дээд цонхонд л үйлчилнэ, хаахад
+// цонхыг нээсэн товч руу фокус буцна (гараар ажиллахад байрлалаа алдахгүй).
+const modalStack = [];
+function topModal(){
+  const top = modalStack[modalStack.length - 1];
+  return top ? document.getElementById(top.id) : null;
 }
-function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+function focusablesIn(el){
+  return [...el.querySelectorAll('button, [href], input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"])')]
+    .filter(x => !x.disabled && x.offsetParent !== null);
+}
+// Хулгана/гартай төхөөрөмж (компьютер) дээр л эхний талбарт автоматаар фокуслана —
+// утсан дээр фокуславал цонх нээгдэхтэй зэрэг гар (keyboard) гарч ирж саад болдог.
+const POINTER_FINE = window.matchMedia ? window.matchMedia('(pointer: fine)') : { matches: true };
+function openModal(id){
+  const ov = document.getElementById(id);
+  clearFormErr(id);
+  ov.classList.add('show');
+  modalSnapshots[id] = modalFormSignature(id);
+  const i = modalStack.findIndex(m => m.id === id);
+  if (i >= 0) modalStack.splice(i, 1);
+  modalStack.push({ id, returnFocus: document.activeElement });
+  const box = ov.querySelector('.modal');
+  setTimeout(() => {
+    if (!ov.classList.contains('show') || !box) return;
+    const first = POINTER_FINE.matches ? focusablesIn(box).find(x => !x.classList.contains('modal-close') && x.closest('.modal-body')) : null;
+    (first || box).focus({ preventScroll: true });
+  }, 30);
+}
+function closeModal(id){
+  const ov = document.getElementById(id);
+  if (ov) ov.classList.remove('show');
+  const i = modalStack.findIndex(m => m.id === id);
+  if (i < 0) return;
+  const entry = modalStack.splice(i, 1)[0];
+  const rf = entry.returnFocus;
+  if (!modalStack.length && rf && rf !== document.body && document.contains(rf) && typeof rf.focus === 'function') {
+    try { rf.focus({ preventScroll: true }); } catch(_){}
+  }
+}
+// Гадна (сүүдэр) дарах эсвэл Escape — маягтад өөрчлөлт орсон бол асууна.
+// × болон "Цуцлах" товч нь зориуд хийсэн үйлдэл тул асуухгүй.
+function requestCloseModal(id){
+  if (modalSnapshots[id] !== undefined && modalFormSignature(id) !== modalSnapshots[id]) {
+    if (!confirm('Оруулсан мэдээлэл хадгалагдаагүй байна. Цонхыг хаах уу?')) return false;
+  }
+  if (id === 'orderModal') discardOrderDraftForOpenForm();
+  closeModal(id);
+  return true;
+}
 document.querySelectorAll('[data-close]').forEach(el => {
-  el.addEventListener('click', () => closeModal(el.dataset.close));
-});
-document.querySelectorAll('.overlay').forEach(ov => {
-  ov.addEventListener('click', (e) => {
-    if (e.target !== ov) return;
-    // Маягтад өөрчлөлт орсон бол санамсаргүй гадна дарснаар бүгд алдагдахаас
-    // сэргийлж асууна. "Харах" цонх зэрэг өөрчлөлтгүй үед шууд хаагдана.
-    // (× болон "Цуцлах" товч нь зориуд хийсэн үйлдэл тул асуухгүй.)
-    if (modalSnapshots[ov.id] !== undefined && modalFormSignature(ov.id) !== modalSnapshots[ov.id]) {
-      if (!confirm('Оруулсан мэдээлэл хадгалагдаагүй байна. Цонхыг хаах уу?')) return;
-    }
-    closeModal(ov.id);
+  el.addEventListener('click', () => {
+    if (el.dataset.close === 'orderModal') discardOrderDraftForOpenForm();   // зориуд цуцалсан — ноорог хэрэггүй
+    closeModal(el.dataset.close);
   });
 });
+document.querySelectorAll('.overlay').forEach(ov => {
+  ov.addEventListener('click', (e) => { if (e.target === ov) requestCloseModal(ov.id); });
+});
+document.addEventListener('keydown', (e) => {
+  const ov = topModal();
+  if (!ov || !ov.classList.contains('show')) return;
+  if (e.key === 'Escape') { e.preventDefault(); requestCloseModal(ov.id); return; }
+  if (e.key === 'Tab') {
+    // Фокус цонхны гадна (ард байгаа хуудас руу) гарахгүй, цонхон дотроо эргэлдэнэ.
+    const f = focusablesIn(ov.querySelector('.modal') || ov);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    const inside = ov.contains(document.activeElement);
+    if (e.shiftKey && (document.activeElement === first || !inside)) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (document.activeElement === last || !inside)) { e.preventDefault(); first.focus(); }
+  }
+});
+// Дэлгэц уншигч (screen reader)-д зориулсан шинж чанар — бүх цонхонд нэг удаа тавина.
+document.querySelectorAll('.overlay').forEach(ov => {
+  const box = ov.querySelector('.modal');
+  if (!box) return;
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  box.tabIndex = -1;
+  const h = box.querySelector('.modal-head h3');
+  if (h) { if (!h.id) h.id = ov.id + 'Heading'; box.setAttribute('aria-labelledby', h.id); }
+  const x = box.querySelector('.modal-close');
+  if (x) x.setAttribute('aria-label', 'Хаах');
+});
+// Маягтын алдааг тухайн цонхны дээд хэсэгт харуулна (toast 3 секундэд алга болж,
+// утсан дээр гарны ард нуугддаг байв).
+function formErr(msg){
+  const ov = topModal();
+  const body = ov && ov.classList.contains('show') ? ov.querySelector('.modal-body') : null;
+  if (!body) { toast(msg, 'err'); return; }
+  let el = body.querySelector(':scope > .form-err');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'form-err';
+    el.setAttribute('role', 'alert');
+    body.insertBefore(el, body.firstChild);
+  }
+  el.textContent = msg;
+  body.scrollTop = 0;
+}
+function clearFormErr(id){
+  const ov = document.getElementById(id);
+  const el = ov && ov.querySelector('.modal-body > .form-err');
+  if (el) el.remove();
+}
+
+/* ---------------- Захиалгын ноорог (автомат хадгалалт) ---------------- */
+// Захиалга бөглөж байхад хуудас хаагдах, утас унтрах, санамсаргүй refresh хийгдэхэд
+// оруулсан бараа алдагдахгүй. Өөрчлөлт бүрээс 0.8 секундын дараа энэ төхөөрөмжийн
+// localStorage-д хадгална. "+ Захиалга нэмэх" (эсвэл тухайн захиалгын "Засах")
+// дарахад сэргээх эсэхийг асууна. Хадгалсан, эсвэл зориуд цуцалсан үед устна.
+const ORDER_DRAFT_KEY = 'nehiitrade_order_draft_v1';
+const ORDER_DRAFT_MAX_AGE = 7 * 86400000;
+let orderDraftTimer = null;
+function currentOrderDraftKey(){ return document.getElementById('orderId').value || 'new'; }
+function readOrderDraft(){
+  try {
+    const d = JSON.parse(localStorage.getItem(ORDER_DRAFT_KEY) || 'null');
+    if (!d || !d.savedAt || !Array.isArray(d.items) || Date.now() - d.savedAt > ORDER_DRAFT_MAX_AGE) return null;
+    return d;
+  } catch(_) { return null; }
+}
+function clearOrderDraft(){
+  clearTimeout(orderDraftTimer);
+  try { localStorage.removeItem(ORDER_DRAFT_KEY); } catch(_){}
+}
+// Зөвхөн ОДОО нээлттэй маягтын ноорогийг устгана — жиш: шинэ захиалгын маягтыг
+// цуцлахад өөр захиалгын хадгалаагүй засварын ноорог устах ёсгүй.
+function discardOrderDraftForOpenForm(){
+  clearTimeout(orderDraftTimer);
+  const d = readOrderDraft();
+  if (d && d.key === currentOrderDraftKey()) clearOrderDraft();
+}
+function scheduleOrderDraftSave(){
+  clearTimeout(orderDraftTimer);
+  orderDraftTimer = setTimeout(saveOrderDraftNow, 800);
+}
+function saveOrderDraftNow(){
+  const ov = document.getElementById('orderModal');
+  if (!ov.classList.contains('show') || modalSnapshots.orderModal === undefined) return;
+  const key = currentOrderDraftKey();
+  const notes = document.getElementById('orderNotes').value;
+  const discount = document.getElementById('orderDiscountPct').value;
+  const dirty = modalFormSignature('orderModal') !== modalSnapshots.orderModal;
+  // Шинэ захиалгад бараа/тэмдэглэл/хөнгөлөлтийн аль нь ч алга бол хадгалах зүйлгүй.
+  const empty = key === 'new' && !currentOrderItems.length && !notes.trim() && !discount.trim();
+  if (!dirty || empty) {
+    const d = readOrderDraft();
+    if (d && d.key === key) clearOrderDraft();
+    return;
+  }
+  const draft = {
+    key, savedAt: Date.now(),
+    shopId: document.getElementById('orderShop').value,
+    orderDate: document.getElementById('orderDate').value,
+    status: document.getElementById('orderStatus').value,
+    cancelReason: document.getElementById('orderCancelReason').value,
+    notes, discount,
+    items: currentOrderItems.map(it => ({ ...it }))
+  };
+  safeSetItem(ORDER_DRAFT_KEY, JSON.stringify(draft));
+}
+// openModal('orderModal')-ийн ДАРАА дуудна — сэргээсэн утга "өөрчлөлт" гэж тооцогдож,
+// хадгалахгүйгээр хаах гэвэл асуух, дахин ноорогт хадгалагдах ёстой.
+function offerOrderDraftRestore(key){
+  const d = readOrderDraft();
+  if (!d || d.key !== key) return;
+  const when = new Date(d.savedAt).toLocaleString('mn-MN');
+  const what = key === 'new' ? 'Дуусгаагүй шинэ захиалгын' : 'Энэ захиалгын хадгалаагүй засварын';
+  if (!confirm(`${what} ноорог олдлоо (${when}, ${d.items.length} мөр бараа).\n\nСэргээх үү? ("Cancel" дарвал ноорог устна)`)) {
+    clearOrderDraft();
+    return;
+  }
+  if (d.shopId) {
+    fillSelectOptions(d.shopId);
+    if ([...document.getElementById('orderShop').options].some(o => o.value === d.shopId)) document.getElementById('orderShop').value = d.shopId;
+  }
+  if (d.orderDate) document.getElementById('orderDate').value = d.orderDate;
+  if (d.status && STATUS_LABEL[d.status]) document.getElementById('orderStatus').value = d.status;
+  document.getElementById('orderCancelReason').value = d.cancelReason || '';
+  document.getElementById('orderCancelReasonWrap').style.display = document.getElementById('orderStatus').value === 'cancelled' ? '' : 'none';
+  document.getElementById('orderNotes').value = d.notes || '';
+  document.getElementById('orderDiscountPct').value = d.discount || '';
+  currentOrderItems = d.items.filter(it => it && it.productId).map(it => ({ ...it }));
+  renderOrderItemsTable();
+  toast('Ноорог сэргээгдлээ', 'ok');
+}
+document.getElementById('orderModal').addEventListener('input', scheduleOrderDraftSave);
+document.getElementById('orderModal').addEventListener('change', scheduleOrderDraftSave);
 
 /* ---------------- Shops CRUD ---------------- */
 document.getElementById('addShopBtn').addEventListener('click', () => {
@@ -4805,10 +4981,10 @@ function hardDeleteShop(id){
 document.getElementById('saveShopBtn').addEventListener('click', () => {
   const name = document.getElementById('shopName').value.trim();
   const aimag = document.getElementById('shopAimag').value.trim();
-  if (!name || !aimag) { toast('Нэр болон аймгийг бөглөнө үү', 'err'); return; }
+  if (!name || !aimag) { formErr('Дэлгүүрийн нэр болон аймгийг бөглөнө үү.'); return; }
   const facebook = document.getElementById('shopFacebook').value.trim();
   if (facebook && !isSafeHttpsUrl(facebook)) {
-    toast('Facebook холбоос зөвхөн https:// -ээр эхэлсэн байх ёстой', 'err'); return;
+    formErr('Facebook холбоос зөвхөн https:// -ээр эхэлсэн байх ёстой.'); return;
   }
   const id = document.getElementById('shopId').value;
   // Хуучин бичлэгийн дээр давхарлаж бичнэ — маягтад байхгүй талбар (archived г.м.)
@@ -4876,7 +5052,7 @@ document.getElementById('saveProductBtn').addEventListener('click', () => {
   const price = Number(document.getElementById('productPrice').value || 0);
   // HTML input-ийн min="0" зөвхөн ↑↓ сум/шалгалт дээр нөлөөлдөг, гараар "-5000"
   // гэж бичихийг хориглодоггүй тул JS талд заавал шалгана.
-  if (!name || !Number.isFinite(price) || price <= 0) { toast('Нэр болон эерэг үнийг бөглөнө үү', 'err'); return; }
+  if (!name || !Number.isFinite(price) || price <= 0) { formErr('Бүтээгдэхүүний нэр болон 0-ээс их нэгж үнийг бөглөнө үү.'); return; }
   const id = document.getElementById('productId').value;
   const prevProduct = id ? data.products.find(x=>x.id===id) : null;
   const obj = {
@@ -5468,6 +5644,7 @@ function renderOrderItemsTable(){
   const grand = currentOrderItems.reduce((s,it)=>s+Number(it.total||0),0);
   document.getElementById('orderGrandTotal').value = money(grand) + ' ₮';
   updateOrderPayable();
+  scheduleOrderDraftSave();
 }
 function updateItemQty(idx, val){
   const it = currentOrderItems[idx]; if (!it) return;
@@ -5538,6 +5715,7 @@ document.getElementById('addOrderBtn').addEventListener('click', () => {
   resetItemPicker();
   renderOrderItemsTable();
   openModal('orderModal');
+  offerOrderDraftRestore('new');
 });
 let orderViewCurrentId = null;
 function viewOrder(id){
@@ -5770,6 +5948,7 @@ function editOrder(id){
   resetItemPicker();
   renderOrderItemsTable();
   openModal('orderModal');
+  offerOrderDraftRestore(o.id);
 }
 function deleteOrder(id){
   if (!confirm('Энэ захиалгыг архивлах уу? (Идэвхтэй жагсаалтаас нуугдана, дараа нь сэргээж болно)')) return;
@@ -5790,16 +5969,16 @@ function hardDeleteOrder(id){
 }
 document.getElementById('saveOrderBtn').addEventListener('click', () => {
   const shopId = document.getElementById('orderShop').value;
-  if (!shopId) { toast('Дэлгүүр сонгоно уу', 'err'); return; }
-  if (!currentOrderItems.length) { toast('Дор хаяж 1 бараа нэмнэ үү', 'err'); return; }
+  if (!shopId) { formErr('Дэлгүүр сонгоно уу.'); return; }
+  if (!currentOrderItems.length) { formErr('Дор хаяж 1 бараа нэмнэ үү.'); return; }
   if (currentOrderItems.some(it => !Number.isInteger(Number(it.qty)) || Number(it.qty) < 1)) {
-    toast('Захиалгын мөрийн тоо ширхэг 1-ээс дээш бүхэл тоо байх ёстой — засаад дахин хадгална уу', 'err'); return;
+    formErr('Захиалгын мөрийн тоо ширхэг 1-ээс дээш бүхэл тоо байх ёстой — засаад дахин хадгална уу.'); return;
   }
   const newStatus = document.getElementById('orderStatus').value;
   const cancelReason = document.getElementById('orderCancelReason').value.trim();
-  if (newStatus === 'cancelled' && !cancelReason) { toast('Цуцлалтын шалтгаан сонгоно уу', 'err'); return; }
+  if (newStatus === 'cancelled' && !cancelReason) { formErr('Цуцлалтын шалтгаан сонгоно уу.'); return; }
   const discountParsed = parseDiscountInput(document.getElementById('orderDiscountPct').value);
-  if (discountParsed.invalid) { toast('Хөнгөлөлтийн хувь 0–100 хооронд тоо байх ёстой (хөнгөлөлтгүй бол хоосон орхино)', 'err'); return; }
+  if (discountParsed.invalid) { formErr('Хөнгөлөлтийн хувь 0–100 хооронд тоо байх ёстой (жиш: 10 эсвэл 5,5). Хөнгөлөлтгүй бол хоосон орхино.'); return; }
   const id = document.getElementById('orderId').value;
   const total = currentOrderItems.reduce((s,it)=>s+Number(it.total||0),0);
   const shop = data.shops.find(s=>s.id===shopId);
@@ -5843,6 +6022,7 @@ document.getElementById('saveOrderBtn').addEventListener('click', () => {
   };
   if (id) { data.orders = data.orders.map(x => x.id===id ? obj : x); }
   else { data.orders.push(obj); }
+  discardOrderDraftForOpenForm();
   queueSave(); render(); closeModal('orderModal');
   toast('Захиалга хадгалагдлаа', 'ok');
 });
