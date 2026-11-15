@@ -873,6 +873,7 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
           <h1 id="viewTitle">Хяналтын самбар</h1>
           <div class="sub" id="viewSub">Ерөнхий тойм</div>
           <div id="unsavedBanner" class="unsaved-banner" style="display:none;">Хадгалагдаагүй өөрчлөлт — дахин оролдож байна…</div>
+          <button type="button" id="reauthBanner" class="unsaved-banner" style="display:none;border:none;cursor:pointer;background:var(--brick-dim);color:var(--brick);">Нэвтрэлтийн хугацаа дууссан — энд дарж сунгана уу</button>
         </div>
       </div>
     </div>
@@ -1791,6 +1792,52 @@ function mergeById(local, remote){
   (remote||[]).forEach(r => { const l = byId[r.id]; if (!l || (r.updatedAt||0) > (l.updatedAt||0)) byId[r.id] = r; });
   return Object.values(byId).filter(x => !isTombstoned(x));
 }
+// Өгөгдлийн "гарын үсэг": бичлэгийн тоо + хамгийн сүүлийн updatedAt + тоолуур.
+// Хоёр өгөгдөл (локал ба Drive) ижил эсэхийг хямдаар харьцуулахад ашиглана.
+function dataSignature(d){
+  const part = (arr) => {
+    let mx = 0;
+    (arr||[]).forEach(x => { if (x && x.updatedAt > mx) mx = x.updatedAt; });
+    return (arr||[]).length + ':' + mx;
+  };
+  return [part(d.shops), part(d.products), part(d.orders), Number(d.nextOrderNo)||1].join('|');
+}
+// Drive-с уншсан өгөгдлийг (remote) локал `data`-тай нэгтгэнэ. loadFromDrive()
+// болон doSave() ХОЁУЛАА үүнийг дуудна — ингэснээр өөр төхөөрөмжөөс хадгалсан
+// бичлэг хэзээ ч "дарж бичигдэж" алга болохгүй.
+// Буцаах утга: дугаар нь давхцаад шинэчлэгдсэн захиалгын тоо.
+function mergeRemoteIntoData(remote){
+  migrateData(remote);
+  const localOrderIds  = new Set(data.orders.map(o => o.id));
+  const remoteOrderIds = new Set((remote.orders||[]).map(o => o.id));
+  mergeTombstones(remote.tombstones);          // эхлээд устгалтууд, дараа нь бичлэгүүд
+  data.shops    = mergeById(data.shops,    remote.shops    || []);
+  data.products = mergeById(data.products, remote.products || []);
+  data.orders   = mergeById(data.orders,   remote.orders   || []);
+  // Дараалсан тоолуур: хоёр талын хамгийн ихийг авна
+  data.nextOrderNo = Math.max(Number(data.nextOrderNo)||1, Number(remote.nextOrderNo)||1);
+  // Хоёр төхөөрөмж бие биенээ хараагүй байхдаа ИЖИЛ дугаартай захиалга тус тусдаа
+  // үүсгэсэн тохиолдол: Drive-д түрүүлж хадгалагдсан нь дугаараа авч үлдэнэ, энэ
+  // төхөөрөмж дээрх (хараахан Drive-д хүрээгүй) захиалгад шинэ дугаар олгоно.
+  // Зөвхөн энэ "зэрэг үүссэн" тохиолдолд л ажиллана — хуучин өгөгдлийн дугаарыг хөндөхгүй.
+  const mergedIds = new Set(data.orders.map(o => o.id));
+  const remoteOnlyNos = new Set((remote.orders||[])
+    .filter(o => !localOrderIds.has(o.id) && mergedIds.has(o.id) && o.orderNo != null)
+    .map(o => Number(o.orderNo)));
+  let renumbered = 0;
+  if (remoteOnlyNos.size) {
+    data.orders.forEach(o => {
+      if (localOrderIds.has(o.id) && !remoteOrderIds.has(o.id) && o.orderNo != null && remoteOnlyNos.has(Number(o.orderNo))) {
+        o.orderNo = data.nextOrderNo;
+        data.nextOrderNo += 1;
+        o.updatedAt = Date.now();
+        renumbered++;
+      }
+    });
+  }
+  purgeTombstones();
+  return renumbered;
+}
 
 /* ---------------- Toasts ---------------- */
 function toast(msg, kind){
@@ -2125,6 +2172,7 @@ function initGSI(){
           accessToken = resp.access_token;
           tokenExpiresAt = Date.now() + (Number(resp.expires_in || 3600) * 1000);
           saveTokenToStorage();
+          setReauthBanner(false);   // хугацаа хэтэрсний ДАРАА оройтож ирсэн амжилт ч энд орно
           if (pendingRefreshResolve) pendingRefreshResolve(true);
         } else {
           // Дахин баталгаажуулах (silent refresh) амжилтгүй бол хуучин токен
@@ -2148,6 +2196,19 @@ function initGSI(){
       tokenExpiresAt = Date.now() + (Number(resp.expires_in || 3600) * 1000);
       saveTokenToStorage();
       await onSignedIn();
+    },
+    // Popup нээгдээгүй (хөтөч хаасан) эсвэл хэрэглэгч хаасан үед дээрх callback
+    // ОГТ дуудагддаггүй — зөвхөн энэ error_callback дуудагдана. Өмнө нь үүнийг
+    // барьдаггүй байсан тул сунгалтын хүлээлт мөнхөд гацаж, хадгалалт
+    // "Хадгалж байна..." дээр зогсдог байв.
+    error_callback: (err) => {
+      if (authCallbackMode === 'refresh') {
+        if (pendingRefreshResolve) pendingRefreshResolve(false);
+        return;
+      }
+      if (err && err.type === 'popup_failed_to_open') {
+        showLoginError('Нэвтрэх цонх нээгдсэнгүй. Хөтчийн popup хориглолтыг энэ сайтад зөвшөөрөөд дахин оролдоно уу.');
+      }
     }
   });
 
@@ -2228,16 +2289,53 @@ function tokenExpiringSoon(){
   return !tokenExpiresAt || Date.now() > tokenExpiresAt - 120000; // дуусахаас 2 минутын өмнө
 }
 
+const REFRESH_TIMEOUT_MS = 30000;
+function setReauthBanner(show){
+  const el = document.getElementById('reauthBanner');
+  if (el) el.style.display = show ? '' : 'none';
+}
 function silentRefresh(){
   if (refreshPromise) return refreshPromise; // аль хэдийн давхар яваа бол шинэ хүсэлт үүсгэхгүй, хуучныг буцаана
   refreshPromise = new Promise((resolve) => {
     if (!tokenClient) { resolve(false); return; }
     authCallbackMode = 'refresh';
-    pendingRefreshResolve = resolve;
-    tokenClient.requestAccessToken({ prompt: '' });
+    // Хариу ямар ч шалтгаанаар ирэхгүй бол (popup хаагдсан, сүлжээ гацсан)
+    // 30 секундын дараа "амжилтгүй" гэж шийднэ — хэзээ ч мөнхөд хүлээхгүй.
+    let settled = false;
+    const finish = (ok) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      pendingRefreshResolve = null;
+      resolve(ok);
+    };
+    const timer = setTimeout(() => finish(false), REFRESH_TIMEOUT_MS);
+    pendingRefreshResolve = finish;
+    try { tokenClient.requestAccessToken({ prompt: '' }); }
+    catch(e){ console.error(e); finish(false); }
+  }).then((ok) => {
+    // Амжилтгүй бол хэрэглэгчид "дарж сунгах" товч харуулна — хэрэглэгчийн
+    // ДАРАЛТААР нээгдсэн popup-ыг хөтөч хаадаггүй.
+    setReauthBanner(!ok);
+    return ok;
   }).finally(() => { refreshPromise = null; });
   return refreshPromise;
 }
+document.getElementById('reauthBanner').addEventListener('click', async () => {
+  // Аль хэдийн хүлээгдэж буй (хаагдсан popup-ын) сунгалт байвал энэ даралтаар
+  // popup-ыг шинээр нээнэ — хариу нь мөн тэр хүлээлтийг шийднэ.
+  if (refreshPromise && tokenClient) {
+    authCallbackMode = 'refresh';
+    try { tokenClient.requestAccessToken({ prompt: '' }); } catch(e){ console.error(e); }
+  }
+  const ok = await silentRefresh();
+  if (ok) {
+    toast('Нэвтрэлт сунгагдлаа', 'ok');
+    doSave();          // хүлээгдэж байсан өөрчлөлтийг Drive руу (нэгтгээд) хадгална
+  } else {
+    toast('Сунгаж чадсангүй. "Гарах" дараад дахин нэвтэрнэ үү — өгөгдөл тань энэ төхөөрөмжид хадгалагдсан.', 'err');
+  }
+});
 
 // 30 секунд тутам токены хугацааг шалгаж, дуусахад ойртсон бол нам гүм шинэчилнэ
 setInterval(() => {
@@ -2248,12 +2346,22 @@ setInterval(() => {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && accessToken && tokenExpiringSoon()) silentRefresh();
 });
+// Tab/апп руу буцаж ирэхэд өөр төхөөрөмжөөс орсон өөрчлөлтийг Drive-с татна
+// (минутад 1-ээс олонгүй). Ингэснээр удаан нээлттэй байсан таб хуучирсан
+// өгөгдөл дээр ажиллах, ижил захиалгын дугаар олгох магадлал эрс багасна.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !accessToken) return;
+  if (document.getElementById('app').style.display === 'none') return;
+  if (Date.now() - lastDriveLoadAt < 60000) return;
+  loadFromDrive({ silent: true });
+});
 
 function signOutLocal(){
   if (accessToken) {
     google.accounts.oauth2.revoke(accessToken, () => {});
   }
   cancelSaveRetry();
+  setReauthBanner(false);
   clearTokenStorage();
   authCallbackMode = 'login';
   pendingRefreshResolve = null;
@@ -2393,8 +2501,26 @@ async function createDriveFile(folderId, initialData){
 
 async function readDriveFile(fileId){
   const res = await driveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
-  if (!res.ok) throw new Error('read failed');
-  return await res.json();
+  if (!res.ok) {
+    const err = new Error('read failed');
+    err.status = res.status;      // doSave() 404-ийг (файл устсан) ялгахад хэрэглэнэ
+    throw err;
+  }
+  let json;
+  try { json = await res.json(); }
+  catch(parseErr){
+    // Файл байгаа ч агуулга нь JSON биш (хоосон/эвдэрсэн). doSave() үүнийг
+    // "нэгтгэх зүйл алга" гэж үзээд локал өгөгдлөөр сэргээн бичнэ.
+    const err = new Error('bad json');
+    err.badJson = true;
+    throw err;
+  }
+  if (json === null || typeof json !== 'object' || Array.isArray(json)) {
+    const err = new Error('bad json');
+    err.badJson = true;
+    throw err;
+  }
+  return json;
 }
 
 async function writeDriveFile(fileId, obj){
@@ -2413,7 +2539,12 @@ async function writeDriveFile(fileId, obj){
   }
 }
 
-async function loadFromDrive(){
+let lastDriveLoadAt = 0;
+async function loadFromDrive(opts){
+  // opts.silent: tab руу буцаж ирэхэд автоматаар дуудагдах үед алдааны toast
+  // гаргахгүй (сүлжээ түр тасарсан бүрд хэрэглэгчийг залхаахгүй).
+  const silent = !!(opts && opts.silent);
+  let needsPush = false;
   setSync('busy', 'Ачааллаж байна...');
   // Кэшнээс өмнөх folder/file ID-г эхлээд авч үзнэ — амжилттай бол Drive
   // дээрх нэр хайлтын 2 round-trip-ийг алгасаж хурдасгана.
@@ -2429,19 +2560,19 @@ async function loadFromDrive(){
       driveFileId = await createDriveFile(folderId, data);
     } else {
       const remote = await readDriveFile(driveFileId);
-      migrateData(remote);
-      mergeTombstones(remote.tombstones);          // эхлээд устгалтууд, дараа нь бичлэгүүд
-      data.shops = mergeById(data.shops, remote.shops || []);
-      data.products = mergeById(data.products, remote.products || []);
-      data.orders = mergeById(data.orders, remote.orders || []);
-      // Дараалсан тоолуур: sync-ийн зөрчлийг багасгахын тулд хоёр талын хамгийн ихийг авна
-      data.nextOrderNo = Math.max(Number(data.nextOrderNo)||1, Number(remote.nextOrderNo)||1);
-      purgeTombstones();
+      const renumbered = mergeRemoteIntoData(remote);
+      // Нэгтгэсний дараах өгөгдөл Drive дээрхээс өөр байвал (энэ төхөөрөмж дээр
+      // Drive-д хүрээгүй өөрчлөлт үлдсэн байсан гэсэн үг) буцааж хадгална — өмнө нь
+      // тэр өөрчлөлт зөвхөн энэ browser-т үлдэж, бусад төхөөрөмжид харагддаггүй байв.
+      needsPush = dataSignature(data) !== dataSignature(remote);
+      if (renumbered) toast(`${renumbered} захиалгын дугаар өөр төхөөрөмжийнхтэй давхцсан тул шинэ дугаар олголоо`, 'ok');
     }
     safeSetItem(LOCAL_KEY, JSON.stringify(data));
     writeFileIdCache(); // ID зөв ажилласны дараа л кэшид бичнэ
+    lastDriveLoadAt = Date.now();
     setSync('', 'Синк хийгдсэн');
     render();
+    if (needsPush) queueSave();
   } catch(e){
     console.error(e);
     // Кэшнээс авсан ID хуучирсан (файл устсан/зөөгдсөн) байж болзошгүй тул
@@ -2449,8 +2580,8 @@ async function loadFromDrive(){
     clearFileIdCache();
     driveFolderId = null;
     driveFileId = null;
-    setSync('err', 'Ачааллахад алдаа гарлаа');
-    toast('Drive-с ачаалахад алдаа гарлаа. Кэш өгөгдлөөр ажиллаж байна.', 'err');
+    setSync('err', isAuthExpired(e) ? 'Нэвтрэлт дууссан' : 'Ачааллахад алдаа гарлаа');
+    if (!silent && !isAuthExpired(e)) toast('Drive-с ачаалахад алдаа гарлаа. Кэш өгөгдлөөр ажиллаж байна.', 'err');
   }
 }
 
@@ -2463,6 +2594,11 @@ function queueSave(){
 
 let saveRetryTimer = null;
 let saveRetryAttempts = 0;
+// Нөөцөөс "Сэргээх" хийсний дараах ЭХНИЙ хадгалалт Drive-тай нэгтгэхгүй, бүрэн солино.
+let forceOverwriteNextSave = false;
+function isAuthExpired(e){
+  return !!(e && e.message && String(e.message).indexOf('AUTH_EXPIRED') === 0);
+}
 const SAVE_RETRY_DELAYS = [10000, 30000, 60000]; // 10с → 30с → 60с, тэгээд 60с-аар үргэлжилнэ
 
 function scheduleSaveRetry(){
@@ -2514,14 +2650,59 @@ async function doSave(){
         driveFileId = await createDriveFile(folderId, data);
       }
     }
-    catch(e){ setSync('err','Холбогдоогүй'); scheduleSaveRetry(); return; }
+    catch(e){
+      if (isAuthExpired(e)) { setSync('err','Нэвтрэлт дууссан'); return; }  // "сунгах" товчоор үргэлжилнэ
+      setSync('err','Холбогдоогүй'); scheduleSaveRetry(); return;
+    }
   }
   try {
+    // ---- Бичихийн ӨМНӨ Drive дээрх одоогийн файлыг уншиж нэгтгэнэ ----
+    // Өмнө нь энд шууд дарж бичдэг байсан тул: компьютер дээр таб нээлттэй
+    // байхад утсаар нэмсэн захиалга, дараа нь компьютерээс юу ч хадгалахад
+    // Drive-аас алга болдог байв. Одоо хоёр талын өгөгдөл нэгтгэгдэж бичигдэнэ.
+    // (Нөөцөөс "Сэргээх" хийсэн үед л зориуд нэгтгэхгүй — бүрэн солих ёстой.)
+    if (!forceOverwriteNextSave) {
+      let remote = null;
+      try { remote = await readDriveFile(driveFileId); }
+      catch(readErr){
+        if (readErr && readErr.badJson) {
+          remote = null;            // Drive дээрх файл эвдэрсэн — локалаар сэргээн бичнэ
+        } else if (readErr && readErr.status === 404) {
+          throw readErr;            // файл устсан — доорх 404 салбар шинэ файл үүсгэнэ
+        } else if (isAuthExpired(readErr)) {
+          throw readErr;
+        } else {
+          // Уншиж чадаагүй бол СОХРООР дарж бичихгүй — дараа дахин оролдоно.
+          console.error(readErr);
+          setSync('err', 'Холбогдоогүй');
+          scheduleSaveRetry();
+          return;
+        }
+      }
+      if (remote) {
+        const before = dataSignature(data);
+        const renumbered = mergeRemoteIntoData(remote);
+        if (dataSignature(data) !== before) {
+          // Өөр төхөөрөмжөөс шинэ бичлэг орж ирсэн — дэлгэц, локал кэшийг шинэчилнэ.
+          safeSetItem(LOCAL_KEY, JSON.stringify(data));
+          render();
+        }
+        if (renumbered) toast(`${renumbered} захиалгын дугаар өөр төхөөрөмжийнхтэй давхцсан тул шинэ дугаар олголоо`, 'ok');
+      }
+    }
     await writeDriveFile(driveFileId, data);
+    forceOverwriteNextSave = false;
+    lastDriveLoadAt = Date.now();
     setSync('', 'Хадгалагдсан');
     cancelSaveRetry();
   } catch(e){
     console.error(e);
+    if (isAuthExpired(e)) {
+      // Токен дууссан: 60 секунд тутам дэмий оролдохын оронд хэрэглэгч "сунгах"
+      // товч дармагц (reauthBanner) хадгалалт үргэлжилнэ. Өгөгдөл localStorage-д бүрэн бий.
+      setSync('err', 'Нэвтрэлт дууссан');
+      return;
+    }
     if (e && e.status === 404) {
       // Drive дээрх файл устсан/зөөгдсөн (жиш: хэрэглэгч Drive-с шууд устгасан).
       // Хуучин ID-гаар цаашид дахин дахин бичихийг оролдвол мөнхөд 404 өгсөөр
@@ -2537,7 +2718,7 @@ async function doSave(){
   }
 }
 
-document.getElementById('syncNowBtn').addEventListener('click', loadFromDrive);
+document.getElementById('syncNowBtn').addEventListener('click', () => loadFromDrive());
 function sanitizeBackupData(incoming){
   // Нөөцлөлтийн (backup) файл бол дурын гадаад JSON тул мөр бүрийг
   // цэвэрлэж, апп цохигдохоос болон буруу утга (сөрөг үнэ, танигдахгүй
@@ -2627,6 +2808,7 @@ document.getElementById('backupRestoreFile').addEventListener('change', (e) => {
     if (!data.tombstones) data.tombstones = {};
     migrateData(data);
     driveFileId = null;
+    forceOverwriteNextSave = true;   // сэргээлт = бүрэн солих; Drive-тай нэгтгэхгүй
     queueSave();
     render();
     e.target.value = '';
@@ -3196,7 +3378,10 @@ function getDateRangeBounds(preset){
   else if (preset === '7d') { const d = new Date(now); d.setDate(d.getDate()-6); start = localDateStr(d); }
   else if (preset === '30d') { const d = new Date(now); d.setDate(d.getDate()-29); start = localDateStr(d); }
   else if (preset === 'month') { start = todayStr().slice(0,7)+'-01'; }
-  return { start, end: todayStr() };
+  // "Бүх хугацаа" (start байхгүй) үед төгсгөлийн хязгаар ч тавихгүй — өмнө нь
+  // энд үргэлж өнөөдрөөр хязгаарладаг байсан тул маргаашийн огноотой захиалга
+  // Захиалгууд/Тайлангийн жагсаалтаас бүрмөсөн алга болдог байв.
+  return { start, end: start ? todayStr() : null };
 }
 function filterOrdersByRange(rangeStart, rangeEnd, shopSel, aimagSel, productSel, statusSel){
   return data.orders.filter(o => {
@@ -4194,7 +4379,11 @@ document.getElementById('saveShopBtn').addEventListener('click', () => {
     toast('Facebook холбоос зөвхөн https:// -ээр эхэлсэн байх ёстой', 'err'); return;
   }
   const id = document.getElementById('shopId').value;
+  // Хуучин бичлэгийн дээр давхарлаж бичнэ — маягтад байхгүй талбар (archived г.м.)
+  // хэвээр үлдэнэ. Өмнө нь архивласан дэлгүүрийг засахад архиваас чимээгүй гардаг байв.
+  const prevShop = id ? data.shops.find(x=>x.id===id) : null;
   const obj = {
+    ...(prevShop || {}),
     id: id || uid(),
     name, aimag,
     sum: document.getElementById('shopSum').value.trim(),
@@ -4257,7 +4446,9 @@ document.getElementById('saveProductBtn').addEventListener('click', () => {
   // гэж бичихийг хориглодоггүй тул JS талд заавал шалгана.
   if (!name || !Number.isFinite(price) || price <= 0) { toast('Нэр болон эерэг үнийг бөглөнө үү', 'err'); return; }
   const id = document.getElementById('productId').value;
+  const prevProduct = id ? data.products.find(x=>x.id===id) : null;
   const obj = {
+    ...(prevProduct || {}),
     id: id || uid(),
     itemCode: document.getElementById('productItemCode').value.trim(),
     code: document.getElementById('productCode').value.trim(),
@@ -4930,7 +5121,7 @@ function viewOrder(id){
     </div>` : ''}
     <div class="field-row">
       <div><div class="ov-label">Төлөв</div><div class="ov-val"><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></div></div>
-      <div><div class="ov-label">Нийт дүн</div><div class="ov-val" style="font-weight:600;font-size:17px;">${money(o.total)} ₮</div></div>
+      <div><div class="ov-label">Нийт дүн</div><div class="ov-val" style="font-weight:600;font-size:17px;">${money(o.total)} ₮<div style="font-weight:400;font-size:12.5px;color:var(--muted);margin-top:2px;">Төлөх (${orderAmounts(o).pct}% хөнгөлөлттэй): <b style="color:var(--text);">${money(orderAmounts(o).payable)} ₮</b></div></div></div>
     </div>
     <div class="ov-label" style="margin-top:6px;">Бараа</div>
     <table class="aimag-table mobile-card-table" style="margin-bottom:14px;">
@@ -4954,6 +5145,13 @@ document.getElementById('orderViewEditBtn').addEventListener('click', () => {
   closeModal('orderViewModal');
   editOrder(orderViewCurrentId);
 });
+// Захиалгын мөнгөн дүнгийн НЭГ эх сурвалж: хэвлэх хуудас, WhatsApp зурвас,
+// дэлгэрэнгүй цонх гурвуулаа үүнийг ашиглана — харилцагчид очих тоо зөрөхгүй.
+function orderAmounts(o){
+  const subtotal = Number(o.total)||0;
+  const discount = Math.round(subtotal * DISCOUNT_RATE);
+  return { subtotal, discount, payable: subtotal - discount, pct: Math.round(DISCOUNT_RATE*100) };
+}
 function buildOrderSummaryLines(o){
   const shop = data.shops.find(s=>s.id===o.shopId);
   const shopName = shop ? shop.name : (o.shopName || '—');
@@ -4968,7 +5166,10 @@ function buildOrderSummaryLines(o){
     lines.push('- ' + name + (it.size?' ('+it.size+')':'') + ': ' + it.qty + ' ш × ' + money(it.unitPrice) + '₮ = ' + money(it.total) + '₮');
   });
   lines.push('');
-  lines.push('Нийт дүн: ' + money(o.total) + '₮');
+  const amt = orderAmounts(o);
+  lines.push('Барааны нийт дүн: ' + money(amt.subtotal) + '₮');
+  lines.push('Хөнгөлөлт (' + amt.pct + '%): -' + money(amt.discount) + '₮');
+  lines.push('ТӨЛӨХ НИЙТ ДҮН: ' + money(amt.payable) + '₮');
   if (o.notes) { lines.push(''); lines.push('Тэмдэглэл: ' + o.notes); }
   return lines;
 }
@@ -4980,9 +5181,7 @@ document.getElementById('orderViewPrintBtn').addEventListener('click', () => {
   const shopAimag = shop ? (shop.aimag||'') : (o.shopAimag||'');
   const shopContact = shop ? (shop.contact||'') : '';
   const shopPhones = shop ? [shop.phone1, shop.phone2].filter(Boolean).join(' / ') : '';
-  const subtotal = Number(o.total)||0;
-  const discountAmt = Math.round(subtotal * DISCOUNT_RATE);
-  const payable = subtotal - discountAmt;
+  const { subtotal, discount: discountAmt, payable, pct: discountPct } = orderAmounts(o);
   let totalQty = 0;
   const groupSet = new Set();
   const itemsHtml = (o.items||[]).map((it, i) => {
@@ -5023,7 +5222,7 @@ document.getElementById('orderViewPrintBtn').addEventListener('click', () => {
         <div class="row"><span class="k">Нийт нэр төрөл:</span><span class="v">${groupSet.size}</span></div>
         <div class="row"><span class="k">Нийт тоо ширхэг:</span><span class="v">${totalQty}</span></div>
         <div class="row"><span class="k">Барааны нийт дүн:</span><span class="v">${money(subtotal)} ₮</span></div>
-        <div class="row discount"><span class="k">Хөнгөлөлт (10%):</span><span class="v">−${money(discountAmt)} ₮</span></div>
+        <div class="row discount"><span class="k">Хөнгөлөлт (${discountPct}%):</span><span class="v">−${money(discountAmt)} ₮</span></div>
         <div class="row total"><span class="k">ТӨЛӨХ НИЙТ ДҮН:</span><span class="v">${money(payable)} ₮</span></div>
       </div>
     </div>
@@ -5120,6 +5319,9 @@ document.getElementById('saveOrderBtn').addEventListener('click', () => {
     statusHistory.push({ status: newStatus, changedAt: now });
   }
   const obj = {
+    // Хуучин бичлэгийн дээр давхарлана — архивласан захиалгыг засахад `archived`
+    // тэмдэг хэвээр үлдэнэ (өмнө нь чимээгүйгээр идэвхтэй жагсаалт руу буцдаг байв).
+    ...(existingOrder || {}),
     id: id || uid(),
     orderNo,
     shopId,
