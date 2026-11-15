@@ -1497,7 +1497,11 @@ tbody tr:hover{background:rgba(166,89,46,.04);}
       </div>
 
       <div class="field-row">
-        <div class="field"><label for="orderGrandTotal">Нийт дүн (₮)</label><input type="text" id="orderGrandTotal" readonly style="background:var(--stone);font-weight:600;"></div>
+        <div class="field"><label for="orderGrandTotal">Барааны нийт дүн (₮)</label><input type="text" id="orderGrandTotal" readonly style="background:var(--stone);font-weight:600;"></div>
+        <div class="field"><label for="orderDiscountPct">Хөнгөлөлт (%)</label><input type="number" id="orderDiscountPct" min="0" max="100" step="any" inputmode="decimal" placeholder="Хөнгөлөлтгүй бол хоосон орхино"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="orderPayable">Төлөх дүн (₮)</label><input type="text" id="orderPayable" readonly style="background:var(--stone);font-weight:600;"></div>
         <div class="field"><label for="orderStatus">Төлөв</label>
           <select id="orderStatus">
             <option value="new">Шинэ</option>
@@ -1544,10 +1548,11 @@ const DATA_FILENAME = 'nehii_trade_orders_data.json';
 const LOCAL_KEY = 'nehiitrade_orders_cache_v1';
 const FILE_ID_CACHE_KEY = 'nehiitrade_file_ids_v1';
 const TOKEN_KEY = 'nehiitrade_token_v1';
-// Бүх захиалгад мөрддөг 10%-ийн бөөний хөнгөлөлт. Зөвхөн ХАРУУЛАХ (хэвлэх/PDF,
-// тайлангийн "Нийт борлуулалт" KPI) тооцоонд ашиглана — өгөгдлийн санд (order.total
-// гэх мэт) хадгалагддаггүй тул захиалга/бараа тус бүрийн дүн өөрчлөгдөхгүй.
-const DISCOUNT_RATE = 0.10;
+// Хөнгөлөлт одоо ЗАХИАЛГА ТУС БҮРД гараар оруулдаг хувь (order.discountPct):
+// хоосон/0 = хөнгөлөлтгүй. Доорх утга нь ЗӨВХӨН энэ талбар нэвтрэхээс өмнө
+// бүртгэгдсэн хуучин захиалгад (тэр үед бүгд 10%-иар хэвлэгддэг байсан) нэг удаа
+// нөхөж өгөх хувь — шинэ захиалгад ОГТ хэрэглэгдэхгүй.
+const LEGACY_DISCOUNT_PCT = 10;
 // Нэгтгэл тайлангийн PDF/хэвлэлт дээр "Гаргасан ажилтан" хэсэгт харуулах нэр,
 // албан тушаал. 1 админтай систем тул тогтмол утга — өөр хүн болвол энд солино.
 const REPORT_ISSUER_NAME = 'Б.Мөнхцэцэг';
@@ -1603,6 +1608,10 @@ function migrateOrder(o, d){
   }
   if (!o.items) o.items = [];
   if (o.total == null) o.total = o.items.reduce((s,it)=>s+Number(it.total||0),0);
+  // discountPct талбаргүй = хуучин захиалга. Тэдгээр нь 10% хөнгөлөлттэйгээр
+  // хэвлэгдэж, тайланд тооцогдож байсан тул түүхэн дүн өөрчлөгдөхгүйн тулд 10 гэж
+  // нөхнө. Шинэ захиалга хадгалахдаа үргэлж тоо (хоосон бол 0) бичдэг тул энд орохгүй.
+  if (o.discountPct === undefined) o.discountPct = LEGACY_DISCOUNT_PCT;
   // Статусын түүх (audit trail) байхгүй хуучин захиалгад одоогийн статусаар
   // 1 удаагийн эхлэлийн бичлэг үүсгэж нөхнө.
   if (!Array.isArray(o.statusHistory) || !o.statusHistory.length) {
@@ -2755,7 +2764,8 @@ function sanitizeBackupData(incoming){
       cancelReason: safeStatus === 'cancelled' ? String(x.cancelReason||'').slice(0,200) : '',
       statusHistory,
       items,
-      total: cleanNum(x.total, items.reduce((sum,it)=>sum+Number(it.total||0),0))
+      total: cleanNum(x.total, items.reduce((sum,it)=>sum+Number(it.total||0),0)),
+      ...(x.discountPct !== undefined ? { discountPct: Math.min(100, cleanNum(x.discountPct, 0)) } : {})
     };
   });
   return { ...incoming, shops, products, orders };
@@ -3752,11 +3762,11 @@ function buildReportAIContext(){
   const prevOrders = getPreviousPeriodOrders();
   const active = orders.filter(o=>o.status!=='cancelled');
   const revenueGross = active.reduce((s,o)=>s+Number(o.total||0),0);
-  // AI-д өгөх "Борлуулалт" тоог дэлгэц дээрх "Нийт борлуулалт" KPI-тай (10%-ийн
+  // AI-д өгөх "Борлуулалт" тоог дэлгэц дээрх "Нийт борлуулалт" KPI-тай (захиалга бүрийн
   // хөнгөлөлтийг хассан) яг ижил дүнгээр илгээнэ — AI-ийн дурдах тоо ба тайлан дээрх
   // KPI зөрөхөөс сэргийлнэ (өмнө нь AI gross дүн авдаг байсан тул зөрчил гардаг байсан).
   // avgOrder-ийг дэлгэц дээрх "Дундаж захиалга" KPI-тай адилаар gross дүнгээр тооцно.
-  const revenue = Math.round(revenueGross * (1 - DISCOUNT_RATE));
+  const revenue = active.reduce((sum,o)=>sum+orderAmounts(o).payable,0);
   const totalOrders = orders.length;
   const avgOrder = active.length ? revenueGross/active.length : 0;
   const cancelledCount = orders.filter(o=>o.status==='cancelled').length;
@@ -3766,9 +3776,9 @@ function buildReportAIContext(){
   if (prevOrders) {
     const prevActive = prevOrders.filter(o=>o.status!=='cancelled');
     const prevRevenueGross = prevActive.reduce((s,o)=>s+Number(o.total||0),0);
-    // Одоогийн мөчлөгтэй адил: AI-д өгөх previousRevenue-г мөн 10%-ийн хөнгөлөлт
+    // Одоогийн мөчлөгтэй адил: AI-д өгөх previousRevenue-г мөн хөнгөлөлт
     // хассан дүнгээр, previousAvgOrder-ийг gross дүнгээр тооцно.
-    previousRevenue = Math.round(prevRevenueGross * (1 - DISCOUNT_RATE));
+    previousRevenue = prevActive.reduce((sum,o)=>sum+orderAmounts(o).payable,0);
     previousOrders = prevOrders.length;
     previousAvgOrder = prevActive.length ? Math.round(prevRevenueGross/prevActive.length) : 0;
     const prevCancelled = prevOrders.filter(o=>o.status==='cancelled').length;
@@ -4119,10 +4129,10 @@ function renderReports(){
 
   const activeOrders = orders.filter(o=>o.status!=='cancelled');
   const totalRevenue = activeOrders.reduce((s,o)=>s+Number(o.total||0),0);
-  // "Нийт борлуулалт" KPI-г 10%-ийн хөнгөлөлтийг хассан (бодит хүлээж авах) дүнгээр
-  // харуулна. avgOrder (дундаж захиалга) болон бусад тайлангийн тооцоо (ABC, RFM,
-  // шилдэг бараа/дэлгүүр гэх мэт) хөндөгдөхгүй, зөвхөн энэ нэг KPI-д тусгана.
-  const totalRevenueAfterDiscount = totalRevenue * (1 - DISCOUNT_RATE);
+  // "Нийт борлуулалт" KPI-г захиалга тус бүрийн ӨӨРИЙН хөнгөлөлтийг хассан (бодит
+  // хүлээж авах) дүнгийн нийлбэрээр харуулна. avgOrder (дундаж захиалга) болон бусад
+  // тооцоо (ABC, RFM, шилдэг бараа/дэлгүүр гэх мэт) хөнгөлөлтийн өмнөх дүнгээр хэвээр.
+  const totalRevenueAfterDiscount = activeOrders.reduce((sum,o)=>sum+orderAmounts(o).payable,0);
   const totalOrders = orders.length;
   const avgOrder = activeOrders.length ? totalRevenue/activeOrders.length : 0;
   const cancelledCount = orders.filter(o=>o.status==='cancelled').length;
@@ -4136,13 +4146,12 @@ function renderReports(){
   if (prevOrders) {
     const prevActive = prevOrders.filter(o=>o.status!=='cancelled');
     const prevRevenue = prevActive.reduce((s,o)=>s+Number(o.total||0),0);
-    const prevRevenueAfterDiscount = prevRevenue * (1 - DISCOUNT_RATE);
+    const prevRevenueAfterDiscount = prevActive.reduce((sum,o)=>sum+orderAmounts(o).payable,0);
     const prevTotalOrders = prevOrders.length;
     const prevAvgOrder = prevActive.length ? prevRevenue/prevActive.length : 0;
     const prevCancelled = prevOrders.filter(o=>o.status==='cancelled').length;
     const prevCancelRate = prevTotalOrders ? (prevCancelled/prevTotalOrders*100) : 0;
-    // Хоёр тал (одоогийн ба өмнөх мөчлөг) ижил 10%-иар хөнгөлөгдсөн тул хувийн
-    // өөрчлөлт (%) яг тэнцүү хэвээр байна — зөвхөн харагдах мөнгөн дүн бага болно.
+    // Хоёр мөчлөгийг хоёуланг нь хөнгөлөлт хассан (бодит) дүнгээр харьцуулна.
     renderKpiDelta('repKpiRevenueDelta', totalRevenueAfterDiscount, prevRevenueAfterDiscount, {label:'өмнөх мөчлөгөөс'});
     renderKpiDelta('repKpiOrdersDelta', totalOrders, prevTotalOrders, {label:'өмнөх мөчлөгөөс'});
     renderKpiDelta('repKpiAvgDelta', avgOrder, prevAvgOrder, {label:'өмнөх мөчлөгөөс'});
@@ -5019,6 +5028,7 @@ function renderOrderItemsTable(){
   }
   const grand = currentOrderItems.reduce((s,it)=>s+Number(it.total||0),0);
   document.getElementById('orderGrandTotal').value = money(grand) + ' ₮';
+  updateOrderPayable();
 }
 function updateItemQty(idx, val){
   const it = currentOrderItems[idx]; if (!it) return;
@@ -5083,6 +5093,7 @@ document.getElementById('addOrderBtn').addEventListener('click', () => {
   document.getElementById('orderStatus').value = 'new';
   document.getElementById('orderCancelReasonWrap').style.display = 'none';
   document.getElementById('orderNotes').value = '';
+  document.getElementById('orderDiscountPct').value = '';   // шинэ захиалга: анхдагчаар хөнгөлөлтгүй
   currentOrderItems = [];
   fillSelectOptions();
   resetItemPicker();
@@ -5121,7 +5132,7 @@ function viewOrder(id){
     </div>` : ''}
     <div class="field-row">
       <div><div class="ov-label">Төлөв</div><div class="ov-val"><span class="badge ${STATUS_CLASS[o.status]}">${STATUS_LABEL[o.status]}</span></div></div>
-      <div><div class="ov-label">Нийт дүн</div><div class="ov-val" style="font-weight:600;font-size:17px;">${money(o.total)} ₮<div style="font-weight:400;font-size:12.5px;color:var(--muted);margin-top:2px;">Төлөх (${orderAmounts(o).pct}% хөнгөлөлттэй): <b style="color:var(--text);">${money(orderAmounts(o).payable)} ₮</b></div></div></div>
+      <div><div class="ov-label">Нийт дүн</div><div class="ov-val" style="font-weight:600;font-size:17px;">${money(o.total)} ₮${orderAmounts(o).pct > 0 ? `<div style="font-weight:400;font-size:12.5px;color:var(--muted);margin-top:2px;">Төлөх (${orderAmounts(o).pct}% хөнгөлөлттэй): <b style="color:var(--text);">${money(orderAmounts(o).payable)} ₮</b></div>` : ''}</div></div>
     </div>
     <div class="ov-label" style="margin-top:6px;">Бараа</div>
     <table class="aimag-table mobile-card-table" style="margin-bottom:14px;">
@@ -5147,11 +5158,36 @@ document.getElementById('orderViewEditBtn').addEventListener('click', () => {
 });
 // Захиалгын мөнгөн дүнгийн НЭГ эх сурвалж: хэвлэх хуудас, WhatsApp зурвас,
 // дэлгэрэнгүй цонх гурвуулаа үүнийг ашиглана — харилцагчид очих тоо зөрөхгүй.
+function orderDiscountPct(o){
+  const n = Number(o && o.discountPct);
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0;
+}
 function orderAmounts(o){
   const subtotal = Number(o.total)||0;
-  const discount = Math.round(subtotal * DISCOUNT_RATE);
-  return { subtotal, discount, payable: subtotal - discount, pct: Math.round(DISCOUNT_RATE*100) };
+  const pct = orderDiscountPct(o);                       // 0 = хөнгөлөлтгүй
+  const discount = Math.round(subtotal * pct / 100);
+  return { subtotal, discount, payable: subtotal - discount, pct };
 }
+// Маягтын "Хөнгөлөлт (%)" талбарыг уншина. Хоосон = 0 (хөнгөлөлтгүй).
+function parseDiscountInput(raw){
+  const str = String(raw == null ? '' : raw).trim().replace(',', '.').replace('%', '');
+  if (str === '') return { pct: 0, invalid: false };
+  const n = Number(str);
+  if (!Number.isFinite(n) || n < 0 || n > 100) return { pct: 0, invalid: true };
+  return { pct: n, invalid: false };
+}
+// Захиалгын маягт дахь "Төлөх дүн"-г бараа эсвэл хөнгөлөлтийн хувь өөрчлөгдөх бүрд шинэчилнэ.
+function updateOrderPayable(){
+  const out = document.getElementById('orderPayable');
+  const inp = document.getElementById('orderDiscountPct');
+  if (!out || !inp) return;
+  const grand = currentOrderItems.reduce((sum,it)=>sum+Number(it.total||0),0);
+  const d = parseDiscountInput(inp.value);
+  if (d.invalid) { out.value = '0–100 хооронд тоо оруулна уу'; return; }
+  const a = orderAmounts({ total: grand, discountPct: d.pct });
+  out.value = money(a.payable) + ' ₮' + (a.pct > 0 ? `  (−${money(a.discount)} ₮)` : '');
+}
+document.getElementById('orderDiscountPct').addEventListener('input', updateOrderPayable);
 function buildOrderSummaryLines(o){
   const shop = data.shops.find(s=>s.id===o.shopId);
   const shopName = shop ? shop.name : (o.shopName || '—');
@@ -5167,8 +5203,10 @@ function buildOrderSummaryLines(o){
   });
   lines.push('');
   const amt = orderAmounts(o);
-  lines.push('Барааны нийт дүн: ' + money(amt.subtotal) + '₮');
-  lines.push('Хөнгөлөлт (' + amt.pct + '%): -' + money(amt.discount) + '₮');
+  if (amt.pct > 0) {
+    lines.push('Барааны нийт дүн: ' + money(amt.subtotal) + '₮');
+    lines.push('Хөнгөлөлт (' + amt.pct + '%): -' + money(amt.discount) + '₮');
+  }
   lines.push('ТӨЛӨХ НИЙТ ДҮН: ' + money(amt.payable) + '₮');
   if (o.notes) { lines.push(''); lines.push('Тэмдэглэл: ' + o.notes); }
   return lines;
@@ -5222,7 +5260,7 @@ document.getElementById('orderViewPrintBtn').addEventListener('click', () => {
         <div class="row"><span class="k">Нийт нэр төрөл:</span><span class="v">${groupSet.size}</span></div>
         <div class="row"><span class="k">Нийт тоо ширхэг:</span><span class="v">${totalQty}</span></div>
         <div class="row"><span class="k">Барааны нийт дүн:</span><span class="v">${money(subtotal)} ₮</span></div>
-        <div class="row discount"><span class="k">Хөнгөлөлт (${discountPct}%):</span><span class="v">−${money(discountAmt)} ₮</span></div>
+        ${discountPct > 0 ? `<div class="row discount"><span class="k">Хөнгөлөлт (${discountPct}%):</span><span class="v">−${money(discountAmt)} ₮</span></div>` : ''}
         <div class="row total"><span class="k">ТӨЛӨХ НИЙТ ДҮН:</span><span class="v">${money(payable)} ₮</span></div>
       </div>
     </div>
@@ -5271,6 +5309,7 @@ function editOrder(id){
   document.getElementById('orderCancelReason').value = o.cancelReason||'';
   document.getElementById('orderCancelReasonWrap').style.display = o.status === 'cancelled' ? '' : 'none';
   document.getElementById('orderNotes').value = o.notes||'';
+  document.getElementById('orderDiscountPct').value = orderDiscountPct(o) || '';
   currentOrderItems = (o.items||[]).map(it => ({...it}));
   resetItemPicker();
   renderOrderItemsTable();
@@ -5300,6 +5339,8 @@ document.getElementById('saveOrderBtn').addEventListener('click', () => {
   const newStatus = document.getElementById('orderStatus').value;
   const cancelReason = document.getElementById('orderCancelReason').value.trim();
   if (newStatus === 'cancelled' && !cancelReason) { toast('Цуцлалтын шалтгаан сонгоно уу', 'err'); return; }
+  const discountParsed = parseDiscountInput(document.getElementById('orderDiscountPct').value);
+  if (discountParsed.invalid) { toast('Хөнгөлөлтийн хувь 0–100 хооронд тоо байх ёстой (хөнгөлөлтгүй бол хоосон орхино)', 'err'); return; }
   const id = document.getElementById('orderId').value;
   const total = currentOrderItems.reduce((s,it)=>s+Number(it.total||0),0);
   const shop = data.shops.find(s=>s.id===shopId);
@@ -5332,6 +5373,7 @@ document.getElementById('saveOrderBtn').addEventListener('click', () => {
       return { productId: it.productId, productName: p ? p.name : (it.productName||''), size: it.size||'', qty: Number(it.qty||0), unitPrice: Number(it.unitPrice||0), total: Number(it.total||0) };
     }),
     total,
+    discountPct: discountParsed.pct,     // 0 = хөнгөлөлтгүй
     orderDate: document.getElementById('orderDate').value || todayStr(),
     status: newStatus,
     cancelReason: newStatus === 'cancelled' ? cancelReason : '',
