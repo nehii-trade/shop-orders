@@ -2783,11 +2783,24 @@ function sanitizeBackupData(incoming){
   const cleanUpdatedAt = (x) => Number.isFinite(x.updatedAt) ? x.updatedAt : Date.now();
   const cleanNum = (v, fallback) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : fallback; };
 
+  // Нэр нь заавал string байна (нэргүй/тоон нэртэй бичлэг эрэмбэлэлт, хайлтыг цохидог байв).
+  const cleanName = (v, alt) => { const t = String(v == null ? '' : v).trim(); return t || String(alt == null ? '' : alt).trim() || 'Нэргүй'; };
+  // Огноо заавал бодит "YYYY-MM-DD" байна; буруу бол бичлэгийн үүссэн/шинэчлэгдсэн
+  // цагаас, тэр ч байхгүй бол өнөөдрөөр нөхнө.
+  const cleanDate = (v, x) => {
+    const str = String(v == null ? '' : v).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+      const d = parseLocalDate(str);
+      if (d && !isNaN(d.getTime()) && localDateStr(d) === str) return str;
+    }
+    const ts = Number.isFinite(x.createdAt) ? x.createdAt : (Number.isFinite(x.updatedAt) ? x.updatedAt : Date.now());
+    return localDateStr(new Date(ts));
+  };
   const shops = (Array.isArray(incoming.shops) ? incoming.shops : []).filter(isPlainObj).map(x => ({
-    ...x, id: cleanId(x), updatedAt: cleanUpdatedAt(x)
+    ...x, id: cleanId(x), updatedAt: cleanUpdatedAt(x), name: cleanName(x.name)
   }));
   const products = (Array.isArray(incoming.products) ? incoming.products : []).filter(isPlainObj).map(x => ({
-    ...x, id: cleanId(x), updatedAt: cleanUpdatedAt(x), price: cleanNum(x.price, 0)
+    ...x, id: cleanId(x), updatedAt: cleanUpdatedAt(x), price: cleanNum(x.price, 0), name: cleanName(x.name, x.itemName)
   }));
   const orders = (Array.isArray(incoming.orders) ? incoming.orders : []).filter(isPlainObj).map(x => {
     const items = (Array.isArray(x.items) ? x.items : []).filter(isPlainObj).map(it => {
@@ -2811,6 +2824,8 @@ function sanitizeBackupData(incoming){
       statusHistory,
       items,
       total: cleanNum(x.total, items.reduce((sum,it)=>sum+Number(it.total||0),0)),
+      orderDate: cleanDate(x.orderDate, x),
+      orderNo: (x.orderNo != null && x.orderNo !== '' && Number.isFinite(Number(x.orderNo))) ? Number(x.orderNo) : undefined,
       ...(x.discountPct !== undefined ? { discountPct: Math.min(100, cleanNum(x.discountPct, 0)) } : {})
     };
   });
@@ -3020,8 +3035,8 @@ function computeSmartInsights(activeOrders){
   }
 
   const { cur: curOrders, prev: prevOrders } = splitMonthToDate(activeOrders);
-  const curRev = curOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
-  const prevRev = prevOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
+  const curRev = sumPayable(curOrders);
+  const prevRev = sumPayable(prevOrders);
   if (prevRev > 0) {
     const pct = ((curRev-prevRev)/prevRev)*100;
     if (Math.abs(pct) >= 5) {
@@ -3131,9 +3146,13 @@ function computeInactiveShops(thresholdDays){
     let lastOrder = null;
     shopOrders.forEach(o => { if (!lastOrder || (o.orderDate||'') > (lastOrder.orderDate||'')) lastOrder = o; });
     const totalSpent = shopOrders.reduce((s,o)=>s+Number(o.total||0),0);
-    const daysSince = lastOrder && lastOrder.orderDate ? Math.floor((Date.now() - parseLocalDate(lastOrder.orderDate).getTime())/86400000) : null;
+    const lastLocal = lastOrder ? parseLocalDate(lastOrder.orderDate) : null;   // буруу форматтай огноо → null (цохигдохгүй)
+    const daysSince = lastLocal ? Math.floor((Date.now() - lastLocal.getTime())/86400000) : null;
     return { shop, lastOrderDate: lastOrder ? lastOrder.orderDate : null, daysSince, totalSpent };
-  }).filter(x => x.daysSince === null || x.daysSince >= thresholdDays)
+  // Хэзээ ч захиалга өгөөгүй дэлгүүрийг (daysSince === null) ЭНД оруулахгүй — тэд
+  // "идэвхгүй БОЛСОН" биш, шинээр бүртгэгдсэн. Өмнө нь Excel-ээр 100 дэлгүүр
+  // импортлоход "100 дэлгүүр идэвхгүй болсон" гэж харуулдаг байв.
+  }).filter(x => x.daysSince !== null && x.daysSince >= thresholdDays)
     .sort((a,b)=> b.totalSpent - a.totalSpent);
 }
 function renderInactiveShops(precomputedList){
@@ -3161,8 +3180,8 @@ function renderTodaySummary(activeOrders, precomputedInactiveCount){
     `Өнөөдрийн тойм — ${now.getFullYear()} оны ${now.getMonth()+1}-р сарын ${now.getDate()}, ${WEEKDAY_MN[now.getDay()]} гараг`;
   const curKey = getMonthKey(now);
   const { cur: curMonthOrders, prev: prevMonthOrders } = splitMonthToDate(activeOrders);
-  const curRev = curMonthOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
-  const prevRev = prevMonthOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
+  const curRev = sumPayable(curMonthOrders);
+  const prevRev = sumPayable(prevMonthOrders);
   const newCount = activeOrders.filter(o=>o.status==='new').length;
   const inactiveCount = precomputedInactiveCount != null ? precomputedInactiveCount : computeInactiveShops(30).length;
 
@@ -3220,8 +3239,11 @@ function renderDashboard(){
   const inactiveShopsList = computeInactiveShops(30);
   renderTodaySummary(activeOrders, inactiveShopsList.length);
 
-  const curRevenue = curMonthOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
-  const prevRevenue = prevMonthOrders.filter(o=>o.status!=='cancelled').reduce((s,o)=>s+Number(o.total||0),0);
+  // Тайлангийн "Нийт борлуулалт"-тай ИЖИЛ тооцоо (захиалга бүрийн хөнгөлөлтийг хассан
+  // төлөх дүн) — өмнө нь энд хөнгөлөлтгүй дүн гардаг байсан тул нэг сарын
+  // борлуулалт хоёр дэлгэцэд хоёр өөр тоогоор харагддаг байв.
+  const curRevenue = sumPayable(curMonthOrders);
+  const prevRevenue = sumPayable(prevMonthOrders);
   animateCount('statRevenue', curRevenue, (el,v,done) => el.innerHTML = money(Math.round(v)) + ' <small>₮</small>');
   renderKpiDelta('statRevenueDelta', curRevenue, prevRevenue, {label: MTD_LABEL});
 
@@ -3518,7 +3540,7 @@ function populateReportFilterOptions(){
 
   const productSel = document.getElementById('reportProductFilter');
   const curProduct = productSel.value;
-  const productsSorted = [...data.products].sort((a,b)=>a.name.localeCompare(b.name));
+  const productsSorted = [...data.products].sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
   productSel.innerHTML = '<option value="">Бүх бараа</option>' + productsSorted.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}${p.itemName?' · '+esc(p.itemName):''}</option>`).join('');
   if (curProduct) productSel.value = curProduct;
 }
@@ -3723,7 +3745,10 @@ function renderReportRFM(orders){
   const rows = shopIds.map(id => {
     const shop = data.shops.find(x=>x.id===id);
     const st = shopStats[id];
-    const recencyDays = st.lastDate ? Math.floor((now - new Date(st.lastDate).getTime())/86400000) : 999999;
+    // new Date("YYYY-MM-DD") нь UTC 00:00 (Улаанбаатарт 08:00) гэж тайлагддаг тул
+    // өглөө 08:00-аас өмнө өнөөдрийн захиалга "−1 хоног" гэж гардаг байв.
+    const lastLocal = parseLocalDate(st.lastDate);
+    const recencyDays = lastLocal ? Math.max(0, Math.floor((now - lastLocal.getTime())/86400000)) : 999999;
     return { name: shop ? shop.name : 'Тодорхойгүй', recencyDays, frequency: st.orders, monetary: st.total };
   });
   function quintileRank(values, value, higherIsBetter){
@@ -3795,6 +3820,17 @@ function renderReportCancelReasons(orders){
 // хоосон утгыг зөвхөн ТА эзэмшдэг Worker-ийн URL-аар солино.
 const AI_WORKER_URL = 'https://nehii-ai-worker.munhtsetsegdn.workers.dev';
 let lastAIInsightText = null; // Хэвлэх/PDF-д ашиглах, filter солигдвол null болно
+// lastAIInsightText-ийг ЯМАР шүүлтүүр + өгөгдлийн хувилбар дээр гаргасныг санана.
+// renderReports() бүрд одоогийн түлхүүртэй тулгаж, зөрвөл дүгнэлтийг арилгана —
+// шүүлтүүрийг код дотроос (Хяналтын самбарын "Харах →") сольсон эсвэл захиалга
+// нэмэгдсэн үед ч хуучин тоотой дүгнэлт дэлгэц/хэвлэлтэд үлдэхгүй.
+let lastAIInsightKey = null;
+function clearAIInsight(){
+  lastAIInsightText = null;
+  lastAIInsightKey = null;
+  const card = document.getElementById('aiInsightCard');
+  if (card) card.style.display = 'none';
+}
 // AI кэшийн key: зөвхөн ctx.period-оор биш, тайлангийн БҮХ 5 filter-ээр (хугацаа,
 // дэлгүүр, аймаг, бараа, төлөв) ялгаж, нэмэлтээр өгөгдөл (захиалгууд) өөрчлөгдсөн
 // эсэхийг илрүүлэх "dataVersion"-той хамт хадгалж/шалгана.
@@ -3960,6 +3996,7 @@ async function generateReportAIInsight(){
 
   const ctx = buildReportAIContext();
   const prompt = buildReportAIPrompt(ctx);
+  const requestKey = getReportCacheKey();   // энэ хүсэлт ЯМАР шүүлтүүр/өгөгдөл дээр явсан бэ
 
   btn.disabled = true;
   const origLabel = btn.textContent;
@@ -4023,10 +4060,18 @@ async function generateReportAIInsight(){
       console.warn('AI Worker-ийн хариунд "result" талбар алга эсвэл хоосон байна:', j);
     }
     const resultText = (typeof j.result === 'string' && j.result.trim()) ? j.result : 'Хариу ирсэнгүй';
+    if (requestKey !== getReportCacheKey()) {
+      // Хариуг хүлээх зуур шүүлтүүр эсвэл өгөгдөл өөрчлөгдсөн — энэ дүгнэлт одоо
+      // дэлгэц дээрх тоотой таарахгүй тул харуулахгүй.
+      clearAIInsight();
+      toast('Шүүлтүүр/өгөгдөл өөрчлөгдсөн тул дүгнэлтийг дахин гаргана уу', 'err');
+      return;
+    }
     // ЧУХАЛ: AI-ийн хариу гадаад эх сурвалж тул esc() ЗААВАЛ ашиглана (XSS хамгаалалт)
     body.innerHTML = mdLiteToHtml(resultText);
     lastAIInsightText = resultText;
-    safeSetItem('nehiitrade_ai_report_cache_v1', JSON.stringify({ text: resultText, at: Date.now(), cacheKey: getReportCacheKey(), period: ctx.period }));
+    lastAIInsightKey = requestKey;
+    safeSetItem('nehiitrade_ai_report_cache_v1', JSON.stringify({ text: resultText, at: Date.now(), cacheKey: requestKey, period: ctx.period }));
   } catch (err) {
     console.error(err);
     let msg;
@@ -4077,6 +4122,7 @@ function restoreAIInsightFromCache(){
   const MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 цагаас хуучирсан кэшийг харуулахгүй
   if (!cached.at || Date.now() - cached.at > MAX_AGE_MS) return;
   lastAIInsightText = cached.text;
+  lastAIInsightKey = cached.cacheKey;
   const card = document.getElementById('aiInsightCard');
   const body = document.getElementById('aiInsightBody');
   if (card && body) {
@@ -4242,6 +4288,7 @@ function renderReports(){
   renderReportRFM(orders);
   renderReportSizeDemand(orders);
   renderReportCancelReasons(orders);
+  if (lastAIInsightText && lastAIInsightKey !== getReportCacheKey()) clearAIInsight();
   restoreAIInsightFromCache();
 }
 ['reportDateRange','reportShopFilter','reportAimagFilter','reportProductFilter','reportStatusFilter'].forEach(id => {
@@ -4250,8 +4297,7 @@ function renderReports(){
     // Одоо getReportCacheKey() бүх 5 filter-ийг багтаадаг тул localStorage кэш өөрөө ч
     // шинэ filter-т таарахгүй болно, гэхдээ дэлгэц дээрх хуучин текстийг шууд/шуурхай
     // арилгахын тулд энд ч мөн тодорхой цэвэрлэнэ.
-    lastAIInsightText = null;
-    document.getElementById('aiInsightCard').style.display = 'none';
+    clearAIInsight();
     try { localStorage.removeItem('nehiitrade_ai_report_cache_v1'); } catch(e){}
     renderReports();
   });
@@ -5036,7 +5082,7 @@ function renderSizePickerForGroup(rows){
             <input type="checkbox" class="sizeGroupChk" data-pid="${esc(p.id)}">
             <span>${esc(p.size || 'Размергүй')}</span>
           </label>
-          <input type="number" class="sizeQtyInput" data-pid="${esc(p.id)}" min="1" placeholder="Тоо" style="display:none;">
+          <input type="number" class="sizeQtyInput" data-pid="${esc(p.id)}" min="1" step="1" inputmode="numeric" placeholder="Тоо" style="display:none;">
         </div>`).join('')}
     </div>
     <div id="sizePickerSummary"></div>
@@ -5072,7 +5118,7 @@ function updateSizePickerSummary(rows){
     if (chk && chk.checked) {
       const qtyInput = host.querySelector(`.sizeQtyInput[data-pid="${p.id}"]`);
       const qty = Number(qtyInput.value || 0);
-      if (Number.isFinite(qty) && qty >= 1) { totalQty += qty; totalSum += qty * Number(p.price||0); }
+      if (Number.isInteger(qty) && qty >= 1) { totalQty += qty; totalSum += qty * Number(p.price||0); }
     }
   });
   summaryEl.textContent = totalQty > 0 ? `Нийт: ${totalQty} ширхэг · ${money(totalSum)} ₮` : 'Размер сонгоод тоо ширхэг оруулна уу';
@@ -5117,7 +5163,7 @@ function renderOrderItemsTable(){
         return `<tr>
           <td data-label="Бараа">${nameCell}</td>
           <td data-label="Размер">${esc(it.size||'—')}</td>
-          <td data-label="Тоо"><input type="number" min="1" value="${it.qty}" style="width:60px;padding:5px;border:1px solid var(--line);" onchange="updateItemQty(${idx}, this.value)"></td>
+          <td data-label="Тоо"><input type="number" min="1" step="1" inputmode="numeric" value="${it.qty}" style="width:60px;padding:5px;border:1px solid var(--line);" onchange="updateItemQty(${idx}, this.value)"></td>
           <td data-label="Үнэ"><input type="number" min="0" value="${it.unitPrice}" style="width:80px;padding:5px;border:1px solid var(--line);" onchange="updateItemPrice(${idx}, this.value)"></td>
           <td data-label="Дүн">${money(it.total)}</td>
           <td><button type="button" class="rowbtn" onclick="removeOrderItem(${idx})">✕</button></td>
@@ -5136,7 +5182,7 @@ function updateItemQty(idx, val){
   // хориглодоггүй тул энд JS талд заавал шалгана. Хүчингүй утга оруулбал
   // хуучин утгаараа буцаана — чимээгүйгээр сөрөг/0 болгохгүй.
   const n = Number(val);
-  if (!Number.isFinite(n) || n < 1) { toast('Тоо ширхэг 1-ээс дээш байх ёстой', 'err'); renderOrderItemsTable(); return; }
+  if (!Number.isInteger(n) || n < 1) { toast('Тоо ширхэг 1-ээс дээш БҮХЭЛ тоо байх ёстой', 'err'); renderOrderItemsTable(); return; }
   it.qty = n; it.total = it.qty * it.unitPrice;
   renderOrderItemsTable();
 }
@@ -5166,12 +5212,12 @@ document.getElementById('addItemRowBtn').addEventListener('click', () => {
     if (!p) return;
     const qtyInput = host.querySelector(`.sizeQtyInput[data-pid="${pid}"]`);
     const qty = Number(qtyInput ? qtyInput.value : 0);
-    if (!Number.isFinite(qty) || qty < 1) { skippedCount++; return; } // Тоо ширхэг 1-ээс бага бол нэмэхгүй
+    if (!Number.isInteger(qty) || qty < 1) { skippedCount++; return; } // 1-ээс бага эсвэл бутархай (1.5 г.м.) бол нэмэхгүй
     const unitPrice = Number(p.price||0);
     currentOrderItems.push({ productId: p.id, productName: p.name, size: p.size||'', qty, unitPrice, total: qty*unitPrice });
     addedCount++;
   });
-  if (!addedCount) { toast('Тоо ширхэг 1-ээс дээш утга оруулна уу', 'err'); return; }
+  if (!addedCount) { toast('Тоо ширхэг 1-ээс дээш бүхэл тоо оруулна уу', 'err'); return; }
   renderOrderItemsTable();
   toast(`${addedCount} размер захиалгад нэмэгдлээ${skippedCount ? ' ('+skippedCount+' алгассан)' : ''}`, 'ok');
   resetItemPicker();
@@ -5258,6 +5304,10 @@ document.getElementById('orderViewEditBtn').addEventListener('click', () => {
 });
 // Захиалгын мөнгөн дүнгийн НЭГ эх сурвалж: хэвлэх хуудас, WhatsApp зурвас,
 // дэлгэрэнгүй цонх гурвуулаа үүнийг ашиглана — харилцагчид очих тоо зөрөхгүй.
+// Цуцлагдаагүй захиалгуудын ТӨЛӨХ дүнгийн (хөнгөлөлт хассан) нийлбэр.
+function sumPayable(orders){
+  return orders.reduce((sum,o) => o.status === 'cancelled' ? sum : sum + orderAmounts(o).payable, 0);
+}
 function orderDiscountPct(o){
   const n = Number(o && o.discountPct);
   return Number.isFinite(n) && n > 0 ? Math.min(n, 100) : 0;
@@ -5445,6 +5495,9 @@ document.getElementById('saveOrderBtn').addEventListener('click', () => {
   const shopId = document.getElementById('orderShop').value;
   if (!shopId) { toast('Дэлгүүр сонгоно уу', 'err'); return; }
   if (!currentOrderItems.length) { toast('Дор хаяж 1 бараа нэмнэ үү', 'err'); return; }
+  if (currentOrderItems.some(it => !Number.isInteger(Number(it.qty)) || Number(it.qty) < 1)) {
+    toast('Захиалгын мөрийн тоо ширхэг 1-ээс дээш бүхэл тоо байх ёстой — засаад дахин хадгална уу', 'err'); return;
+  }
   const newStatus = document.getElementById('orderStatus').value;
   const cancelReason = document.getElementById('orderCancelReason').value.trim();
   if (newStatus === 'cancelled' && !cancelReason) { toast('Цуцлалтын шалтгаан сонгоно уу', 'err'); return; }
